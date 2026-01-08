@@ -153,7 +153,7 @@ async function fetchWeather(
   };
 }
 
-export function useWeather(latitude = 38.7223, longitude = -9.1393) {
+export function useWeather(latitude = 39.2417, longitude = -9.3128) {
   return useQuery({
     queryKey: ["weather", latitude, longitude],
     queryFn: () => fetchWeather(latitude, longitude),

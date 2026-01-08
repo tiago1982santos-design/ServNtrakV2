@@ -9,7 +9,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Client } from "@shared/schema";
 
-const defaultCenter: [number, number] = [38.7223, -9.1393];
+const defaultCenter: [number, number] = [39.2417, -9.3128];
 
 const tileLayers = {
   street: {
