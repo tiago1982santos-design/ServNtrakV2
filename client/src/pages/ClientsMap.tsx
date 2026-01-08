@@ -92,112 +92,106 @@ export default function ClientsMap() {
         </div>
       </div>
 
-      <div className="h-[calc(100vh-180px)]">
+      <div className="h-[calc(100vh-180px)] relative">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : clientsWithLocation.length > 0 ? (
-          <MapContainer
-            center={mapCenter}
-            zoom={10}
-            style={{ height: "100%", width: "100%" }}
-            scrollWheelZoom={true}
-          >
-            <TileLayer
-              key={mapType}
-              attribution={tileLayers[mapType].attribution}
-              url={tileLayers[mapType].url}
-            />
-            <div 
-              className="leaflet-bottom leaflet-left" 
-              style={{ bottom: 10, left: 10, zIndex: 1000 }}
-              onClick={(e) => e.stopPropagation()}
+          <>
+            <MapContainer
+              center={mapCenter}
+              zoom={10}
+              style={{ height: "100%", width: "100%" }}
+              scrollWheelZoom={true}
             >
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="shadow-md gap-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMapType(mapType === "street" ? "satellite" : "street");
-                }}
-                data-testid="button-toggle-map-type"
-              >
-                <Layers className="w-4 h-4" />
-                {mapType === "street" ? "Satélite" : "Mapa"}
-              </Button>
-            </div>
-            {clientsWithLocation.map((client) => (
-              <Marker
-                key={client.id}
-                position={[client.latitude!, client.longitude!]}
-                icon={getClientIcon(client)}
-              >
-                <Popup>
-                  <div className="min-w-[200px] p-1">
-                    <h3 className="font-bold text-base mb-2">{client.name}</h3>
-                    
-                    {client.address && (
-                      <p className="text-sm text-gray-600 flex items-start gap-1 mb-2">
-                        <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                        {client.address}
-                      </p>
-                    )}
-                    
-                    <div className="flex gap-1 mb-3 flex-wrap">
-                      {client.hasGarden && (
-                        <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded">
-                          <Leaf className="w-3 h-3" /> Jardim
-                        </span>
+              <TileLayer
+                key={mapType}
+                attribution={tileLayers[mapType].attribution}
+                url={tileLayers[mapType].url}
+              />
+              {clientsWithLocation.map((client) => (
+                <Marker
+                  key={client.id}
+                  position={[client.latitude!, client.longitude!]}
+                  icon={getClientIcon(client)}
+                >
+                  <Popup>
+                    <div className="min-w-[200px] p-1">
+                      <h3 className="font-bold text-base mb-2">{client.name}</h3>
+                      
+                      {client.address && (
+                        <p className="text-sm text-gray-600 flex items-start gap-1 mb-2">
+                          <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                          {client.address}
+                        </p>
                       )}
-                      {client.hasPool && (
-                        <span className="flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                          <Waves className="w-3 h-3" /> Piscina
-                        </span>
-                      )}
-                      {client.hasJacuzzi && (
-                        <span className="flex items-center gap-1 text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded">
-                          <ThermometerSun className="w-3 h-3" /> Jacuzzi
-                        </span>
-                      )}
-                    </div>
+                      
+                      <div className="flex gap-1 mb-3 flex-wrap">
+                        {client.hasGarden && (
+                          <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded">
+                            <Leaf className="w-3 h-3" /> Jardim
+                          </span>
+                        )}
+                        {client.hasPool && (
+                          <span className="flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                            <Waves className="w-3 h-3" /> Piscina
+                          </span>
+                        )}
+                        {client.hasJacuzzi && (
+                          <span className="flex items-center gap-1 text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded">
+                            <ThermometerSun className="w-3 h-3" /> Jacuzzi
+                          </span>
+                        )}
+                      </div>
 
-                    <div className="flex gap-2">
-                      {client.phone && (
-                        <a
-                          href={`tel:${client.phone}`}
-                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-secondary text-secondary-foreground rounded-md text-xs font-medium"
-                          data-testid={`button-call-${client.id}`}
+                      <div className="flex gap-2">
+                        {client.phone && (
+                          <a
+                            href={`tel:${client.phone}`}
+                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-secondary text-secondary-foreground rounded-md text-xs font-medium"
+                            data-testid={`button-call-${client.id}`}
+                          >
+                            <Phone className="w-3 h-3" />
+                            Ligar
+                          </a>
+                        )}
+                        <button
+                          onClick={() => openInMaps(client.latitude!, client.longitude!)}
+                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-medium"
+                          data-testid={`button-navigate-${client.id}`}
                         >
-                          <Phone className="w-3 h-3" />
-                          Ligar
-                        </a>
-                      )}
-                      <button
-                        onClick={() => openInMaps(client.latitude!, client.longitude!)}
-                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-medium"
-                        data-testid={`button-navigate-${client.id}`}
-                      >
-                        <Navigation className="w-3 h-3" />
-                        Navegar
-                      </button>
-                    </div>
+                          <Navigation className="w-3 h-3" />
+                          Navegar
+                        </button>
+                      </div>
 
-                    <Link href={`/clients/${client.id}`}>
-                      <button 
-                        className="w-full mt-2 text-xs text-primary hover:underline"
-                        data-testid={`link-client-detail-${client.id}`}
-                      >
-                        Ver detalhes do cliente
-                      </button>
-                    </Link>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+                      <Link href={`/clients/${client.id}`}>
+                        <button 
+                          className="w-full mt-2 text-xs text-primary hover:underline"
+                          data-testid={`link-client-detail-${client.id}`}
+                        >
+                          Ver detalhes do cliente
+                        </button>
+                      </Link>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+            
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="absolute bottom-6 left-4 z-[1000] shadow-md gap-1"
+              onClick={() => setMapType(mapType === "street" ? "satellite" : "street")}
+              data-testid="button-toggle-map-type"
+            >
+              <Layers className="w-4 h-4" />
+              {mapType === "street" ? "Satélite" : "Mapa"}
+            </Button>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center px-6">
             <MapPin className="w-16 h-16 text-muted-foreground/30 mb-4" />

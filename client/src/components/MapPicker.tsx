@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import { MapPin, LocateFixed, X, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,37 +44,11 @@ function MapClickHandler({ onLocationChange }: { onLocationChange: (lat: number,
   return null;
 }
 
-function LocateControl({ onLocate }: { onLocate: (lat: number, lng: number) => void }) {
-  const map = useMap();
-  
-  const handleLocate = () => {
-    map.locate({ setView: true, maxZoom: 16 });
-    map.once("locationfound", (e) => {
-      onLocate(e.latlng.lat, e.latlng.lng);
-    });
-  };
-
-  return (
-    <div className="leaflet-top leaflet-right" style={{ top: 10, right: 10 }}>
-      <Button
-        type="button"
-        size="icon"
-        variant="secondary"
-        className="shadow-md"
-        onClick={handleLocate}
-        data-testid="button-locate-me"
-      >
-        <LocateFixed className="w-4 h-4" />
-      </Button>
-    </div>
-  );
-}
-
-function CenterMap({ center }: { center: [number, number] }) {
+function MapRefSetter({ mapRef }: { mapRef: React.MutableRefObject<L.Map | null> }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, 14);
-  }, [center, map]);
+    mapRef.current = map;
+  }, [map, mapRef]);
   return null;
 }
 
@@ -82,6 +56,7 @@ export function MapPicker({ latitude, longitude, onChange }: MapPickerProps) {
   const [open, setOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapType, setMapType] = useState<"street" | "satellite">("street");
+  const mapRef = useRef<L.Map | null>(null);
 
   const hasLocation = latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined;
   
@@ -109,6 +84,15 @@ export function MapPicker({ latitude, longitude, onChange }: MapPickerProps) {
     setOpen(isOpen);
     if (!isOpen) {
       setTempLocation(null);
+    }
+  };
+
+  const handleLocate = () => {
+    if (mapRef.current) {
+      mapRef.current.locate({ setView: true, maxZoom: 16 });
+      mapRef.current.once("locationfound", (e) => {
+        handleLocationChange(e.latlng.lat, e.latlng.lng);
+      });
     }
   };
 
@@ -149,31 +133,34 @@ export function MapPicker({ latitude, longitude, onChange }: MapPickerProps) {
               url={tileLayers[mapType].url}
             />
             <MapClickHandler onLocationChange={handleLocationChange} />
-            <LocateControl onLocate={handleLocationChange} />
-            <div 
-              className="leaflet-bottom leaflet-left" 
-              style={{ bottom: 10, left: 10, zIndex: 1000 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="shadow-md gap-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMapType(mapType === "street" ? "satellite" : "street");
-                }}
-                data-testid="button-toggle-map-type"
-              >
-                <Layers className="w-4 h-4" />
-                {mapType === "street" ? "Satélite" : "Mapa"}
-              </Button>
-            </div>
+            <MapRefSetter mapRef={mapRef} />
             {currentMarker && (
               <Marker position={[currentMarker.lat, currentMarker.lng]} icon={markerIcon} />
             )}
           </MapContainer>
+          
+          <Button
+            type="button"
+            size="icon"
+            variant="secondary"
+            className="absolute top-3 right-3 z-[1000] shadow-md"
+            onClick={handleLocate}
+            data-testid="button-locate-me"
+          >
+            <LocateFixed className="w-4 h-4" />
+          </Button>
+          
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="absolute bottom-3 left-3 z-[1000] shadow-md gap-1"
+            onClick={() => setMapType(mapType === "street" ? "satellite" : "street")}
+            data-testid="button-toggle-map-type"
+          >
+            <Layers className="w-4 h-4" />
+            {mapType === "street" ? "Satélite" : "Mapa"}
+          </Button>
         </div>
 
         <div className="p-4 border-t bg-background flex gap-2">
