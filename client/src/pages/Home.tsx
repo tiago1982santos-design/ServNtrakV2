@@ -5,6 +5,7 @@ import { Loader2, CalendarClock, MapPin, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { BottomNav } from "@/components/BottomNav";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
+import { WeatherWidget } from "@/components/WeatherWidget";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
 
@@ -33,10 +34,16 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/20 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
         
         <div className="relative z-10">
-          <p className="text-primary-foreground/80 font-medium">Peralta Gardens,</p>
-          <h1 className="text-3xl font-display font-bold text-white mt-1">Olá {userName}</h1>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-primary-foreground/80 font-medium">Peralta Gardens,</p>
+              <h1 className="text-3xl font-display font-bold text-white mt-1">Olá {userName}</h1>
+            </div>
+          </div>
           
-          <div className="mt-6 flex gap-4">
+          <WeatherWidget className="mt-4" showAlerts={true} />
+          
+          <div className="mt-4 flex gap-4">
             <div className="flex-1 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
               <p className="text-xs text-white/70 uppercase tracking-wider font-semibold">Hoje</p>
               <p className="text-3xl font-bold text-white mt-1">{todayAppointments.length}</p>
