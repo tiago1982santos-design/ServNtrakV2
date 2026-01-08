@@ -5,6 +5,7 @@ import { z } from "zod";
 import { insertClientSchema } from "@shared/schema";
 import { useCreateClient } from "@/hooks/use-clients";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MapPicker } from "@/components/MapPicker";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +34,8 @@ export function CreateClientDialog() {
       hasGarden: false,
       hasPool: false,
       hasJacuzzi: false,
+      latitude: undefined,
+      longitude: undefined,
     },
   });
 
@@ -110,12 +113,24 @@ export function CreateClientDialog() {
                 <FormItem>
                   <FormLabel>Morada</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Rua das Flores, 123..." {...field} className="rounded-xl min-h-[60px]" />
+                    <Textarea placeholder="Rua das Flores, 123..." {...field} value={field.value ?? ""} className="rounded-xl min-h-[60px]" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <div className="space-y-2">
+              <FormLabel>Localização no Mapa</FormLabel>
+              <MapPicker
+                latitude={form.watch("latitude")}
+                longitude={form.watch("longitude")}
+                onChange={(lat, lng) => {
+                  form.setValue("latitude", lat);
+                  form.setValue("longitude", lng);
+                }}
+              />
+            </div>
 
             <div className="space-y-3 pt-2">
               <FormLabel>Serviços Necessários</FormLabel>
@@ -130,7 +145,7 @@ export function CreateClientDialog() {
                         <span className="text-xs font-medium">Jardim</span>
                       </div>
                       <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        <Checkbox checked={field.value ?? false} onCheckedChange={field.onChange} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -145,7 +160,7 @@ export function CreateClientDialog() {
                         <span className="text-xs font-medium">Piscina</span>
                       </div>
                       <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        <Checkbox checked={field.value ?? false} onCheckedChange={field.onChange} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -160,7 +175,7 @@ export function CreateClientDialog() {
                         <span className="text-xs font-medium">Jacuzzi</span>
                       </div>
                       <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        <Checkbox checked={field.value ?? false} onCheckedChange={field.onChange} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -175,7 +190,7 @@ export function CreateClientDialog() {
                 <FormItem>
                   <FormLabel>Notas Iniciais</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Código do portão, animais, etc." {...field} className="rounded-xl" />
+                    <Textarea placeholder="Código do portão, animais, etc." {...field} value={field.value ?? ""} className="rounded-xl" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

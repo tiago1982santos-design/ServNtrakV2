@@ -13,6 +13,7 @@ import Login from "@/pages/Login";
 import Clients from "@/pages/Clients";
 import ClientDetail from "@/pages/ClientDetail";
 import CalendarPage from "@/pages/Calendar";
+import ClientsMap from "@/pages/ClientsMap";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
 
@@ -41,6 +42,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/clients" component={Clients} />
       <Route path="/clients/:id" component={ClientDetail} />
+      <Route path="/map" component={ClientsMap} />
       <Route path="/calendar" component={CalendarPage} />
       <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
