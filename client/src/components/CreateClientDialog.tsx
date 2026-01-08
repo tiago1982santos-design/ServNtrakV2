@@ -14,8 +14,8 @@ import { Loader2, Plus, Leaf, Waves, ThermometerSun } from "lucide-react";
 
 // Form schema extending the insert schema with validation
 const formSchema = insertClientSchema.extend({
-  email: z.string().email().optional().or(z.literal("")),
-  phone: z.string().min(3, "Phone is too short").optional().or(z.literal("")),
+  email: z.string().email("E-mail inválido").optional().or(z.literal("")),
+  phone: z.string().min(3, "O telefone é demasiado curto").optional().or(z.literal("")),
 });
 
 export function CreateClientDialog() {
@@ -55,7 +55,7 @@ export function CreateClientDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-display text-primary">Add New Client</DialogTitle>
+          <DialogTitle className="text-2xl font-display text-primary">Adicionar Novo Cliente</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -65,9 +65,9 @@ export function CreateClientDialog() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Client Name</FormLabel>
+                  <FormLabel>Nome do Cliente</FormLabel>
                   <FormControl>
-                    <Input placeholder="John Doe" {...field} className="rounded-xl" />
+                    <Input placeholder="João Silva" {...field} className="rounded-xl" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -80,9 +80,9 @@ export function CreateClientDialog() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>Telefone</FormLabel>
                     <FormControl>
-                      <Input placeholder="(555) 123-4567" {...field} className="rounded-xl" />
+                      <Input placeholder="912 345 678" {...field} className="rounded-xl" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -93,9 +93,9 @@ export function CreateClientDialog() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>E-mail</FormLabel>
                     <FormControl>
-                      <Input placeholder="john@example.com" {...field} className="rounded-xl" />
+                      <Input placeholder="joao@exemplo.com" {...field} className="rounded-xl" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -108,9 +108,9 @@ export function CreateClientDialog() {
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>Morada</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="123 Green St..." {...field} className="rounded-xl min-h-[60px]" />
+                    <Textarea placeholder="Rua das Flores, 123..." {...field} className="rounded-xl min-h-[60px]" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -118,7 +118,7 @@ export function CreateClientDialog() {
             />
 
             <div className="space-y-3 pt-2">
-              <FormLabel>Services Required</FormLabel>
+              <FormLabel>Serviços Necessários</FormLabel>
               <div className="grid grid-cols-3 gap-2">
                 <FormField
                   control={form.control}
@@ -127,7 +127,7 @@ export function CreateClientDialog() {
                     <FormItem className="flex flex-row items-center justify-between rounded-xl border p-3 shadow-sm bg-background/50">
                       <div className="flex items-center space-x-2">
                         <Leaf className="w-4 h-4 text-green-600" />
-                        <span className="text-xs font-medium">Garden</span>
+                        <span className="text-xs font-medium">Jardim</span>
                       </div>
                       <FormControl>
                         <Checkbox checked={field.value} onCheckedChange={field.onChange} />
@@ -142,7 +142,7 @@ export function CreateClientDialog() {
                     <FormItem className="flex flex-row items-center justify-between rounded-xl border p-3 shadow-sm bg-background/50">
                       <div className="flex items-center space-x-2">
                         <Waves className="w-4 h-4 text-blue-500" />
-                        <span className="text-xs font-medium">Pool</span>
+                        <span className="text-xs font-medium">Piscina</span>
                       </div>
                       <FormControl>
                         <Checkbox checked={field.value} onCheckedChange={field.onChange} />
@@ -173,9 +173,9 @@ export function CreateClientDialog() {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Initial Notes</FormLabel>
+                  <FormLabel>Notas Iniciais</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Gate code, pets, etc." {...field} className="rounded-xl" />
+                    <Textarea placeholder="Código do portão, animais, etc." {...field} className="rounded-xl" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -187,10 +187,10 @@ export function CreateClientDialog() {
                 {createClient.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
+                    A criar...
                   </>
                 ) : (
-                  "Create Client"
+                  "Criar Cliente"
                 )}
               </Button>
             </div>

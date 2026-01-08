@@ -24,7 +24,7 @@ export default function ClientDetail() {
   const { data: appointments } = useAppointments({ clientId: id });
 
   if (isLoading) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-primary" /></div>;
-  if (!client) return <div>Client not found</div>;
+  if (!client) return <div>Cliente não encontrado</div>;
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -34,7 +34,7 @@ export default function ClientDetail() {
         
         <div className="relative z-10">
           <Link href="/clients" className="inline-flex items-center text-primary-foreground/80 hover:text-white mb-6">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
           </Link>
           
           <h1 className="text-3xl font-display font-bold">{client.name}</h1>
@@ -59,12 +59,12 @@ export default function ClientDetail() {
         <div className="bg-card rounded-2xl p-4 shadow-lg border border-border/50 flex flex-wrap gap-3">
           {client.hasGarden && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium">
-              <Leaf className="w-4 h-4" /> Garden
+              <Leaf className="w-4 h-4" /> Jardim
             </div>
           )}
           {client.hasPool && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
-              <Waves className="w-4 h-4" /> Pool
+              <Waves className="w-4 h-4" /> Piscina
             </div>
           )}
           {client.hasJacuzzi && (
@@ -79,27 +79,27 @@ export default function ClientDetail() {
       <div className="px-6 mt-6">
         <Tabs defaultValue="history">
           <TabsList className="w-full bg-muted/50 p-1 rounded-xl mb-6">
-            <TabsTrigger value="history" className="flex-1 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">History</TabsTrigger>
-            <TabsTrigger value="upcoming" className="flex-1 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Schedule</TabsTrigger>
+            <TabsTrigger value="history" className="flex-1 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Histórico</TabsTrigger>
+            <TabsTrigger value="upcoming" className="flex-1 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Agenda</TabsTrigger>
           </TabsList>
 
           <TabsContent value="history" className="space-y-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="font-bold text-lg">Service Logs</h3>
+              <h3 className="font-bold text-lg">Registos de Serviço</h3>
               <AddServiceLogDialog clientId={clientId} />
             </div>
 
             {logs?.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8 text-sm">No service history yet.</p>
+              <p className="text-muted-foreground text-center py-8 text-sm">Ainda sem histórico de serviço.</p>
             ) : (
               logs?.map((log) => (
                 <div key={log.id} className="bg-card border border-border/50 rounded-xl p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-xs font-semibold bg-secondary px-2 py-0.5 rounded text-secondary-foreground">
-                      {log.type}
+                      {log.type === 'Garden' ? 'Jardim' : log.type === 'Pool' ? 'Piscina' : log.type}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {format(new Date(log.date), "MMM d, yyyy")}
+                      {format(new Date(log.date), "d 'de' MMM, yyyy")}
                     </span>
                   </div>
                   <p className="text-sm text-foreground">{log.description}</p>
@@ -110,12 +110,12 @@ export default function ClientDetail() {
 
           <TabsContent value="upcoming" className="space-y-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="font-bold text-lg">Appointments</h3>
+              <h3 className="font-bold text-lg">Agendamentos</h3>
               <AddAppointmentDialog clientId={clientId} />
             </div>
             
             {appointments?.filter(a => !a.isCompleted).length === 0 ? (
-              <p className="text-muted-foreground text-center py-8 text-sm">No upcoming appointments.</p>
+              <p className="text-muted-foreground text-center py-8 text-sm">Sem agendamentos futuros.</p>
             ) : (
               appointments?.filter(a => !a.isCompleted).map((apt) => (
                 <div key={apt.id} className="bg-card border border-border/50 rounded-xl p-4 shadow-sm flex items-center gap-4">
@@ -124,8 +124,8 @@ export default function ClientDetail() {
                     <span className="text-lg font-bold leading-none">{format(new Date(apt.date), "d")}</span>
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-foreground">{apt.type} Service</h4>
-                    <p className="text-sm text-muted-foreground">{format(new Date(apt.date), "h:mm a")}</p>
+                    <h4 className="font-semibold text-foreground">Serviço de {apt.type === 'Garden' ? 'Jardim' : apt.type === 'Pool' ? 'Piscina' : apt.type}</h4>
+                    <p className="text-sm text-muted-foreground">{format(new Date(apt.date), "HH:mm")}</p>
                   </div>
                 </div>
               ))
@@ -163,12 +163,12 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="h-8 gap-1 rounded-lg">
-          <Plus className="w-3 h-3" /> Log Work
+          <Plus className="w-3 h-3" /> Registar Trabalho
         </Button>
       </DialogTrigger>
       <DialogContent className="rounded-2xl sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Log Service</DialogTitle>
+          <DialogTitle>Registar Serviço</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -177,18 +177,18 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Service Type</FormLabel>
+                  <FormLabel>Tipo de Serviço</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Garden">Garden</SelectItem>
-                      <SelectItem value="Pool">Pool</SelectItem>
+                      <SelectItem value="Garden">Jardim</SelectItem>
+                      <SelectItem value="Pool">Piscina</SelectItem>
                       <SelectItem value="Jacuzzi">Jacuzzi</SelectItem>
-                      <SelectItem value="General">General</SelectItem>
+                      <SelectItem value="General">Geral</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormItem>
@@ -200,10 +200,10 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Descrição</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="What did you do today?" 
+                      placeholder="O que fez hoje?" 
                       className="rounded-xl" 
                       {...field} 
                     />
@@ -213,7 +213,7 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
             />
             
             <Button type="submit" className="w-full btn-primary" disabled={createLog.isPending}>
-              {createLog.isPending ? "Saving..." : "Save Log"}
+              {createLog.isPending ? "A guardar..." : "Guardar Registo"}
             </Button>
           </form>
         </Form>
@@ -248,12 +248,12 @@ function AddAppointmentDialog({ clientId }: { clientId: number }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="h-8 gap-1 rounded-lg">
-          <Plus className="w-3 h-3" /> Add
+          <Plus className="w-3 h-3" /> Adicionar
         </Button>
       </DialogTrigger>
       <DialogContent className="rounded-2xl sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Schedule Appointment</DialogTitle>
+          <DialogTitle>Agendar Serviço</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -262,7 +262,7 @@ function AddAppointmentDialog({ clientId }: { clientId: number }) {
               name="date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date & Time</FormLabel>
+                  <FormLabel>Data e Hora</FormLabel>
                   <FormControl>
                     <Input 
                       type="datetime-local" 
@@ -281,18 +281,18 @@ function AddAppointmentDialog({ clientId }: { clientId: number }) {
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Service Type</FormLabel>
+                  <FormLabel>Tipo de Serviço</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Garden">Garden</SelectItem>
-                      <SelectItem value="Pool">Pool</SelectItem>
+                      <SelectItem value="Garden">Jardim</SelectItem>
+                      <SelectItem value="Pool">Piscina</SelectItem>
                       <SelectItem value="Jacuzzi">Jacuzzi</SelectItem>
-                      <SelectItem value="General">General</SelectItem>
+                      <SelectItem value="General">Geral</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormItem>
@@ -304,10 +304,10 @@ function AddAppointmentDialog({ clientId }: { clientId: number }) {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormLabel>Notas (Opcional)</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Special instructions..." 
+                      placeholder="Instruções especiais..." 
                       className="rounded-xl" 
                       {...field} 
                       value={field.value || ""}
@@ -318,7 +318,7 @@ function AddAppointmentDialog({ clientId }: { clientId: number }) {
             />
             
             <Button type="submit" className="w-full btn-primary" disabled={createApt.isPending}>
-              {createApt.isPending ? "Scheduling..." : "Schedule"}
+              {createApt.isPending ? "A agendar..." : "Agendar"}
             </Button>
           </form>
         </Form>

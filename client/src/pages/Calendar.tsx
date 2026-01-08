@@ -22,7 +22,7 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="pt-8 px-6 mb-6">
-        <h1 className="text-2xl font-display font-bold text-foreground">Schedule</h1>
+        <h1 className="text-2xl font-display font-bold text-foreground">Agenda</h1>
       </div>
 
       <div className="mx-6 bg-card rounded-2xl border border-border/50 shadow-sm p-2 mb-6">
@@ -53,7 +53,7 @@ export default function CalendarPage() {
 
       <div className="px-6 space-y-4">
         <h2 className="text-lg font-bold font-display">
-          {date ? format(date, "EEEE, MMMM d") : "Select a date"}
+          {date ? format(date, "EEEE, d 'de' MMMM") : "Selecione uma data"}
         </h2>
 
         {isLoading ? (
@@ -70,7 +70,7 @@ export default function CalendarPage() {
                       <h3 className="font-bold text-foreground">{apt.client.name}</h3>
                       <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                         <Clock className="w-3 h-3" />
-                        {format(new Date(apt.date), "h:mm a")}
+                        {format(new Date(apt.date), "HH:mm")}
                       </p>
                     </div>
                     <div className={`px-2 py-1 rounded text-xs font-semibold
@@ -78,7 +78,7 @@ export default function CalendarPage() {
                         apt.type === 'Pool' ? 'bg-blue-100 text-blue-700' : 
                         'bg-orange-100 text-orange-700'}`
                     }>
-                      {apt.type}
+                      {apt.type === 'Garden' ? 'Jardim' : apt.type === 'Pool' ? 'Piscina' : apt.type}
                     </div>
                   </div>
                   {apt.client.address && (
@@ -93,7 +93,7 @@ export default function CalendarPage() {
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border">
-            <p>No appointments scheduled.</p>
+            <p>Sem agendamentos marcados.</p>
           </div>
         )}
       </div>

@@ -27,7 +27,7 @@ export default function Login() {
 
         <h1 className="text-4xl font-display font-bold text-foreground mb-3">Service Pro</h1>
         <p className="text-muted-foreground mb-12 text-lg">
-          Manage your gardening, pool, and spa services with ease.
+          Gira os seus serviços de jardinagem, piscina e jacuzzi com facilidade.
         </p>
 
         <div className="space-y-4">
@@ -35,12 +35,12 @@ export default function Login() {
             onClick={handleLogin}
             className="w-full h-14 text-lg font-semibold rounded-2xl shadow-xl shadow-primary/20 btn-primary"
           >
-            Get Started
+            Começar Agora
           </Button>
         </div>
 
         <p className="mt-8 text-xs text-muted-foreground/60">
-          Professional Service Management
+          Gestão Profissional de Serviços
         </p>
       </div>
     </div>

@@ -15,7 +15,7 @@ export default function Home() {
     from: new Date().toISOString() 
   });
 
-  const userName = user?.firstName || "Gardener";
+  const userName = user?.firstName || "Jardineiro";
   
   // Group appointments
   const todayAppointments = appointments?.filter(apt => isToday(new Date(apt.date))) || [];
@@ -29,21 +29,21 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/20 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
         
         <div className="relative z-10">
-          <p className="text-primary-foreground/80 font-medium">Welcome back,</p>
+          <p className="text-primary-foreground/80 font-medium">Bem-vindo,</p>
           <h1 className="text-3xl font-display font-bold text-white mt-1">{userName}</h1>
           
           <div className="mt-6 flex gap-4">
             <div className="flex-1 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-              <p className="text-xs text-white/70 uppercase tracking-wider font-semibold">Today</p>
+              <p className="text-xs text-white/70 uppercase tracking-wider font-semibold">Hoje</p>
               <p className="text-3xl font-bold text-white mt-1">{todayAppointments.length}</p>
-              <p className="text-xs text-white/80">Jobs scheduled</p>
+              <p className="text-xs text-white/80">Trabalhos agendados</p>
             </div>
             <div className="flex-1 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-              <p className="text-xs text-white/70 uppercase tracking-wider font-semibold">Pending</p>
+              <p className="text-xs text-white/70 uppercase tracking-wider font-semibold">Pendentes</p>
               <p className="text-3xl font-bold text-white mt-1">
                 {appointments?.filter(a => !a.isCompleted).length || 0}
               </p>
-              <p className="text-xs text-white/80">Total tasks</p>
+              <p className="text-xs text-white/80">Total de tarefas</p>
             </div>
           </div>
         </div>
@@ -55,8 +55,8 @@ export default function Home() {
         {/* Today's Schedule */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold font-display text-foreground">Today's Schedule</h2>
-            <Link href="/calendar" className="text-xs font-semibold text-primary">View Calendar</Link>
+            <h2 className="text-lg font-bold font-display text-foreground">Agenda de Hoje</h2>
+            <Link href="/calendar" className="text-xs font-semibold text-primary">Ver Calendário</Link>
           </div>
 
           {isLoading ? (
@@ -80,15 +80,15 @@ export default function Home() {
                       <h3 className="font-bold text-foreground truncate">{apt.client.name}</h3>
                       <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
                         <MapPin className="w-3 h-3" />
-                        <span className="truncate">{apt.client.address || "No address"}</span>
+                        <span className="truncate">{apt.client.address || "Sem endereço"}</span>
                       </p>
                       <div className="flex gap-2 mt-2">
                         <span className="text-[10px] font-semibold bg-secondary px-2 py-0.5 rounded-full text-secondary-foreground">
-                          {apt.type}
+                          {apt.type === 'Garden' ? 'Jardim' : apt.type === 'Pool' ? 'Piscina' : apt.type}
                         </span>
                         {apt.isCompleted && (
                           <span className="text-[10px] font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Done
+                            <CheckCircle2 className="w-3 h-3" /> Concluído
                           </span>
                         )}
                       </div>
@@ -102,30 +102,30 @@ export default function Home() {
               <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
                 <CalendarClock className="w-6 h-6 text-muted-foreground" />
               </div>
-              <p className="text-foreground font-medium">No jobs today</p>
-              <p className="text-sm text-muted-foreground mt-1">Enjoy your day off!</p>
+              <p className="text-foreground font-medium">Sem trabalhos para hoje</p>
+              <p className="text-sm text-muted-foreground mt-1">Aproveite o seu dia de folga!</p>
             </div>
           )}
         </section>
 
         {/* Quick Actions */}
         <section>
-          <h2 className="text-lg font-bold font-display text-foreground mb-4">Quick Actions</h2>
+          <h2 className="text-lg font-bold font-display text-foreground mb-4">Ações Rápidas</h2>
           <div className="grid grid-cols-2 gap-4">
             <Link href="/clients" className="bg-gradient-to-br from-green-50 to-green-100/50 p-4 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition-all">
               <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center mb-3">
                 <MapPin className="w-5 h-5 text-green-700" />
               </div>
-              <h3 className="font-bold text-green-900">Clients Map</h3>
-              <p className="text-xs text-green-700/70 mt-1">View routes</p>
+              <h3 className="font-bold text-green-900">Mapa de Clientes</h3>
+              <p className="text-xs text-green-700/70 mt-1">Ver rotas</p>
             </Link>
             
             <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-all cursor-pointer">
                <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center mb-3">
                 <CalendarClock className="w-5 h-5 text-blue-700" />
               </div>
-              <h3 className="font-bold text-blue-900">Schedule</h3>
-              <p className="text-xs text-blue-700/70 mt-1">Add job</p>
+              <h3 className="font-bold text-blue-900">Agenda</h3>
+              <p className="text-xs text-blue-700/70 mt-1">Adicionar tarefa</p>
             </div>
           </div>
         </section>
