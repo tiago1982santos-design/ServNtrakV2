@@ -1,18 +1,22 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useAppointments } from "@/hooks/use-appointments";
-import { format, isToday, isTomorrow } from "date-fns";
+import { format, isToday, isTomorrow, startOfDay } from "date-fns";
 import { Loader2, CalendarClock, MapPin, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { BottomNav } from "@/components/BottomNav";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 import { cn } from "@/lib/utils";
+import { useMemo } from "react";
 
 export default function Home() {
   const { user } = useAuth();
   
+  // Stabilize the "from" date so it doesn't change on every render
+  const todayStart = useMemo(() => startOfDay(new Date()).toISOString(), []);
+  
   // Get upcoming appointments for dashboard
   const { data: appointments, isLoading } = useAppointments({ 
-    from: new Date().toISOString() 
+    from: todayStart 
   });
 
   const userName = user?.firstName || "Jardineiro";
