@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import logoImage from "@assets/generated_images/peralta_gardens_professional_logo_design.png";
+import logoImage from "@assets/IMG_20191011_125612_639_1767910263605.JPEG";
 
 export function SplashScreen({ onFinish }: { onFinish: () => void }) {
   const [isVisible, setIsVisible] = useState(true);
