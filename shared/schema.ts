@@ -67,6 +67,8 @@ export const quickPhotos = pgTable("quick_photos", {
   userId: text("user_id").notNull(),
   clientId: integer("client_id").notNull(),
   photoUrl: text("photo_url").notNull(),
+  serviceType: text("service_type").notNull().default("Geral"), // 'Jardim', 'Piscina', 'Jacuzzi', 'Outros'
+  customCategory: text("custom_category"), // Custom folder name when serviceType is 'Outros'
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
