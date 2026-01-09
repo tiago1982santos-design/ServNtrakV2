@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Calendar, Users, MapPin, CloudSun, User } from "lucide-react";
+import { Home, Calendar, Users, MapPin, CloudSun, User, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
@@ -8,7 +8,7 @@ export function BottomNav() {
   const navItems = [
     { href: "/", icon: Home, label: "Início" },
     { href: "/clients", icon: Users, label: "Clientes" },
-    { href: "/weather", icon: CloudSun, label: "Tempo" },
+    { href: "/purchases", icon: ShoppingCart, label: "Compras" },
     { href: "/calendar", icon: Calendar, label: "Agenda" },
     { href: "/profile", icon: User, label: "Perfil" },
   ];

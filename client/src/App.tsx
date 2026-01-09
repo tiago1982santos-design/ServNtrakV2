@@ -18,6 +18,7 @@ import Weather from "@/pages/Weather";
 import Reminders from "@/pages/Reminders";
 import Billing from "@/pages/Billing";
 import Profile from "@/pages/Profile";
+import Purchases from "@/pages/Purchases";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -50,6 +51,7 @@ function Router() {
       <Route path="/calendar" component={CalendarPage} />
       <Route path="/reminders" component={Reminders} />
       <Route path="/billing" component={Billing} />
+      <Route path="/purchases" component={Purchases} />
       <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
