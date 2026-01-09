@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
 import { useParams, Link } from "wouter";
-import { useClient } from "@/hooks/use-clients";
+import { useClient, useUpdateClient } from "@/hooks/use-clients";
 import { useServiceLogs, useCreateServiceLog } from "@/hooks/use-service-logs";
 import { useAppointments, useCreateAppointment } from "@/hooks/use-appointments";
 import { useUpload } from "@/hooks/use-upload";
-import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon } from "lucide-react";
+import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertServiceLogSchema, insertAppointmentSchema } from "@shared/schema";
+import { insertServiceLogSchema, insertAppointmentSchema, insertClientSchema, type Client } from "@shared/schema";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 
 export default function ClientDetail() {
@@ -35,9 +36,12 @@ export default function ClientDetail() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
         
         <div className="relative z-10">
-          <Link href="/clients" className="inline-flex items-center text-primary-foreground/80 hover:text-white mb-6">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
-          </Link>
+          <div className="flex items-center justify-between mb-6">
+            <Link href="/clients" className="inline-flex items-center text-primary-foreground/80 hover:text-white">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
+            </Link>
+            <EditClientDialog client={client} />
+          </div>
           
           <h1 className="text-3xl font-display font-bold">{client.name}</h1>
           
@@ -424,6 +428,158 @@ function AddAppointmentDialog({ clientId }: { clientId: number }) {
             
             <Button type="submit" className="w-full btn-primary" disabled={createApt.isPending}>
               {createApt.isPending ? "A agendar..." : "Agendar"}
+            </Button>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditClientDialog({ client }: { client: Client }) {
+  const [open, setOpen] = useState(false);
+  const updateClient = useUpdateClient();
+  
+  const form = useForm<z.infer<typeof insertClientSchema>>({
+    resolver: zodResolver(insertClientSchema),
+    defaultValues: {
+      name: client.name,
+      phone: client.phone || "",
+      address: client.address || "",
+      latitude: client.latitude || undefined,
+      longitude: client.longitude || undefined,
+      hasGarden: client.hasGarden ?? false,
+      hasPool: client.hasPool ?? false,
+      hasJacuzzi: client.hasJacuzzi ?? false,
+    }
+  });
+
+  const onSubmit = async (values: z.infer<typeof insertClientSchema>) => {
+    try {
+      await updateClient.mutateAsync({ 
+        id: client.id, 
+        ...values,
+        latitude: values.latitude ?? client.latitude,
+        longitude: values.longitude ?? client.longitude,
+      });
+      setOpen(false);
+    } catch (e) {}
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" className="text-primary-foreground/80 hover:text-white hover:bg-white/10" data-testid="button-edit-client">
+          <Pencil className="w-4 h-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="rounded-2xl sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Editar Cliente</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Nome do cliente" className="rounded-xl" data-testid="input-client-name" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="912 345 678" className="rounded-xl" data-testid="input-client-phone" {...field} value={field.value || ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Morada</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Rua, número, localidade..." className="rounded-xl" data-testid="input-client-address" {...field} value={field.value || ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <div className="space-y-3">
+              <FormLabel>Serviços</FormLabel>
+              <div className="flex flex-wrap gap-4">
+                <FormField
+                  control={form.control}
+                  name="hasGarden"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <Checkbox 
+                          checked={field.value ?? false} 
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-has-garden"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0 flex items-center gap-1 text-sm font-normal">
+                        <Leaf className="w-4 h-4 text-green-600" /> Jardim
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="hasPool"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <Checkbox 
+                          checked={field.value ?? false} 
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-has-pool"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0 flex items-center gap-1 text-sm font-normal">
+                        <Waves className="w-4 h-4 text-blue-600" /> Piscina
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="hasJacuzzi"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <Checkbox 
+                          checked={field.value ?? false} 
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-has-jacuzzi"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0 flex items-center gap-1 text-sm font-normal">
+                        <ThermometerSun className="w-4 h-4 text-orange-600" /> Jacuzzi
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            
+            <Button type="submit" className="w-full btn-primary" disabled={updateClient.isPending}>
+              {updateClient.isPending ? "A guardar..." : "Guardar Alterações"}
             </Button>
           </form>
         </Form>
