@@ -1,26 +1,43 @@
 import { useQuery } from "@tanstack/react-query";
 
-interface WeatherData {
+export interface WeatherData {
   temperature: number;
   weatherCode: number;
   windSpeed: number;
   isDay: boolean;
   precipitation: number;
+  humidity: number;
   alerts: WeatherAlert[];
 }
 
-interface WeatherAlert {
+export interface WeatherAlert {
   type: "rain" | "wind" | "storm";
   message: string;
   severity: "warning" | "danger";
 }
 
-interface HourlyForecast {
+export interface HourlyForecast {
   time: string;
   temperature: number;
   precipitation: number;
+  precipitationProbability: number;
   windSpeed: number;
   weatherCode: number;
+}
+
+export interface DailyForecast {
+  date: string;
+  temperatureMax: number;
+  temperatureMin: number;
+  weatherCode: number;
+  precipitationSum: number;
+  precipitationProbability: number;
+  windSpeedMax: number;
+}
+
+export interface DetailedWeatherData extends WeatherData {
+  hourly: HourlyForecast[];
+  daily: DailyForecast[];
 }
 
 const WEATHER_CODES: Record<number, { description: string; icon: string }> = {
@@ -122,7 +139,7 @@ async function fetchWeather(
   latitude: number,
   longitude: number
 ): Promise<WeatherData> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m,is_day,precipitation&hourly=temperature_2m,precipitation,wind_speed_10m,weather_code&timezone=auto&forecast_days=1`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m,is_day,precipitation,relative_humidity_2m&hourly=temperature_2m,precipitation,precipitation_probability,wind_speed_10m,weather_code&timezone=auto&forecast_days=1`;
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -136,6 +153,7 @@ async function fetchWeather(
       time,
       temperature: data.hourly.temperature_2m[i],
       precipitation: data.hourly.precipitation[i],
+      precipitationProbability: data.hourly.precipitation_probability[i],
       windSpeed: data.hourly.wind_speed_10m[i],
       weatherCode: data.hourly.weather_code[i],
     })
@@ -149,7 +167,59 @@ async function fetchWeather(
     windSpeed: data.current.wind_speed_10m,
     isDay: data.current.is_day === 1,
     precipitation: data.current.precipitation,
+    humidity: data.current.relative_humidity_2m,
     alerts,
+  };
+}
+
+async function fetchDetailedWeather(
+  latitude: number,
+  longitude: number
+): Promise<DetailedWeatherData> {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m,is_day,precipitation,relative_humidity_2m&hourly=temperature_2m,precipitation,precipitation_probability,wind_speed_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=7`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Erro ao obter dados meteorológicos");
+  }
+
+  const data = await response.json();
+
+  const hourlyForecast: HourlyForecast[] = data.hourly.time.map(
+    (time: string, i: number) => ({
+      time,
+      temperature: data.hourly.temperature_2m[i],
+      precipitation: data.hourly.precipitation[i],
+      precipitationProbability: data.hourly.precipitation_probability[i],
+      windSpeed: data.hourly.wind_speed_10m[i],
+      weatherCode: data.hourly.weather_code[i],
+    })
+  );
+
+  const dailyForecast: DailyForecast[] = data.daily.time.map(
+    (date: string, i: number) => ({
+      date,
+      temperatureMax: Math.round(data.daily.temperature_2m_max[i]),
+      temperatureMin: Math.round(data.daily.temperature_2m_min[i]),
+      weatherCode: data.daily.weather_code[i],
+      precipitationSum: data.daily.precipitation_sum[i],
+      precipitationProbability: data.daily.precipitation_probability_max[i],
+      windSpeedMax: data.daily.wind_speed_10m_max[i],
+    })
+  );
+
+  const alerts = generateAlerts(data.current.wind_speed_10m, hourlyForecast);
+
+  return {
+    temperature: Math.round(data.current.temperature_2m),
+    weatherCode: data.current.weather_code,
+    windSpeed: data.current.wind_speed_10m,
+    isDay: data.current.is_day === 1,
+    precipitation: data.current.precipitation,
+    humidity: data.current.relative_humidity_2m,
+    alerts,
+    hourly: hourlyForecast,
+    daily: dailyForecast,
   };
 }
 
@@ -157,6 +227,16 @@ export function useWeather(latitude = 39.2417, longitude = -9.3128) {
   return useQuery({
     queryKey: ["weather", latitude, longitude],
     queryFn: () => fetchWeather(latitude, longitude),
+    staleTime: 10 * 60 * 1000,
+    refetchInterval: 15 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+export function useDetailedWeather(latitude = 39.2417, longitude = -9.3128) {
+  return useQuery({
+    queryKey: ["weather-detailed", latitude, longitude],
+    queryFn: () => fetchDetailedWeather(latitude, longitude),
     staleTime: 10 * 60 * 1000,
     refetchInterval: 15 * 60 * 1000,
     retry: 2,
