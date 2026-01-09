@@ -1,9 +1,10 @@
 import { db } from "./db";
 import {
-  clients, appointments, serviceLogs,
+  clients, appointments, serviceLogs, reminders,
   type InsertClient, type Client,
   type InsertAppointment, type Appointment,
-  type InsertServiceLog, type ServiceLog
+  type InsertServiceLog, type ServiceLog,
+  type InsertReminder, type Reminder
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -16,7 +17,7 @@ export interface IStorage {
   deleteClient(id: number, userId: string): Promise<void>;
 
   // Appointments
-  getAppointments(userId: string, clientId?: number): Promise<Appointment[]>; // Filter by client optional
+  getAppointments(userId: string, clientId?: number): Promise<Appointment[]>;
   createAppointment(appointment: InsertAppointment & { userId: string }): Promise<Appointment>;
   updateAppointment(id: number, userId: string, updates: Partial<InsertAppointment>): Promise<Appointment | undefined>;
   deleteAppointment(id: number, userId: string): Promise<void>;
@@ -25,6 +26,12 @@ export interface IStorage {
   getServiceLogs(userId: string, clientId?: number): Promise<ServiceLog[]>;
   createServiceLog(log: InsertServiceLog & { userId: string }): Promise<ServiceLog>;
   deleteServiceLog(id: number, userId: string): Promise<void>;
+
+  // Reminders
+  getReminders(userId: string, clientId?: number): Promise<Reminder[]>;
+  createReminder(reminder: InsertReminder & { userId: string }): Promise<Reminder>;
+  updateReminder(id: number, userId: string, updates: Partial<InsertReminder>): Promise<Reminder | undefined>;
+  deleteReminder(id: number, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -105,6 +112,36 @@ export class DatabaseStorage implements IStorage {
 
   async deleteServiceLog(id: number, userId: string): Promise<void> {
     await db.delete(serviceLogs).where(and(eq(serviceLogs.id, id), eq(serviceLogs.userId, userId)));
+  }
+
+  // Reminders
+  async getReminders(userId: string, clientId?: number): Promise<Reminder[]> {
+    const conditions = [eq(reminders.userId, userId)];
+    if (clientId) conditions.push(eq(reminders.clientId, clientId));
+    
+    return await db
+      .select()
+      .from(reminders)
+      .where(and(...conditions))
+      .orderBy(desc(reminders.nextDue));
+  }
+
+  async createReminder(reminder: InsertReminder & { userId: string }): Promise<Reminder> {
+    const [newReminder] = await db.insert(reminders).values(reminder).returning();
+    return newReminder;
+  }
+
+  async updateReminder(id: number, userId: string, updates: Partial<InsertReminder>): Promise<Reminder | undefined> {
+    const [updated] = await db
+      .update(reminders)
+      .set(updates)
+      .where(and(eq(reminders.id, id), eq(reminders.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteReminder(id: number, userId: string): Promise<void> {
+    await db.delete(reminders).where(and(eq(reminders.id, id), eq(reminders.userId, userId)));
   }
 }
 

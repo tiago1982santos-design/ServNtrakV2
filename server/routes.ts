@@ -2,6 +2,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 
@@ -12,6 +13,9 @@ export async function registerRoutes(
   // Setup Auth FIRST
   await setupAuth(app);
   registerAuthRoutes(app);
+  
+  // Object Storage for photo uploads
+  registerObjectStorageRoutes(app);
 
   // Middleware to enforce auth for API routes
   const requireAuth = (req: any, res: any, next: any) => {
@@ -189,6 +193,69 @@ export async function registerRoutes(
   app.delete(api.serviceLogs.delete.path, requireAuth, async (req, res) => {
     const userId = (req.user as any).claims.sub;
     await storage.deleteServiceLog(Number(req.params.id), userId);
+    res.status(204).end();
+  });
+
+  // --- Reminders ---
+
+  app.get(api.reminders.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const clientId = req.query.clientId ? Number(req.query.clientId) : undefined;
+    const remindersList = await storage.getReminders(userId, clientId);
+    
+    const enrichedReminders = await Promise.all(remindersList.map(async (reminder) => {
+      const client = await storage.getClient(reminder.clientId);
+      return { ...reminder, client: client! };
+    }));
+
+    res.json(enrichedReminders);
+  });
+
+  app.post(api.reminders.create.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.reminders.create.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      
+      const client = await storage.getClient(input.clientId);
+      if (!client || client.userId !== userId) {
+        return res.status(400).json({ message: "Invalid client" });
+      }
+
+      const reminder = await storage.createReminder({ ...input, userId });
+      res.status(201).json(reminder);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.reminders.update.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.reminders.update.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      const updated = await storage.updateReminder(Number(req.params.id), userId, input);
+      
+      if (!updated) return res.status(404).json({ message: "Reminder not found" });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.reminders.delete.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    await storage.deleteReminder(Number(req.params.id), userId);
     res.status(204).end();
   });
 

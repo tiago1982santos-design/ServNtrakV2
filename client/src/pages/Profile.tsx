@@ -57,8 +57,8 @@ const implementedFeatures = [
   },
   {
     icon: Bell,
-    title: "Alertas Meteorológicos",
-    description: "Avisos automáticos quando há condições adversas para trabalho no exterior nas próximas horas."
+    title: "Lembretes Periódicos",
+    description: "Sistema de lembretes para manutenções regulares com frequência semanal, quinzenal, mensal, trimestral ou anual."
   },
   {
     icon: Leaf,
@@ -81,7 +81,7 @@ const futureIdeas = [
   {
     title: "Fotos nos Registos",
     description: "Adicionar fotografias do antes/depois aos registos de serviço.",
-    source: "sugestão"
+    source: "em desenvolvimento"
   },
   {
     title: "Faturação e Orçamentos",
@@ -96,11 +96,6 @@ const futureIdeas = [
   {
     title: "Rotas Otimizadas",
     description: "Planear a melhor rota para visitar vários clientes no mesmo dia.",
-    source: "sugestão"
-  },
-  {
-    title: "Lembretes Periódicos",
-    description: "Alertas para manutenções regulares (ex: limpeza mensal de piscina).",
     source: "sugestão"
   },
   {

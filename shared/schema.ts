@@ -42,6 +42,20 @@ export const serviceLogs = pgTable("service_logs", {
   date: timestamp("date").notNull(),
   type: text("type").notNull(), // 'Garden', 'Pool', 'Jacuzzi', 'General'
   description: text("description").notNull(), // What was done
+  photosBefore: text("photos_before").array(), // URLs of before photos
+  photosAfter: text("photos_after").array(), // URLs of after photos
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const reminders = pgTable("reminders", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  clientId: integer("client_id").notNull(),
+  title: text("title").notNull(),
+  type: text("type").notNull(), // 'Garden', 'Pool', 'Jacuzzi', 'General'
+  frequency: text("frequency").notNull(), // 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'
+  nextDue: timestamp("next_due").notNull(),
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -54,6 +68,14 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   }),
   appointments: many(appointments),
   serviceLogs: many(serviceLogs),
+  reminders: many(reminders),
+}));
+
+export const remindersRelations = relations(reminders, ({ one }) => ({
+  client: one(clients, {
+    fields: [reminders.clientId],
+    references: [clients.id],
+  }),
 }));
 
 export const appointmentsRelations = relations(appointments, ({ one }) => ({
@@ -75,6 +97,7 @@ export const serviceLogsRelations = relations(serviceLogs, ({ one }) => ({
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, userId: true, createdAt: true });
 export const insertAppointmentSchema = createInsertSchema(appointments).omit({ id: true, userId: true, createdAt: true });
 export const insertServiceLogSchema = createInsertSchema(serviceLogs).omit({ id: true, userId: true, createdAt: true });
+export const insertReminderSchema = createInsertSchema(reminders).omit({ id: true, userId: true, createdAt: true });
 
 // === TYPES ===
 
@@ -86,3 +109,6 @@ export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
 
 export type ServiceLog = typeof serviceLogs.$inferSelect;
 export type InsertServiceLog = z.infer<typeof insertServiceLogSchema>;
+
+export type Reminder = typeof reminders.$inferSelect;
+export type InsertReminder = z.infer<typeof insertReminderSchema>;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, clients, appointments, serviceLogs } from './schema';
+import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, clients, appointments, serviceLogs, reminders } from './schema';
 
 // Shared error schemas
 export const errorSchemas = {
@@ -124,6 +124,45 @@ export const api = {
     delete: {
       method: 'DELETE' as const,
       path: '/api/service-logs/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  reminders: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/reminders',
+      input: z.object({
+        clientId: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof reminders.$inferSelect & { client: typeof clients.$inferSelect }>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/reminders',
+      input: insertReminderSchema,
+      responses: {
+        201: z.custom<typeof reminders.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/reminders/:id',
+      input: insertReminderSchema.partial(),
+      responses: {
+        200: z.custom<typeof reminders.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/reminders/:id',
       responses: {
         204: z.void(),
         404: errorSchemas.notFound,

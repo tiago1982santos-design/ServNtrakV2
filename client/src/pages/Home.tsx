@@ -1,7 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useAppointments } from "@/hooks/use-appointments";
-import { format, isToday, isTomorrow, startOfDay } from "date-fns";
-import { Loader2, CalendarClock, MapPin, CheckCircle2 } from "lucide-react";
+import { useReminders } from "@/hooks/use-reminders";
+import { format, isToday, isTomorrow, startOfDay, isPast } from "date-fns";
+import { Loader2, CalendarClock, MapPin, CheckCircle2, Bell, Map } from "lucide-react";
 import { Link } from "wouter";
 import { BottomNav } from "@/components/BottomNav";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
@@ -123,21 +124,21 @@ export default function Home() {
         <section>
           <h2 className="text-lg font-bold font-display text-foreground mb-4">Ações Rápidas</h2>
           <div className="grid grid-cols-2 gap-4">
-            <Link href="/clients" className="bg-gradient-to-br from-green-50 to-green-100/50 p-4 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition-all">
+            <Link href="/map" className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-800/10 p-4 rounded-2xl border border-green-100 dark:border-green-800/30 shadow-sm hover:shadow-md transition-all" data-testid="link-quick-map">
               <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center mb-3">
-                <MapPin className="w-5 h-5 text-green-700" />
+                <Map className="w-5 h-5 text-green-700 dark:text-green-400" />
               </div>
-              <h3 className="font-bold text-green-900">Mapa de Clientes</h3>
-              <p className="text-xs text-green-700/70 mt-1">Ver rotas</p>
+              <h3 className="font-bold text-green-900 dark:text-green-300">Mapa</h3>
+              <p className="text-xs text-green-700/70 dark:text-green-400/70 mt-1">Ver clientes</p>
             </Link>
             
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-all cursor-pointer">
-               <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center mb-3">
-                <CalendarClock className="w-5 h-5 text-blue-700" />
+            <Link href="/reminders" className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-900/20 dark:to-amber-800/10 p-4 rounded-2xl border border-amber-100 dark:border-amber-800/30 shadow-sm hover:shadow-md transition-all" data-testid="link-quick-reminders">
+              <div className="w-10 h-10 bg-amber-500/10 rounded-full flex items-center justify-center mb-3">
+                <Bell className="w-5 h-5 text-amber-700 dark:text-amber-400" />
               </div>
-              <h3 className="font-bold text-blue-900">Agenda</h3>
-              <p className="text-xs text-blue-700/70 mt-1">Adicionar tarefa</p>
-            </div>
+              <h3 className="font-bold text-amber-900 dark:text-amber-300">Lembretes</h3>
+              <p className="text-xs text-amber-700/70 dark:text-amber-400/70 mt-1">Manutenções</p>
+            </Link>
           </div>
         </section>
       </div>
