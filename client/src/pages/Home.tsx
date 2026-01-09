@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAppointments } from "@/hooks/use-appointments";
 import { useReminders } from "@/hooks/use-reminders";
 import { format, isToday, isTomorrow, startOfDay, isPast } from "date-fns";
-import { Loader2, CalendarClock, MapPin, CheckCircle2, Bell, Map } from "lucide-react";
+import { Loader2, CalendarClock, MapPin, CheckCircle2, Bell, Map, Euro } from "lucide-react";
 import { Link } from "wouter";
 import { BottomNav } from "@/components/BottomNav";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
@@ -123,21 +123,26 @@ export default function Home() {
         {/* Quick Actions */}
         <section>
           <h2 className="text-lg font-bold font-display text-foreground mb-4">Ações Rápidas</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Link href="/map" className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-800/10 p-4 rounded-2xl border border-green-100 dark:border-green-800/30 shadow-sm hover:shadow-md transition-all" data-testid="link-quick-map">
-              <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center mb-3">
-                <Map className="w-5 h-5 text-green-700 dark:text-green-400" />
+          <div className="grid grid-cols-3 gap-3">
+            <Link href="/map" className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-800/10 p-3 rounded-2xl border border-green-100 dark:border-green-800/30 shadow-sm hover:shadow-md transition-all" data-testid="link-quick-map">
+              <div className="w-9 h-9 bg-green-500/10 rounded-full flex items-center justify-center mb-2">
+                <Map className="w-4 h-4 text-green-700 dark:text-green-400" />
               </div>
-              <h3 className="font-bold text-green-900 dark:text-green-300">Mapa</h3>
-              <p className="text-xs text-green-700/70 dark:text-green-400/70 mt-1">Ver clientes</p>
+              <h3 className="font-bold text-sm text-green-900 dark:text-green-300">Mapa</h3>
             </Link>
             
-            <Link href="/reminders" className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-900/20 dark:to-amber-800/10 p-4 rounded-2xl border border-amber-100 dark:border-amber-800/30 shadow-sm hover:shadow-md transition-all" data-testid="link-quick-reminders">
-              <div className="w-10 h-10 bg-amber-500/10 rounded-full flex items-center justify-center mb-3">
-                <Bell className="w-5 h-5 text-amber-700 dark:text-amber-400" />
+            <Link href="/reminders" className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-900/20 dark:to-amber-800/10 p-3 rounded-2xl border border-amber-100 dark:border-amber-800/30 shadow-sm hover:shadow-md transition-all" data-testid="link-quick-reminders">
+              <div className="w-9 h-9 bg-amber-500/10 rounded-full flex items-center justify-center mb-2">
+                <Bell className="w-4 h-4 text-amber-700 dark:text-amber-400" />
               </div>
-              <h3 className="font-bold text-amber-900 dark:text-amber-300">Lembretes</h3>
-              <p className="text-xs text-amber-700/70 dark:text-amber-400/70 mt-1">Manutenções</p>
+              <h3 className="font-bold text-sm text-amber-900 dark:text-amber-300">Lembretes</h3>
+            </Link>
+
+            <Link href="/billing" className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/10 p-3 rounded-2xl border border-blue-100 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-all" data-testid="link-quick-billing">
+              <div className="w-9 h-9 bg-blue-500/10 rounded-full flex items-center justify-center mb-2">
+                <Euro className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+              </div>
+              <h3 className="font-bold text-sm text-blue-900 dark:text-blue-300">Faturação</h3>
             </Link>
           </div>
         </section>

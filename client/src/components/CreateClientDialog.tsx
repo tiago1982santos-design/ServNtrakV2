@@ -11,7 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Leaf, Waves, ThermometerSun } from "lucide-react";
+import { Loader2, Plus, Leaf, Waves, ThermometerSun, Euro, Clock } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 // Form schema extending the insert schema with validation
 const formSchema = insertClientSchema.extend({
@@ -36,8 +38,13 @@ export function CreateClientDialog() {
       hasJacuzzi: false,
       latitude: undefined,
       longitude: undefined,
+      billingType: "monthly",
+      monthlyRate: undefined,
+      hourlyRate: undefined,
     },
   });
+
+  const billingType = form.watch("billingType");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -181,6 +188,90 @@ export function CreateClientDialog() {
                   )}
                 />
               </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <FormLabel>Tipo de Faturação</FormLabel>
+              <FormField
+                control={form.control}
+                name="billingType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value || "monthly"}
+                        className="grid grid-cols-2 gap-3"
+                      >
+                        <div className={`flex items-center space-x-2 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'monthly' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
+                          <RadioGroupItem value="monthly" id="monthly" />
+                          <Label htmlFor="monthly" className="flex items-center gap-2 cursor-pointer">
+                            <Euro className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium">Mensal</span>
+                          </Label>
+                        </div>
+                        <div className={`flex items-center space-x-2 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'hourly' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
+                          <RadioGroupItem value="hourly" id="hourly" />
+                          <Label htmlFor="hourly" className="flex items-center gap-2 cursor-pointer">
+                            <Clock className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium">À Hora</span>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              {billingType === "monthly" && (
+                <FormField
+                  control={form.control}
+                  name="monthlyRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor Mensal (€)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="0.00" 
+                          className="rounded-xl"
+                          data-testid="input-monthly-rate"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {billingType === "hourly" && (
+                <FormField
+                  control={form.control}
+                  name="hourlyRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor por Hora (€)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="0.00" 
+                          className="rounded-xl"
+                          data-testid="input-hourly-rate"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             <FormField

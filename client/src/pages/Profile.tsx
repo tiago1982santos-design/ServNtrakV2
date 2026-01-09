@@ -16,8 +16,10 @@ import {
   CloudSun,
   ClipboardList,
   Bell,
-  Leaf
+  Leaf,
+  Euro
 } from "lucide-react";
+import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -59,6 +61,11 @@ const implementedFeatures = [
     icon: Bell,
     title: "Lembretes Periódicos",
     description: "Sistema de lembretes para manutenções regulares com frequência semanal, quinzenal, mensal, trimestral ou anual."
+  },
+  {
+    icon: Euro,
+    title: "Gestão de Faturação",
+    description: "Definir valores mensais fixos ou cobranças à hora por cliente. Ver resumo de faturação por tipo de cobrança."
   },
   {
     icon: Leaf,

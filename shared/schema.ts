@@ -21,6 +21,9 @@ export const clients = pgTable("clients", {
   hasPool: boolean("has_pool").default(false),
   hasJacuzzi: boolean("has_jacuzzi").default(false),
   notes: text("notes"),
+  billingType: text("billing_type").default("monthly"), // 'monthly' or 'hourly'
+  monthlyRate: doublePrecision("monthly_rate"), // Fixed monthly amount in euros
+  hourlyRate: doublePrecision("hourly_rate"), // Hourly rate in euros
   createdAt: timestamp("created_at").defaultNow(),
 });
 

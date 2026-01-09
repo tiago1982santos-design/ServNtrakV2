@@ -4,7 +4,7 @@ import { useClient, useUpdateClient } from "@/hooks/use-clients";
 import { useServiceLogs, useCreateServiceLog } from "@/hooks/use-service-logs";
 import { useAppointments, useCreateAppointment } from "@/hooks/use-appointments";
 import { useUpload } from "@/hooks/use-upload";
-import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil } from "lucide-react";
+import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil, Euro, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -17,6 +17,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertServiceLogSchema, insertAppointmentSchema, insertClientSchema, type Client } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 
 export default function ClientDetail() {
@@ -451,8 +453,13 @@ function EditClientDialog({ client }: { client: Client }) {
       hasGarden: client.hasGarden ?? false,
       hasPool: client.hasPool ?? false,
       hasJacuzzi: client.hasJacuzzi ?? false,
+      billingType: client.billingType || "monthly",
+      monthlyRate: client.monthlyRate || undefined,
+      hourlyRate: client.hourlyRate || undefined,
     }
   });
+
+  const billingType = form.watch("billingType");
 
   const onSubmit = async (values: z.infer<typeof insertClientSchema>) => {
     try {
@@ -576,6 +583,88 @@ function EditClientDialog({ client }: { client: Client }) {
                   )}
                 />
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <FormLabel>Tipo de Faturação</FormLabel>
+              <FormField
+                control={form.control}
+                name="billingType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value || "monthly"}
+                        className="grid grid-cols-2 gap-3"
+                      >
+                        <div className={`flex items-center space-x-2 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'monthly' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
+                          <RadioGroupItem value="monthly" id="edit-monthly" />
+                          <Label htmlFor="edit-monthly" className="flex items-center gap-2 cursor-pointer">
+                            <Euro className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium">Mensal</span>
+                          </Label>
+                        </div>
+                        <div className={`flex items-center space-x-2 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'hourly' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
+                          <RadioGroupItem value="hourly" id="edit-hourly" />
+                          <Label htmlFor="edit-hourly" className="flex items-center gap-2 cursor-pointer">
+                            <Clock className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium">À Hora</span>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              {billingType === "monthly" && (
+                <FormField
+                  control={form.control}
+                  name="monthlyRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor Mensal (€)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="0.00" 
+                          className="rounded-xl"
+                          data-testid="input-edit-monthly-rate"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {billingType === "hourly" && (
+                <FormField
+                  control={form.control}
+                  name="hourlyRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor por Hora (€)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="0.00" 
+                          className="rounded-xl"
+                          data-testid="input-edit-hourly-rate"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
             
             <Button type="submit" className="w-full btn-primary" disabled={updateClient.isPending}>
