@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { useClient, useUpdateClient } from "@/hooks/use-clients";
 import { useServiceLogs, useCreateServiceLog } from "@/hooks/use-service-logs";
+import { useQuickPhotos, useDeleteQuickPhoto } from "@/hooks/use-quick-photos";
 import { useAppointments, useCreateAppointment } from "@/hooks/use-appointments";
 import { useUpload } from "@/hooks/use-upload";
 import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil, Euro, Clock } from "lucide-react";
@@ -27,6 +28,8 @@ export default function ClientDetail() {
   const { data: client, isLoading } = useClient(clientId);
   const { data: logs } = useServiceLogs(id);
   const { data: appointments } = useAppointments({ clientId: id });
+  const { data: quickPhotos } = useQuickPhotos(id);
+  const deleteQuickPhoto = useDeleteQuickPhoto();
 
   if (isLoading) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-primary" /></div>;
   if (!client) return <div>Cliente não encontrado</div>;
@@ -113,6 +116,38 @@ export default function ClientDetail() {
                   <p className="text-sm text-foreground">{log.description}</p>
                 </div>
               ))
+            )}
+
+            {/* Quick Photos Section */}
+            {quickPhotos && quickPhotos.length > 0 && (
+              <div className="mt-8">
+                <h3 className="font-bold text-lg mb-4">Capturas Rápidas</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {quickPhotos.map((photo) => (
+                    <div key={photo.id} className="relative group aspect-square">
+                      <img
+                        src={photo.photoUrl}
+                        alt="Captura rápida"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-white hover:bg-white/20"
+                          onClick={() => deleteQuickPhoto.mutate(photo.id)}
+                          data-testid={`button-delete-quick-photo-${photo.id}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="absolute bottom-1 left-1 right-1 text-[10px] text-white bg-black/50 rounded px-1 truncate">
+                        {format(new Date(photo.createdAt!), "dd/MM/yy")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </TabsContent>
 

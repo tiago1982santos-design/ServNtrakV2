@@ -6,6 +6,7 @@ import { Loader2, CalendarClock, MapPin, CheckCircle2, Bell, Map, Euro } from "l
 import { Link } from "wouter";
 import { BottomNav } from "@/components/BottomNav";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
+import { QuickPhotoCaptureButton } from "@/components/QuickPhotoCaptureButton";
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
@@ -148,8 +149,9 @@ export default function Home() {
         </section>
       </div>
 
-      {/* Floating Action Button for adding client */}
-      <div className="fixed bottom-24 right-6 z-40">
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-24 right-6 z-40 flex flex-col gap-3">
+        <QuickPhotoCaptureButton />
         <CreateClientDialog />
       </div>
 
