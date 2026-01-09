@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries } from './schema';
+import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, insertPurchaseCategorySchema, insertStoreSchema, insertPurchaseSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries, purchaseCategories, stores, purchases } from './schema';
 
 // Robust numeric validator: preprocess to reject NaN/Infinity before coercion
 const safePositiveNumber = (max: number, fieldName: string) =>
@@ -253,6 +253,126 @@ export const api = {
     delete: {
       method: 'DELETE' as const,
       path: '/api/quick-photos/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  purchaseCategories: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/purchase-categories',
+      responses: {
+        200: z.array(z.custom<typeof purchaseCategories.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/purchase-categories',
+      input: insertPurchaseCategorySchema,
+      responses: {
+        201: z.custom<typeof purchaseCategories.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/purchase-categories/:id',
+      input: insertPurchaseCategorySchema.partial(),
+      responses: {
+        200: z.custom<typeof purchaseCategories.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/purchase-categories/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  stores: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/stores',
+      responses: {
+        200: z.array(z.custom<typeof stores.$inferSelect>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/stores/:id',
+      responses: {
+        200: z.custom<typeof stores.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/stores',
+      input: insertStoreSchema,
+      responses: {
+        201: z.custom<typeof stores.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/stores/:id',
+      input: insertStoreSchema.partial(),
+      responses: {
+        200: z.custom<typeof stores.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/stores/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  purchases: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/purchases',
+      input: z.object({
+        categoryId: z.string().optional(),
+        storeId: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof purchases.$inferSelect & { store: typeof stores.$inferSelect; category: typeof purchaseCategories.$inferSelect }>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/purchases',
+      input: insertPurchaseSchema,
+      responses: {
+        201: z.custom<typeof purchases.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/purchases/:id',
+      input: insertPurchaseSchema.partial(),
+      responses: {
+        200: z.custom<typeof purchases.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/purchases/:id',
       responses: {
         204: z.void(),
         404: errorSchemas.notFound,

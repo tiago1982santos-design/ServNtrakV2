@@ -329,5 +329,170 @@ export async function registerRoutes(
     res.status(204).end();
   });
 
+  // --- Purchase Categories ---
+
+  app.get(api.purchaseCategories.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    // Initialize default categories if needed
+    await storage.initializeDefaultCategories(userId);
+    const categories = await storage.getPurchaseCategories(userId);
+    res.json(categories);
+  });
+
+  app.post(api.purchaseCategories.create.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.purchaseCategories.create.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      const category = await storage.createPurchaseCategory({ ...input, userId });
+      res.status(201).json(category);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.purchaseCategories.update.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.purchaseCategories.update.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      const updated = await storage.updatePurchaseCategory(Number(req.params.id), userId, input);
+      if (!updated) return res.status(404).json({ message: "Categoria não encontrada" });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.purchaseCategories.delete.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    await storage.deletePurchaseCategory(Number(req.params.id), userId);
+    res.status(204).end();
+  });
+
+  // --- Stores ---
+
+  app.get(api.stores.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const storesList = await storage.getStores(userId);
+    res.json(storesList);
+  });
+
+  app.get(api.stores.get.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const store = await storage.getStore(Number(req.params.id), userId);
+    if (!store) return res.status(404).json({ message: "Loja não encontrada" });
+    res.json(store);
+  });
+
+  app.post(api.stores.create.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.stores.create.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      const store = await storage.createStore({ ...input, userId });
+      res.status(201).json(store);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.stores.update.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.stores.update.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      const updated = await storage.updateStore(Number(req.params.id), userId, input);
+      if (!updated) return res.status(404).json({ message: "Loja não encontrada" });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.stores.delete.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    await storage.deleteStore(Number(req.params.id), userId);
+    res.status(204).end();
+  });
+
+  // --- Purchases ---
+
+  app.get(api.purchases.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
+    const storeId = req.query.storeId ? Number(req.query.storeId) : undefined;
+    const purchasesList = await storage.getPurchases(userId, categoryId, storeId);
+    res.json(purchasesList);
+  });
+
+  app.post(api.purchases.create.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.purchases.create.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      
+      // Verify store belongs to user
+      const store = await storage.getStore(input.storeId, userId);
+      if (!store) {
+        return res.status(400).json({ message: "Loja inválida" });
+      }
+
+      const purchase = await storage.createPurchase({ ...input, userId });
+      res.status(201).json(purchase);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.purchases.update.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.purchases.update.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      const updated = await storage.updatePurchase(Number(req.params.id), userId, input);
+      if (!updated) return res.status(404).json({ message: "Compra não encontrada" });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.purchases.delete.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    await storage.deletePurchase(Number(req.params.id), userId);
+    res.status(204).end();
+  });
+
   return httpServer;
 }

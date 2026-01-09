@@ -110,6 +110,44 @@ export const quickPhotos = pgTable("quick_photos", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Purchase categories (Jardim, Rega, Piscina, Jacuzzi, Fitofarmacêuticos, Combustíveis, Máquinas, custom)
+export const purchaseCategories = pgTable("purchase_categories", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  isDefault: boolean("is_default").default(false), // Pre-populated categories
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Stores/suppliers information
+export const stores = pgTable("stores", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  address: text("address"),
+  phone: text("phone"),
+  email: text("email"),
+  taxId: text("tax_id"), // NIF/Contribuinte
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Purchase records
+export const purchases = pgTable("purchases", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  storeId: integer("store_id").notNull(),
+  categoryId: integer("category_id").notNull(),
+  productName: text("product_name").notNull(),
+  quantity: doublePrecision("quantity").notNull().default(1),
+  totalWithoutDiscount: doublePrecision("total_without_discount").notNull(), // Valor total sem desconto
+  discountValue: doublePrecision("discount_value").default(0), // Valor do desconto
+  finalTotal: doublePrecision("final_total").notNull(), // Valor final pago
+  purchaseDate: timestamp("purchase_date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // === RELATIONS ===
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
@@ -167,6 +205,33 @@ export const serviceLogMaterialEntriesRelations = relations(serviceLogMaterialEn
   }),
 }));
 
+export const purchaseCategoriesRelations = relations(purchaseCategories, ({ one, many }) => ({
+  user: one(users, {
+    fields: [purchaseCategories.userId],
+    references: [users.id],
+  }),
+  purchases: many(purchases),
+}));
+
+export const storesRelations = relations(stores, ({ one, many }) => ({
+  user: one(users, {
+    fields: [stores.userId],
+    references: [users.id],
+  }),
+  purchases: many(purchases),
+}));
+
+export const purchasesRelations = relations(purchases, ({ one }) => ({
+  store: one(stores, {
+    fields: [purchases.storeId],
+    references: [stores.id],
+  }),
+  category: one(purchaseCategories, {
+    fields: [purchases.categoryId],
+    references: [purchaseCategories.id],
+  }),
+}));
+
 // === BASE SCHEMAS ===
 
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, userId: true, createdAt: true });
@@ -176,6 +241,9 @@ export const insertReminderSchema = createInsertSchema(reminders).omit({ id: tru
 export const insertQuickPhotoSchema = createInsertSchema(quickPhotos).omit({ id: true, userId: true, createdAt: true });
 export const insertServiceLogLaborEntrySchema = createInsertSchema(serviceLogLaborEntries).omit({ id: true, createdAt: true });
 export const insertServiceLogMaterialEntrySchema = createInsertSchema(serviceLogMaterialEntries).omit({ id: true, createdAt: true });
+export const insertPurchaseCategorySchema = createInsertSchema(purchaseCategories).omit({ id: true, userId: true, createdAt: true });
+export const insertStoreSchema = createInsertSchema(stores).omit({ id: true, userId: true, createdAt: true });
+export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, userId: true, createdAt: true });
 
 // === TYPES ===
 
@@ -204,4 +272,19 @@ export type InsertQuickPhoto = z.infer<typeof insertQuickPhotoSchema>;
 export type ServiceLogWithEntries = ServiceLog & {
   laborEntries: ServiceLogLaborEntry[];
   materialEntries: ServiceLogMaterialEntry[];
+};
+
+export type PurchaseCategory = typeof purchaseCategories.$inferSelect;
+export type InsertPurchaseCategory = z.infer<typeof insertPurchaseCategorySchema>;
+
+export type Store = typeof stores.$inferSelect;
+export type InsertStore = z.infer<typeof insertStoreSchema>;
+
+export type Purchase = typeof purchases.$inferSelect;
+export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
+
+// Extended type for purchase with store and category
+export type PurchaseWithDetails = Purchase & {
+  store: Store;
+  category: PurchaseCategory;
 };

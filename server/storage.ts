@@ -2,6 +2,7 @@ import { db } from "./db";
 import {
   clients, appointments, serviceLogs, reminders, quickPhotos,
   serviceLogLaborEntries, serviceLogMaterialEntries,
+  purchaseCategories, stores, purchases,
   type InsertClient, type Client,
   type InsertAppointment, type Appointment,
   type InsertServiceLog, type ServiceLog,
@@ -9,7 +10,10 @@ import {
   type InsertQuickPhoto, type QuickPhoto,
   type InsertServiceLogLaborEntry, type ServiceLogLaborEntry,
   type InsertServiceLogMaterialEntry, type ServiceLogMaterialEntry,
-  type ServiceLogWithEntries
+  type ServiceLogWithEntries,
+  type InsertPurchaseCategory, type PurchaseCategory,
+  type InsertStore, type Store,
+  type InsertPurchase, type Purchase, type PurchaseWithDetails
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -33,8 +37,8 @@ export interface IStorage {
   getUnpaidExtraServices(userId: string): Promise<(ServiceLog & { clientName: string })[]>;
   createServiceLogWithEntries(
     log: InsertServiceLog & { userId: string },
-    laborEntries: Omit<InsertServiceLogLaborEntry, 'serviceLogId'>[],
-    materialEntries: Omit<InsertServiceLogMaterialEntry, 'serviceLogId'>[]
+    laborEntries: Omit<InsertServiceLogLaborEntry, 'serviceLogId' | 'cost'>[],
+    materialEntries: Omit<InsertServiceLogMaterialEntry, 'serviceLogId' | 'cost'>[]
   ): Promise<ServiceLogWithEntries>;
   updateServiceLog(id: number, userId: string, updates: Partial<InsertServiceLog>): Promise<ServiceLog | undefined>;
   markServiceLogAsPaid(id: number, userId: string): Promise<ServiceLog | undefined>;
@@ -50,6 +54,26 @@ export interface IStorage {
   getQuickPhotos(userId: string, clientId?: number): Promise<QuickPhoto[]>;
   createQuickPhoto(photo: InsertQuickPhoto & { userId: string }): Promise<QuickPhoto>;
   deleteQuickPhoto(id: number, userId: string): Promise<void>;
+
+  // Purchase Categories
+  getPurchaseCategories(userId: string): Promise<PurchaseCategory[]>;
+  createPurchaseCategory(category: InsertPurchaseCategory & { userId: string }): Promise<PurchaseCategory>;
+  updatePurchaseCategory(id: number, userId: string, updates: Partial<InsertPurchaseCategory>): Promise<PurchaseCategory | undefined>;
+  deletePurchaseCategory(id: number, userId: string): Promise<void>;
+  initializeDefaultCategories(userId: string): Promise<void>;
+
+  // Stores
+  getStores(userId: string): Promise<Store[]>;
+  getStore(id: number, userId: string): Promise<Store | undefined>;
+  createStore(store: InsertStore & { userId: string }): Promise<Store>;
+  updateStore(id: number, userId: string, updates: Partial<InsertStore>): Promise<Store | undefined>;
+  deleteStore(id: number, userId: string): Promise<void>;
+
+  // Purchases
+  getPurchases(userId: string, categoryId?: number, storeId?: number): Promise<PurchaseWithDetails[]>;
+  createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase>;
+  updatePurchase(id: number, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase | undefined>;
+  deletePurchase(id: number, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -171,8 +195,8 @@ export class DatabaseStorage implements IStorage {
 
   async createServiceLogWithEntries(
     log: InsertServiceLog & { userId: string },
-    laborEntries: Omit<InsertServiceLogLaborEntry, 'serviceLogId'>[],
-    materialEntries: Omit<InsertServiceLogMaterialEntry, 'serviceLogId'>[]
+    laborEntries: Omit<InsertServiceLogLaborEntry, 'serviceLogId' | 'cost'>[],
+    materialEntries: Omit<InsertServiceLogMaterialEntry, 'serviceLogId' | 'cost'>[]
   ): Promise<ServiceLogWithEntries> {
     // Recalculate costs server-side for data integrity (round to 2 decimal places)
     const roundToTwo = (n: number) => Math.round(n * 100) / 100;
@@ -302,6 +326,134 @@ export class DatabaseStorage implements IStorage {
 
   async deleteQuickPhoto(id: number, userId: string): Promise<void> {
     await db.delete(quickPhotos).where(and(eq(quickPhotos.id, id), eq(quickPhotos.userId, userId)));
+  }
+
+  // Purchase Categories
+  async getPurchaseCategories(userId: string): Promise<PurchaseCategory[]> {
+    return await db
+      .select()
+      .from(purchaseCategories)
+      .where(eq(purchaseCategories.userId, userId))
+      .orderBy(purchaseCategories.name);
+  }
+
+  async createPurchaseCategory(category: InsertPurchaseCategory & { userId: string }): Promise<PurchaseCategory> {
+    const [newCategory] = await db.insert(purchaseCategories).values(category).returning();
+    return newCategory;
+  }
+
+  async updatePurchaseCategory(id: number, userId: string, updates: Partial<InsertPurchaseCategory>): Promise<PurchaseCategory | undefined> {
+    const [updated] = await db
+      .update(purchaseCategories)
+      .set(updates)
+      .where(and(eq(purchaseCategories.id, id), eq(purchaseCategories.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deletePurchaseCategory(id: number, userId: string): Promise<void> {
+    await db.delete(purchaseCategories).where(and(eq(purchaseCategories.id, id), eq(purchaseCategories.userId, userId)));
+  }
+
+  async initializeDefaultCategories(userId: string): Promise<void> {
+    const existing = await this.getPurchaseCategories(userId);
+    if (existing.length > 0) return;
+
+    const defaultCategories = [
+      'Jardim',
+      'Rega',
+      'Piscina',
+      'Jacuzzi',
+      'Fitofarmacêuticos',
+      'Combustíveis',
+      'Máquinas',
+    ];
+
+    for (const name of defaultCategories) {
+      await db.insert(purchaseCategories).values({
+        userId,
+        name,
+        isDefault: true,
+      });
+    }
+  }
+
+  // Stores
+  async getStores(userId: string): Promise<Store[]> {
+    return await db
+      .select()
+      .from(stores)
+      .where(eq(stores.userId, userId))
+      .orderBy(stores.name);
+  }
+
+  async getStore(id: number, userId: string): Promise<Store | undefined> {
+    const [store] = await db
+      .select()
+      .from(stores)
+      .where(and(eq(stores.id, id), eq(stores.userId, userId)));
+    return store;
+  }
+
+  async createStore(store: InsertStore & { userId: string }): Promise<Store> {
+    const [newStore] = await db.insert(stores).values(store).returning();
+    return newStore;
+  }
+
+  async updateStore(id: number, userId: string, updates: Partial<InsertStore>): Promise<Store | undefined> {
+    const [updated] = await db
+      .update(stores)
+      .set(updates)
+      .where(and(eq(stores.id, id), eq(stores.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteStore(id: number, userId: string): Promise<void> {
+    await db.delete(stores).where(and(eq(stores.id, id), eq(stores.userId, userId)));
+  }
+
+  // Purchases
+  async getPurchases(userId: string, categoryId?: number, storeId?: number): Promise<PurchaseWithDetails[]> {
+    const conditions = [eq(purchases.userId, userId)];
+    if (categoryId) conditions.push(eq(purchases.categoryId, categoryId));
+    if (storeId) conditions.push(eq(purchases.storeId, storeId));
+
+    const result = await db
+      .select({
+        purchase: purchases,
+        store: stores,
+        category: purchaseCategories,
+      })
+      .from(purchases)
+      .innerJoin(stores, eq(purchases.storeId, stores.id))
+      .innerJoin(purchaseCategories, eq(purchases.categoryId, purchaseCategories.id))
+      .where(and(...conditions))
+      .orderBy(desc(purchases.purchaseDate));
+
+    return result.map(r => ({
+      ...r.purchase,
+      store: r.store,
+      category: r.category,
+    }));
+  }
+
+  async createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase> {
+    const [newPurchase] = await db.insert(purchases).values(purchase).returning();
+    return newPurchase;
+  }
+
+  async updatePurchase(id: number, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase | undefined> {
+    const [updated] = await db
+      .update(purchases)
+      .set(updates)
+      .where(and(eq(purchases.id, id), eq(purchases.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deletePurchase(id: number, userId: string): Promise<void> {
+    await db.delete(purchases).where(and(eq(purchases.id, id), eq(purchases.userId, userId)));
   }
 }
 
