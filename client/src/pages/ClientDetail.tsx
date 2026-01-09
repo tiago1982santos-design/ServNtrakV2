@@ -76,9 +76,9 @@ export default function ClientDetail() {
           {client.hasPool && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
               <Waves className="w-4 h-4" /> Piscina
-              {client.poolLength && client.poolWidth && client.poolDepth && (
+              {client.poolLength && client.poolWidth && client.poolMinDepth && client.poolMaxDepth && (
                 <span className="text-xs font-bold">
-                  ({(client.poolLength * client.poolWidth * client.poolDepth).toFixed(0)} m³)
+                  ({(client.poolLength * client.poolWidth * ((client.poolMinDepth + client.poolMaxDepth) / 2)).toFixed(0)} m³)
                 </span>
               )}
             </div>
@@ -542,7 +542,8 @@ function EditClientDialog({ client }: { client: Client }) {
       hourlyRate: client.hourlyRate || undefined,
       poolLength: client.poolLength || undefined,
       poolWidth: client.poolWidth || undefined,
-      poolDepth: client.poolDepth || undefined,
+      poolMinDepth: client.poolMinDepth || undefined,
+      poolMaxDepth: client.poolMaxDepth || undefined,
       jacuzziLength: client.jacuzziLength || undefined,
       jacuzziWidth: client.jacuzziWidth || undefined,
       jacuzziDepth: client.jacuzziDepth || undefined,
@@ -683,7 +684,7 @@ function EditClientDialog({ client }: { client: Client }) {
                   <Waves className="w-4 h-4" />
                   Dimensões da Piscina (metros)
                 </FormLabel>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <FormField
                     control={form.control}
                     name="poolLength"
@@ -724,17 +725,39 @@ function EditClientDialog({ client }: { client: Client }) {
                       </FormItem>
                     )}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <FormField
                     control={form.control}
-                    name="poolDepth"
+                    name="poolMinDepth"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Prof.</FormLabel>
+                        <FormLabel className="text-xs">Prof. Mín.</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
                             step="0.1"
-                            placeholder="1.5" 
+                            placeholder="1.0" 
+                            className="rounded-xl"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="poolMaxDepth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Prof. Máx.</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.1"
+                            placeholder="2.0" 
                             className="rounded-xl"
                             {...field}
                             value={field.value ?? ""}
@@ -745,9 +768,9 @@ function EditClientDialog({ client }: { client: Client }) {
                     )}
                   />
                 </div>
-                {form.watch("poolLength") && form.watch("poolWidth") && form.watch("poolDepth") && (
+                {form.watch("poolLength") && form.watch("poolWidth") && form.watch("poolMinDepth") && form.watch("poolMaxDepth") && (
                   <div className="text-sm text-blue-700 font-medium">
-                    Volume: {((form.watch("poolLength") || 0) * (form.watch("poolWidth") || 0) * (form.watch("poolDepth") || 0)).toFixed(1)} m³
+                    Volume: {((form.watch("poolLength") || 0) * (form.watch("poolWidth") || 0) * ((form.watch("poolMinDepth") || 0) + (form.watch("poolMaxDepth") || 0)) / 2).toFixed(1)} m³
                   </div>
                 )}
               </div>

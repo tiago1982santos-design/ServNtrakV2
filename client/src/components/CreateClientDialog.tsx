@@ -43,7 +43,8 @@ export function CreateClientDialog() {
       hourlyRate: undefined,
       poolLength: undefined,
       poolWidth: undefined,
-      poolDepth: undefined,
+      poolMinDepth: undefined,
+      poolMaxDepth: undefined,
       jacuzziLength: undefined,
       jacuzziWidth: undefined,
       jacuzziDepth: undefined,
@@ -204,7 +205,7 @@ export function CreateClientDialog() {
                   <Waves className="w-4 h-4" />
                   Dimensões da Piscina (metros)
                 </FormLabel>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <FormField
                     control={form.control}
                     name="poolLength"
@@ -247,19 +248,42 @@ export function CreateClientDialog() {
                       </FormItem>
                     )}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <FormField
                     control={form.control}
-                    name="poolDepth"
+                    name="poolMinDepth"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Profundidade</FormLabel>
+                        <FormLabel className="text-xs">Prof. Mínima</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
                             step="0.1"
-                            placeholder="1.5" 
+                            placeholder="1.0" 
                             className="rounded-xl"
-                            data-testid="input-pool-depth"
+                            data-testid="input-pool-min-depth"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="poolMaxDepth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Prof. Máxima</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.1"
+                            placeholder="2.0" 
+                            className="rounded-xl"
+                            data-testid="input-pool-max-depth"
                             {...field}
                             value={field.value ?? ""}
                             onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
@@ -269,9 +293,9 @@ export function CreateClientDialog() {
                     )}
                   />
                 </div>
-                {form.watch("poolLength") && form.watch("poolWidth") && form.watch("poolDepth") && (
+                {form.watch("poolLength") && form.watch("poolWidth") && form.watch("poolMinDepth") && form.watch("poolMaxDepth") && (
                   <div className="text-sm text-blue-700 font-medium mt-2">
-                    Volume: {((form.watch("poolLength") || 0) * (form.watch("poolWidth") || 0) * (form.watch("poolDepth") || 0)).toFixed(1)} m³
+                    Volume: {((form.watch("poolLength") || 0) * (form.watch("poolWidth") || 0) * ((form.watch("poolMinDepth") || 0) + (form.watch("poolMaxDepth") || 0)) / 2).toFixed(1)} m³
                   </div>
                 )}
               </div>

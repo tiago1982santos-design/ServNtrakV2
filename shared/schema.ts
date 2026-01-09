@@ -23,7 +23,8 @@ export const clients = pgTable("clients", {
   // Pool dimensions in meters
   poolLength: doublePrecision("pool_length"),
   poolWidth: doublePrecision("pool_width"),
-  poolDepth: doublePrecision("pool_depth"),
+  poolMinDepth: doublePrecision("pool_min_depth"),
+  poolMaxDepth: doublePrecision("pool_max_depth"),
   // Jacuzzi dimensions in meters
   jacuzziLength: doublePrecision("jacuzzi_length"),
   jacuzziWidth: doublePrecision("jacuzzi_width"),
