@@ -1,4 +1,5 @@
 import { useWeather, getWeatherInfo } from "@/hooks/use-weather";
+import { useLocation } from "wouter";
 import {
   Sun,
   Cloud,
@@ -48,6 +49,7 @@ export function WeatherWidget({
   showAlerts = true,
 }: WeatherWidgetProps) {
   const { data: weather, isLoading, error } = useWeather();
+  const [, setLocation] = useLocation();
 
   if (isLoading) {
     return (
@@ -100,8 +102,9 @@ export function WeatherWidget({
   return (
     <div className={cn("space-y-3", className)}>
       <div
-        className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20"
+        className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 cursor-pointer active:scale-[0.98] transition-transform"
         data-testid="weather-current"
+        onClick={() => setLocation("/weather")}
       >
         <div className="flex items-center gap-4">
           <div
@@ -150,6 +153,9 @@ export function WeatherWidget({
             )}
           </div>
         </div>
+        <p className="text-xs text-white/50 text-center mt-3">
+          (Clique para aceder ao menu da meteorologia completo)
+        </p>
       </div>
 
       {showAlerts && weather.alerts.length > 0 && (
