@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { seedProductionData } from "./seed-production";
 
 const app = express();
 const httpServer = createServer(app);
@@ -76,6 +77,10 @@ app.use((req, res, next) => {
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
+    // Seed production data on startup (only adds if not exists)
+    seedProductionData().catch(err => {
+      console.error("Failed to seed production data:", err);
+    });
   } else {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
