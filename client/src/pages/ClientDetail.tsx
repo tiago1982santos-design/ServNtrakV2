@@ -18,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertServiceLogSchema, insertAppointmentSchema, insertClientSchema, type Client } from "@shared/schema";
 import { createServiceLogWithEntriesInput } from "@shared/routes";
+import { getClientVisitSchedule, getSeason, getSeasonLabel, getTotalMonthlyVisits } from "@shared/scheduling";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -96,6 +97,37 @@ export default function ClientDetail() {
           )}
         </div>
       </div>
+
+      {/* Visit Schedule Info */}
+      {(client.hasGarden || client.hasPool || client.hasJacuzzi) && (
+        <div className="px-6 mt-4">
+          <div className="bg-card rounded-xl p-4 border border-border/50">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm">Frequência de Visitas</h3>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getSeason(new Date()) === 'high' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                {getSeasonLabel(getSeason(new Date()))}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {getClientVisitSchedule(client).map((schedule) => (
+                <div key={schedule.type} className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2">
+                    {schedule.type === 'Garden' && <Leaf className="w-3.5 h-3.5 text-green-600" />}
+                    {schedule.type === 'Pool' && <Waves className="w-3.5 h-3.5 text-blue-600" />}
+                    {schedule.type === 'Jacuzzi' && <ThermometerSun className="w-3.5 h-3.5 text-orange-600" />}
+                    <span>{schedule.type === 'Garden' ? 'Jardim' : schedule.type === 'Pool' ? 'Piscina' : 'Jacuzzi'}</span>
+                  </span>
+                  <span className="text-muted-foreground text-xs">{schedule.description}</span>
+                </div>
+              ))}
+              <div className="pt-2 mt-2 border-t flex justify-between text-sm font-medium">
+                <span>Total este mês:</span>
+                <span className="text-primary">{getTotalMonthlyVisits(client)} visitas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Tabs */}
       <div className="px-6 mt-6">
