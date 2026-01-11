@@ -19,6 +19,7 @@ import Reminders from "@/pages/Reminders";
 import Billing from "@/pages/Billing";
 import Profile from "@/pages/Profile";
 import Purchases from "@/pages/Purchases";
+import Logos from "@/pages/Logos";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -53,6 +54,7 @@ function Router() {
       <Route path="/billing" component={Billing} />
       <Route path="/purchases" component={Purchases} />
       <Route path="/profile" component={Profile} />
+      <Route path="/logos" component={Logos} />
       <Route component={NotFound} />
     </Switch>
   );
