@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, insertPurchaseCategorySchema, insertStoreSchema, insertPurchaseSchema, insertClientPaymentSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries, purchaseCategories, stores, purchases, clientPayments } from './schema';
+import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, insertPurchaseCategorySchema, insertStoreSchema, insertPurchaseSchema, insertClientPaymentSchema, insertServiceVisitSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries, purchaseCategories, stores, purchases, clientPayments, serviceVisits, serviceVisitServices } from './schema';
 
 // Robust numeric validator: preprocess to reject NaN/Infinity before coercion
 const safePositiveNumber = (max: number, fieldName: string) =>
@@ -426,6 +426,48 @@ export const api = {
       responses: {
         204: z.void(),
         404: errorSchemas.notFound,
+      },
+    },
+  },
+  serviceVisits: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/service-visits',
+      query: z.object({
+        clientId: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof serviceVisits.$inferSelect & { services: (typeof serviceVisitServices.$inferSelect)[] }>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/service-visits',
+      input: z.object({
+        visit: insertServiceVisitSchema,
+        services: z.array(z.object({
+          serviceType: z.string(),
+          wasPlanned: z.boolean().optional(),
+          notes: z.string().optional(),
+        })),
+      }),
+      responses: {
+        201: z.custom<typeof serviceVisits.$inferSelect & { services: (typeof serviceVisitServices.$inferSelect)[] }>(),
+        400: errorSchemas.validation,
+      },
+    },
+    stats: {
+      method: 'GET' as const,
+      path: '/api/clients/:id/service-stats',
+      responses: {
+        200: z.object({
+          clientId: z.number(),
+          totalVisits: z.number(),
+          averageDurationMinutes: z.number(),
+          averageWorkerCount: z.number(),
+          totalWorkerHours: z.number(),
+          serviceBreakdown: z.record(z.string(), z.number()),
+        }).nullable(),
       },
     },
   },

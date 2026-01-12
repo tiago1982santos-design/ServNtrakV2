@@ -654,5 +654,41 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
     }
   });
 
+  // --- Service Visits ---
+
+  app.get(api.serviceVisits.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const clientId = req.query.clientId ? Number(req.query.clientId) : undefined;
+    const visits = await storage.getServiceVisits(userId, clientId);
+    res.json(visits);
+  });
+
+  app.post(api.serviceVisits.create.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.serviceVisits.create.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      const visit = await storage.createServiceVisit(
+        { ...input.visit, userId },
+        input.services
+      );
+      res.status(201).json(visit);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.get(api.serviceVisits.stats.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const clientId = Number(req.params.id);
+    const stats = await storage.getClientServiceStats(userId, clientId);
+    res.json(stats);
+  });
+
   return httpServer;
 }
