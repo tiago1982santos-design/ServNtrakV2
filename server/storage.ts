@@ -3,6 +3,7 @@ import {
   clients, appointments, serviceLogs, reminders, quickPhotos,
   serviceLogLaborEntries, serviceLogMaterialEntries,
   purchaseCategories, stores, purchases, clientPayments,
+  serviceVisits, serviceVisitServices,
   type InsertClient, type Client,
   type InsertAppointment, type Appointment,
   type InsertServiceLog, type ServiceLog,
@@ -14,9 +15,12 @@ import {
   type InsertPurchaseCategory, type PurchaseCategory,
   type InsertStore, type Store,
   type InsertPurchase, type Purchase, type PurchaseWithDetails,
-  type InsertClientPayment, type ClientPayment, type ClientPaymentWithClient
+  type InsertClientPayment, type ClientPayment, type ClientPaymentWithClient,
+  type InsertServiceVisit, type ServiceVisit, type ServiceVisitWithServices,
+  type InsertServiceVisitService, type ServiceVisitService,
+  type ClientServiceStats
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Clients
@@ -84,6 +88,14 @@ export interface IStorage {
   markPaymentAsPaid(id: number, userId: string): Promise<ClientPayment | undefined>;
   deleteClientPayment(id: number, userId: string): Promise<void>;
   generateMonthlyPayments(userId: string, year: number, month: number): Promise<ClientPayment[]>;
+
+  // Service Visits
+  getServiceVisits(userId: string, clientId?: number): Promise<ServiceVisitWithServices[]>;
+  createServiceVisit(
+    visit: InsertServiceVisit & { userId: string },
+    services: Omit<InsertServiceVisitService, 'visitId'>[]
+  ): Promise<ServiceVisitWithServices>;
+  getClientServiceStats(userId: string, clientId: number): Promise<ClientServiceStats | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -554,6 +566,91 @@ export class DatabaseStorage implements IStorage {
     }
     
     return newPayments;
+  }
+
+  // Service Visits
+  async getServiceVisits(userId: string, clientId?: number): Promise<ServiceVisitWithServices[]> {
+    const conditions = [eq(serviceVisits.userId, userId)];
+    if (clientId) conditions.push(eq(serviceVisits.clientId, clientId));
+
+    const visits = await db
+      .select()
+      .from(serviceVisits)
+      .where(and(...conditions))
+      .orderBy(desc(serviceVisits.visitDate));
+
+    const result: ServiceVisitWithServices[] = [];
+    for (const visit of visits) {
+      const services = await db
+        .select()
+        .from(serviceVisitServices)
+        .where(eq(serviceVisitServices.visitId, visit.id));
+      result.push({ ...visit, services });
+    }
+
+    return result;
+  }
+
+  async createServiceVisit(
+    visit: InsertServiceVisit & { userId: string },
+    services: Omit<InsertServiceVisitService, 'visitId'>[]
+  ): Promise<ServiceVisitWithServices> {
+    const [newVisit] = await db.insert(serviceVisits).values(visit).returning();
+
+    const insertedServices: ServiceVisitService[] = [];
+    for (const service of services) {
+      const [s] = await db.insert(serviceVisitServices).values({
+        ...service,
+        visitId: newVisit.id,
+      }).returning();
+      insertedServices.push(s);
+    }
+
+    // If there's an appointment linked, mark it as completed
+    if (visit.appointmentId) {
+      await db
+        .update(appointments)
+        .set({ isCompleted: true })
+        .where(and(
+          eq(appointments.id, visit.appointmentId),
+          eq(appointments.userId, visit.userId)
+        ));
+    }
+
+    return { ...newVisit, services: insertedServices };
+  }
+
+  async getClientServiceStats(userId: string, clientId: number): Promise<ClientServiceStats | undefined> {
+    const visits = await this.getServiceVisits(userId, clientId);
+
+    if (visits.length === 0) return undefined;
+
+    let totalDuration = 0;
+    let totalWorkers = 0;
+    const serviceBreakdown: Record<string, number> = {};
+
+    for (const visit of visits) {
+      totalDuration += visit.actualDurationMinutes;
+      totalWorkers += visit.workerCount;
+
+      for (const service of visit.services) {
+        serviceBreakdown[service.serviceType] = (serviceBreakdown[service.serviceType] || 0) + 1;
+      }
+    }
+
+    const totalWorkerHours = visits.reduce(
+      (sum, v) => sum + (v.actualDurationMinutes * v.workerCount) / 60,
+      0
+    );
+
+    return {
+      clientId,
+      totalVisits: visits.length,
+      averageDurationMinutes: Math.round(totalDuration / visits.length),
+      averageWorkerCount: Math.round((totalWorkers / visits.length) * 10) / 10,
+      totalWorkerHours: Math.round(totalWorkerHours * 10) / 10,
+      serviceBreakdown,
+    };
   }
 }
 

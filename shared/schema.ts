@@ -151,6 +151,30 @@ export const clientPayments = pgTable("client_payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Service visits - tracks actual completion data for statistics
+export const serviceVisits = pgTable("service_visits", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  clientId: integer("client_id").notNull(),
+  appointmentId: integer("appointment_id"), // Optional link to original appointment
+  visitDate: timestamp("visit_date").notNull(),
+  actualDurationMinutes: integer("actual_duration_minutes").notNull(), // Real time spent
+  workerCount: integer("worker_count").notNull().default(1), // Number of workers
+  notes: text("notes"),
+  completedAt: timestamp("completed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Services performed during a visit (for combo visits)
+export const serviceVisitServices = pgTable("service_visit_services", {
+  id: serial("id").primaryKey(),
+  visitId: integer("visit_id").notNull(),
+  serviceType: text("service_type").notNull(), // 'Garden', 'Pool', 'Jacuzzi', 'General'
+  wasPlanned: boolean("was_planned").default(true), // Was this service in the original appointment
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Purchase records
 export const purchases = pgTable("purchases", {
   id: serial("id").primaryKey(),
@@ -259,6 +283,25 @@ export const purchasesRelations = relations(purchases, ({ one }) => ({
   }),
 }));
 
+export const serviceVisitsRelations = relations(serviceVisits, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [serviceVisits.clientId],
+    references: [clients.id],
+  }),
+  appointment: one(appointments, {
+    fields: [serviceVisits.appointmentId],
+    references: [appointments.id],
+  }),
+  services: many(serviceVisitServices),
+}));
+
+export const serviceVisitServicesRelations = relations(serviceVisitServices, ({ one }) => ({
+  visit: one(serviceVisits, {
+    fields: [serviceVisitServices.visitId],
+    references: [serviceVisits.id],
+  }),
+}));
+
 // === BASE SCHEMAS ===
 
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, userId: true, createdAt: true });
@@ -272,6 +315,8 @@ export const insertPurchaseCategorySchema = createInsertSchema(purchaseCategorie
 export const insertStoreSchema = createInsertSchema(stores).omit({ id: true, userId: true, createdAt: true });
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, userId: true, createdAt: true });
 export const insertClientPaymentSchema = createInsertSchema(clientPayments).omit({ id: true, userId: true, createdAt: true });
+export const insertServiceVisitSchema = createInsertSchema(serviceVisits).omit({ id: true, userId: true, createdAt: true, completedAt: true });
+export const insertServiceVisitServiceSchema = createInsertSchema(serviceVisitServices).omit({ id: true, createdAt: true });
 
 // === TYPES ===
 
@@ -323,4 +368,25 @@ export type InsertClientPayment = z.infer<typeof insertClientPaymentSchema>;
 // Extended type for client payment with client info
 export type ClientPaymentWithClient = ClientPayment & {
   client: Client;
+};
+
+export type ServiceVisit = typeof serviceVisits.$inferSelect;
+export type InsertServiceVisit = z.infer<typeof insertServiceVisitSchema>;
+
+export type ServiceVisitService = typeof serviceVisitServices.$inferSelect;
+export type InsertServiceVisitService = z.infer<typeof insertServiceVisitServiceSchema>;
+
+// Extended type for service visit with services
+export type ServiceVisitWithServices = ServiceVisit & {
+  services: ServiceVisitService[];
+};
+
+// Client statistics from visits
+export type ClientServiceStats = {
+  clientId: number;
+  totalVisits: number;
+  averageDurationMinutes: number;
+  averageWorkerCount: number;
+  totalWorkerHours: number;
+  serviceBreakdown: Record<string, number>; // Count per service type
 };
