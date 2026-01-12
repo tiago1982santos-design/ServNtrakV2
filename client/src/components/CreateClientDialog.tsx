@@ -49,6 +49,7 @@ export function CreateClientDialog() {
       jacuzziLength: undefined,
       jacuzziWidth: undefined,
       jacuzziDepth: undefined,
+      serviceDurationMinutes: 60,
     },
   });
 
@@ -420,6 +421,40 @@ export function CreateClientDialog() {
                 )}
               </div>
             )}
+
+            <div className="space-y-3 pt-2 p-3 rounded-xl border bg-muted/30">
+              <FormLabel className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                Duração Estimada do Serviço
+              </FormLabel>
+              <FormField
+                control={form.control}
+                name="serviceDurationMinutes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          type="number" 
+                          min="15"
+                          step="15"
+                          placeholder="60" 
+                          className="rounded-xl w-24"
+                          data-testid="input-service-duration"
+                          {...field}
+                          value={field.value ?? 60}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 60)}
+                        />
+                        <span className="text-sm text-muted-foreground">minutos</span>
+                      </div>
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tempo médio para realizar todos os serviços neste cliente
+                    </p>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="space-y-3 pt-2">
               <FormLabel>Tipo de Faturação</FormLabel>

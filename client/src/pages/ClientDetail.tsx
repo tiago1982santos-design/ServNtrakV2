@@ -778,6 +778,7 @@ function EditClientDialog({ client }: { client: Client }) {
       jacuzziLength: client.jacuzziLength || undefined,
       jacuzziWidth: client.jacuzziWidth || undefined,
       jacuzziDepth: client.jacuzziDepth || undefined,
+      serviceDurationMinutes: client.serviceDurationMinutes ?? 60,
     }
   });
 
@@ -1122,6 +1123,40 @@ function EditClientDialog({ client }: { client: Client }) {
                 )}
               </div>
             )}
+
+            <div className="space-y-3 p-3 rounded-xl border bg-muted/30">
+              <FormLabel className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                Duração Estimada do Serviço
+              </FormLabel>
+              <FormField
+                control={form.control}
+                name="serviceDurationMinutes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          type="number" 
+                          min="15"
+                          step="15"
+                          placeholder="60" 
+                          className="rounded-xl w-24"
+                          data-testid="input-edit-service-duration"
+                          {...field}
+                          value={field.value ?? 60}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 60)}
+                        />
+                        <span className="text-sm text-muted-foreground">minutos</span>
+                      </div>
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tempo médio para realizar todos os serviços
+                    </p>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="space-y-3">
               <FormLabel>Tipo de Faturação</FormLabel>

@@ -32,6 +32,8 @@ export const clients = pgTable("clients", {
   jacuzziLength: doublePrecision("jacuzzi_length"),
   jacuzziWidth: doublePrecision("jacuzzi_width"),
   jacuzziDepth: doublePrecision("jacuzzi_depth"),
+  // Estimated service duration in minutes for scheduling
+  serviceDurationMinutes: integer("service_duration_minutes").default(60),
   notes: text("notes"),
   billingType: text("billing_type").default("monthly"), // 'monthly' or 'hourly'
   monthlyRate: doublePrecision("monthly_rate"), // Fixed monthly amount in euros
