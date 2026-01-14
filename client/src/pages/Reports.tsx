@@ -49,6 +49,10 @@ export default function Reports() {
     if (!clients || !serviceLogs || !purchases) return null;
 
     const year = parseInt(selectedYear);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
     const monthlyData: { month: string; receitas: number; despesas: number; lucro: number }[] = [];
     const servicesByType: Record<string, number> = {};
     const purchasesByCategory: Record<string, number> = {};
@@ -57,7 +61,9 @@ export default function Reports() {
       .filter(c => c.billingType === 'monthly' && c.monthlyRate)
       .reduce((sum, c) => sum + (c.monthlyRate || 0), 0);
 
-    for (let month = 0; month < 12; month++) {
+    const maxMonth = year < currentYear ? 11 : (year === currentYear ? currentMonth : -1);
+
+    for (let month = 0; month <= maxMonth; month++) {
       const monthStart = new Date(year, month, 1);
       const monthEnd = endOfMonth(monthStart);
       const monthName = format(monthStart, 'MMM', { locale: pt });
