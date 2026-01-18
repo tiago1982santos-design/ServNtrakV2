@@ -304,6 +304,47 @@ export const serviceVisitServicesRelations = relations(serviceVisitServices, ({ 
   }),
 }));
 
+// Financial configuration for income distribution
+export const financialConfig = pgTable("financial_config", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  salaryPercentage: doublePrecision("salary_percentage").notNull().default(40), // % for salary
+  companyPercentage: doublePrecision("company_percentage").notNull().default(60), // % for company
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Monthly income distributions
+export const monthlyDistributions = pgTable("monthly_distributions", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(), // 1-12
+  totalReceived: doublePrecision("total_received").notNull().default(0), // Total from paid client payments
+  salaryAmount: doublePrecision("salary_amount").notNull().default(0), // Amount for salary
+  companyAmount: doublePrecision("company_amount").notNull().default(0), // Amount for company
+  salaryPercentageUsed: doublePrecision("salary_percentage_used").notNull(), // Snapshot of % used
+  notes: text("notes"),
+  isLocked: boolean("is_locked").default(false), // Prevent recalculation
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const financialConfigRelations = relations(financialConfig, ({ one }) => ({
+  user: one(users, {
+    fields: [financialConfig.userId],
+    references: [users.id],
+  }),
+}));
+
+export const monthlyDistributionsRelations = relations(monthlyDistributions, ({ one }) => ({
+  user: one(users, {
+    fields: [monthlyDistributions.userId],
+    references: [users.id],
+  }),
+}));
+
 // === BASE SCHEMAS ===
 
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, userId: true, createdAt: true });
@@ -319,6 +360,8 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: tru
 export const insertClientPaymentSchema = createInsertSchema(clientPayments).omit({ id: true, userId: true, createdAt: true });
 export const insertServiceVisitSchema = createInsertSchema(serviceVisits).omit({ id: true, userId: true, createdAt: true, completedAt: true });
 export const insertServiceVisitServiceSchema = createInsertSchema(serviceVisitServices).omit({ id: true, createdAt: true });
+export const insertFinancialConfigSchema = createInsertSchema(financialConfig).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
+export const insertMonthlyDistributionSchema = createInsertSchema(monthlyDistributions).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 
 // === TYPES ===
 
@@ -392,3 +435,9 @@ export type ClientServiceStats = {
   totalWorkerHours: number;
   serviceBreakdown: Record<string, number>; // Count per service type
 };
+
+export type FinancialConfig = typeof financialConfig.$inferSelect;
+export type InsertFinancialConfig = z.infer<typeof insertFinancialConfigSchema>;
+
+export type MonthlyDistribution = typeof monthlyDistributions.$inferSelect;
+export type InsertMonthlyDistribution = z.infer<typeof insertMonthlyDistributionSchema>;
