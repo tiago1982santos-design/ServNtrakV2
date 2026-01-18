@@ -22,7 +22,8 @@ import {
   Trash2, Edit2, MapPin, Phone, Mail, Building2, Package, Scan
 } from "lucide-react";
 import { DocumentScanDialog } from "@/components/DocumentScanDialog";
-import type { PurchaseCategory, Store, PurchaseWithDetails } from "@shared/schema";
+import type { PurchaseCategory, Store, PurchaseWithDetails, Client } from "@shared/schema";
+import { User } from "lucide-react";
 
 export default function Purchases() {
   const [activeTab, setActiveTab] = useState("compras");
@@ -39,6 +40,10 @@ export default function Purchases() {
 
   const { data: stores, isLoading: storesLoading } = useQuery<Store[]>({
     queryKey: ['/api/stores'],
+  });
+
+  const { data: clients } = useQuery<Client[]>({
+    queryKey: ['/api/clients'],
   });
 
   const purchasesUrl = selectedCategory 
@@ -114,6 +119,7 @@ export default function Purchases() {
                   onOpenChange={setIsAddPurchaseOpen}
                   categories={categories || []}
                   stores={stores || []}
+                  clients={clients || []}
                 />
               </div>
             </div>
@@ -211,9 +217,15 @@ function PurchaseCard({ purchase }: { purchase: PurchaseWithDetails }) {
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-foreground truncate" data-testid={`text-purchase-name-${purchase.id}`}>{purchase.productName}</h3>
           <p className="text-sm text-muted-foreground" data-testid={`text-purchase-store-${purchase.id}`}>{purchase.store.name}</p>
-          <div className="flex gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             <Badge variant="secondary">{purchase.category.name}</Badge>
             <Badge variant="outline">Qtd: {purchase.quantity}</Badge>
+            {purchase.client && (
+              <Badge variant="default" className="bg-green-600" data-testid={`badge-client-${purchase.id}`}>
+                <User className="w-3 h-3 mr-1" />
+                {purchase.client.name}
+              </Badge>
+            )}
           </div>
         </div>
         <div className="text-right shrink-0 ml-3">
@@ -332,6 +344,7 @@ function CategoryCard({ category }: { category: PurchaseCategory }) {
 const purchaseFormSchema = z.object({
   storeId: z.number({ required_error: "Selecione uma loja" }),
   categoryId: z.number({ required_error: "Selecione uma categoria" }),
+  clientId: z.number().optional().nullable(),
   productName: z.string().min(1, "Nome do produto é obrigatório"),
   quantity: z.number().positive("Quantidade deve ser positiva").default(1),
   totalWithoutDiscount: z.number().positive("Valor total é obrigatório"),
@@ -344,12 +357,14 @@ function AddPurchaseDialog({
   open, 
   onOpenChange, 
   categories, 
-  stores 
+  stores,
+  clients
 }: { 
   open: boolean; 
   onOpenChange: (open: boolean) => void;
   categories: PurchaseCategory[];
   stores: Store[];
+  clients: Client[];
 }) {
   const { toast } = useToast();
   
@@ -446,6 +461,33 @@ function AddPurchaseDialog({
                     <SelectContent>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="clientId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cliente (opcional)</FormLabel>
+                  <Select 
+                    onValueChange={(v) => field.onChange(v === "none" ? null : Number(v))} 
+                    value={field.value?.toString() || "none"}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-client">
+                        <SelectValue placeholder="Sem cliente associado" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Sem cliente associado</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id.toString()}>{client.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

@@ -183,6 +183,7 @@ export const purchases = pgTable("purchases", {
   userId: text("user_id").notNull(),
   storeId: integer("store_id").notNull(),
   categoryId: integer("category_id").notNull(),
+  clientId: integer("client_id"), // Optional - link purchase to a specific client
   productName: text("product_name").notNull(),
   quantity: doublePrecision("quantity").notNull().default(1),
   totalWithoutDiscount: doublePrecision("total_without_discount").notNull(), // Valor total sem desconto
@@ -282,6 +283,10 @@ export const purchasesRelations = relations(purchases, ({ one }) => ({
   category: one(purchaseCategories, {
     fields: [purchases.categoryId],
     references: [purchaseCategories.id],
+  }),
+  client: one(clients, {
+    fields: [purchases.clientId],
+    references: [clients.id],
   }),
 }));
 
@@ -405,6 +410,7 @@ export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type PurchaseWithDetails = Purchase & {
   store: Store;
   category: PurchaseCategory;
+  client?: Client | null;
 };
 
 export type ClientPayment = typeof clientPayments.$inferSelect;

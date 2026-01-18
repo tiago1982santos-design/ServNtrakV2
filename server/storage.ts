@@ -459,10 +459,12 @@ export class DatabaseStorage implements IStorage {
         purchase: purchases,
         store: stores,
         category: purchaseCategories,
+        client: clients,
       })
       .from(purchases)
       .innerJoin(stores, eq(purchases.storeId, stores.id))
       .innerJoin(purchaseCategories, eq(purchases.categoryId, purchaseCategories.id))
+      .leftJoin(clients, and(eq(purchases.clientId, clients.id), eq(clients.userId, purchases.userId)))
       .where(and(...conditions))
       .orderBy(desc(purchases.purchaseDate));
 
@@ -470,15 +472,34 @@ export class DatabaseStorage implements IStorage {
       ...r.purchase,
       store: r.store,
       category: r.category,
+      client: r.client,
     }));
   }
 
   async createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase> {
+    // Validate that clientId belongs to the same user if provided
+    if (purchase.clientId) {
+      const [client] = await db.select().from(clients).where(
+        and(eq(clients.id, purchase.clientId), eq(clients.userId, purchase.userId))
+      );
+      if (!client) {
+        throw new Error("Cliente não encontrado ou não autorizado");
+      }
+    }
     const [newPurchase] = await db.insert(purchases).values(purchase).returning();
     return newPurchase;
   }
 
   async updatePurchase(id: number, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase | undefined> {
+    // Validate that clientId belongs to the same user if provided
+    if (updates.clientId) {
+      const [client] = await db.select().from(clients).where(
+        and(eq(clients.id, updates.clientId), eq(clients.userId, userId))
+      );
+      if (!client) {
+        throw new Error("Cliente não encontrado ou não autorizado");
+      }
+    }
     const [updated] = await db
       .update(purchases)
       .set(updates)
