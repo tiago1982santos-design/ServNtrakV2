@@ -22,6 +22,7 @@ import Purchases from "@/pages/Purchases";
 import Reports from "@/pages/Reports";
 import Payments from "@/pages/Payments";
 import Logos from "@/pages/Logos";
+import Gallery from "@/pages/Gallery";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/payments" component={Payments} />
       <Route path="/profile" component={Profile} />
       <Route path="/logos" component={Logos} />
+      <Route path="/gallery" component={Gallery} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -3,7 +3,7 @@ import { useAppointments } from "@/hooks/use-appointments";
 import { useReminders } from "@/hooks/use-reminders";
 import { useUnpaidExtraServices, useMarkServiceAsPaid } from "@/hooks/use-service-logs";
 import { format, isToday, isTomorrow, startOfDay, isPast } from "date-fns";
-import { Loader2, CalendarClock, MapPin, CheckCircle2, Bell, Map, Euro, AlertCircle, Banknote, BarChart3, CreditCard } from "lucide-react";
+import { Loader2, CalendarClock, MapPin, CheckCircle2, Bell, Map, Euro, AlertCircle, Banknote, BarChart3, CreditCard, Image } from "lucide-react";
 import { Link } from "wouter";
 import { BottomNav } from "@/components/BottomNav";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
@@ -210,6 +210,13 @@ export default function Home() {
                 <CreditCard className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
               </div>
               <h3 className="font-bold text-xs text-cyan-900 dark:text-cyan-300 text-center">Pagamentos</h3>
+            </Link>
+
+            <Link href="/gallery" className="flex flex-col items-center bg-gradient-to-br from-pink-50 to-pink-100/50 dark:from-pink-900/20 dark:to-pink-800/10 p-3 rounded-2xl border border-pink-100 dark:border-pink-800/30 shadow-sm hover:shadow-md transition-all" data-testid="link-quick-gallery">
+              <div className="w-9 h-9 bg-pink-500/10 rounded-full flex items-center justify-center mb-2">
+                <Image className="w-4 h-4 text-pink-700 dark:text-pink-400" />
+              </div>
+              <h3 className="font-bold text-xs text-pink-900 dark:text-pink-300 text-center">Galeria</h3>
             </Link>
           </div>
         </section>

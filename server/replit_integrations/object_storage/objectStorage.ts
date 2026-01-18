@@ -9,6 +9,18 @@ import {
   setObjectAclPolicy,
 } from "./objectAcl";
 
+const PORTUGUESE_MONTH_ABBRS = [
+  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+  "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+];
+
+function getMonthYearFolder(): string {
+  const now = new Date();
+  const monthAbbr = PORTUGUESE_MONTH_ABBRS[now.getMonth()];
+  const year = now.getFullYear();
+  return `${monthAbbr}${year}`;
+}
+
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
 // The object storage client is used to interact with the object storage service.
@@ -131,6 +143,7 @@ export class ObjectStorageService {
   }
 
   // Gets the upload URL for an object entity.
+  // Files are organized by month/year folders (e.g., Jan2026, Fev2026)
   async getObjectEntityUploadURL(): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
@@ -141,7 +154,8 @@ export class ObjectStorageService {
     }
 
     const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
+    const monthYearFolder = getMonthYearFolder();
+    const fullPath = `${privateObjectDir}/uploads/${monthYearFolder}/${objectId}`;
 
     const { bucketName, objectName } = parseObjectPath(fullPath);
 
