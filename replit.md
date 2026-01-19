@@ -7,7 +7,7 @@ TrackServ é uma aplicação mobile-first para gestão de serviços de manutenç
 ## User Preferences
 
 - **Utilizador**: Tiago Santos
-- **Empresa**: TrackServ (anteriormente Peralta Gardens)
+- **Empresa**: Peralta Gardens
 - **Língua**: Português de Portugal (PT-PT)
 - **Estilo de Comunicação**: Simples e direto.
 - **Serviços Atuais**: Jardim, Piscina, Jacuzzi e Geral.
