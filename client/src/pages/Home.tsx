@@ -54,7 +54,7 @@ export default function Home() {
             <div className="slide-up">
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-4 h-4 text-white/70" />
-                <p className="text-white/80 text-sm font-medium">Peralta Gardens</p>
+                <p className="text-white/80 text-sm font-medium">TrackServ</p>
               </div>
               <h1 className="text-2xl font-extrabold text-white">
                 {getGreeting()}, {userName}

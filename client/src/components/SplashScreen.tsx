@@ -54,7 +54,7 @@ export function SplashScreen({ onFinish, userName }: SplashScreenProps) {
             <div className="w-[185px] h-[185px] rounded-full overflow-hidden bg-white flex items-center justify-center">
               <img 
                 src={logoImage} 
-                alt="Peralta Gardens Logo" 
+                alt="TrackServ Logo" 
                 className="w-full h-full object-cover"
               />
             </div>
@@ -64,8 +64,8 @@ export function SplashScreen({ onFinish, userName }: SplashScreenProps) {
               transition={{ delay: 0.3 }}
               className="text-center"
             >
-              <h1 className="text-2xl font-display font-bold text-primary">Peralta Gardens</h1>
-              <p className="text-sm text-muted-foreground mt-1">Gestão de Jardins e Piscinas</p>
+              <h1 className="text-2xl font-display font-bold text-primary">TrackServ</h1>
+              <p className="text-sm text-muted-foreground mt-1">Gestão de Serviços e Tarefas</p>
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

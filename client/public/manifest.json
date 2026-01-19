@@ -1,7 +1,7 @@
 {
-  "name": "Peralta Gardens",
-  "short_name": "Peralta",
-  "description": "Gestão de jardins, piscinas e jacuzzis",
+  "name": "TrackServ",
+  "short_name": "TrackServ",
+  "description": "Gestão de serviços, jardins, piscinas e jacuzzis",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f4a2c",

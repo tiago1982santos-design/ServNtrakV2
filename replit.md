@@ -1,13 +1,13 @@
-# Peralta Gardens - Gestão de Jardins, Piscinas e Jacuzzis
+# TrackServ - Gestão de Serviços e Tarefas
 
 ## Overview
 
-A Peralta Gardens é uma aplicação mobile-first desenvolvida para o Tiago Santos gerir a sua empresa de manutenção de jardins, piscinas e jacuzzis. A aplicação permite acompanhar clientes, agendar serviços e registar atividades concluídas. Foi construída com React no frontend e Express no backend, utilizando PostgreSQL para persistência de dados e Replit Auth para autenticação.
+TrackServ é uma aplicação mobile-first para gestão de serviços de manutenção de jardins, piscinas e jacuzzis. A aplicação permite acompanhar clientes, agendar serviços e registar atividades concluídas. Foi construída com React no frontend e Express no backend, utilizando PostgreSQL para persistência de dados e Replit Auth para autenticação.
 
 ## User Preferences
 
 - **Utilizador**: Tiago Santos
-- **Empresa**: Peralta Gardens
+- **Empresa**: TrackServ (anteriormente Peralta Gardens)
 - **Língua**: Português de Portugal (PT-PT)
 - **Estilo de Comunicação**: Simples e direto.
 - **Serviços Atuais**: Jardim, Piscina, Jacuzzi e Geral.
