@@ -8,6 +8,7 @@ import { pt } from "date-fns/locale";
 import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { BackButton } from "@/components/BackButton";
 
 export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -22,8 +23,11 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-background pb-24 page-transition">
       <div className="gradient-primary pt-10 pb-6 px-5">
-        <h1 className="text-2xl font-extrabold text-white">Agenda</h1>
-        <p className="text-white/70 text-sm mt-1">Gerir agendamentos e visitas</p>
+        <div className="flex items-center gap-2 mb-2">
+          <BackButton />
+          <h1 className="text-2xl font-extrabold text-white">Agenda</h1>
+        </div>
+        <p className="text-white/70 text-sm">Gerir agendamentos e visitas</p>
       </div>
 
       <div className="px-5 -mt-4 relative z-10">

@@ -12,6 +12,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import type { Client, PurchaseWithDetails, ClientPayment } from "@shared/schema";
+import { BackButton } from "@/components/BackButton";
 
 const MONTHS = [
   { value: "1", label: "Janeiro" },
@@ -417,8 +418,11 @@ export default function Exports() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border/50 px-6 py-4 pt-8">
-        <h1 className="text-2xl font-display font-bold text-foreground">Exportar Dados</h1>
-        <p className="text-sm text-muted-foreground mt-1">Gerar PDF e Excel para contabilidade</p>
+        <div className="flex items-center gap-2 mb-1">
+          <BackButton />
+          <h1 className="text-2xl font-display font-bold text-foreground">Exportar Dados</h1>
+        </div>
+        <p className="text-sm text-muted-foreground">Gerar PDF e Excel para contabilidade</p>
       </div>
 
       <div className="p-6 space-y-6">

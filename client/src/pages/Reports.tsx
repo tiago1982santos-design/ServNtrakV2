@@ -9,6 +9,7 @@ import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval
 import { pt } from "date-fns/locale";
 import { useState, useMemo } from "react";
 import type { Client, ServiceLog, PurchaseWithDetails, PurchaseCategory, ClientPayment } from "@shared/schema";
+import { BackButton } from "@/components/BackButton";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
@@ -176,7 +177,10 @@ export default function Reports() {
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border/50 px-6 py-4 pt-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-display font-bold text-foreground">Relatórios</h1>
+          <div className="flex items-center gap-2">
+            <BackButton />
+            <h1 className="text-2xl font-display font-bold text-foreground">Relatórios</h1>
+          </div>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger className="w-24" data-testid="select-year">
               <SelectValue />

@@ -2,6 +2,7 @@ import { useClients } from "@/hooks/use-clients";
 import { BottomNav } from "@/components/BottomNav";
 import { Loader2, Euro, Clock, Users } from "lucide-react";
 import { Link } from "wouter";
+import { BackButton } from "@/components/BackButton";
 
 export default function Billing() {
   const { data: clients, isLoading } = useClients();
@@ -14,8 +15,11 @@ export default function Billing() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="pt-8 px-6 mb-6">
-        <h1 className="text-2xl font-display font-bold text-foreground">Faturação</h1>
-        <p className="text-sm text-muted-foreground mt-1">Gestão de valores de clientes</p>
+        <div className="flex items-center gap-2 mb-1">
+          <BackButton />
+          <h1 className="text-2xl font-display font-bold text-foreground">Faturação</h1>
+        </div>
+        <p className="text-sm text-muted-foreground">Gestão de valores de clientes</p>
       </div>
 
       {isLoading ? (

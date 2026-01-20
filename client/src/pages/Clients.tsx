@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
+import { BackButton } from "@/components/BackButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -133,7 +134,10 @@ export default function Clients() {
     <div className="min-h-screen bg-background pb-24 page-transition">
       <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border/30 px-5 py-4 pt-8 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-display font-bold text-foreground">Clientes</h1>
+          <div className="flex items-center gap-2">
+            <BackButton />
+            <h1 className="text-2xl font-display font-bold text-foreground">Clientes</h1>
+          </div>
           <CreateClientDialog />
         </div>
         

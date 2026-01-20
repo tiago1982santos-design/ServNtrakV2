@@ -16,6 +16,7 @@ import { pt } from "date-fns/locale";
 import { Loader2, Plus, Bell, Clock, Trash2, CheckCircle2, AlertCircle, Leaf, Waves, ThermometerSun, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { BackButton } from "@/components/BackButton";
 
 const frequencyLabels: Record<string, string> = {
   weekly: "Semanal",
@@ -68,9 +69,12 @@ export default function Reminders() {
     <div className="min-h-screen bg-background pb-24">
       <div className="pt-8 px-6 mb-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-foreground">Lembretes</h1>
-            <p className="text-sm text-muted-foreground mt-1">Manutenções periódicas</p>
+          <div className="flex items-center gap-2">
+            <BackButton />
+            <div>
+              <h1 className="text-2xl font-display font-bold text-foreground">Lembretes</h1>
+              <p className="text-sm text-muted-foreground">Manutenções periódicas</p>
+            </div>
           </div>
           <AddReminderDialog />
         </div>

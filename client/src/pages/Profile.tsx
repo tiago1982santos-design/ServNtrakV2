@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { BackButton } from "@/components/BackButton";
 
 const implementedFeatures = [
   {
@@ -103,8 +104,11 @@ export default function Profile() {
       <div className="gradient-primary pt-10 pb-20 px-5 relative overflow-hidden">
         <div className="absolute inset-0 gradient-mesh opacity-40" />
         <div className="relative z-10">
-          <h1 className="text-2xl font-extrabold text-white">Perfil</h1>
-          <p className="text-white/70 text-sm mt-1">Configurações da conta</p>
+          <div className="flex items-center gap-2 mb-1">
+            <BackButton />
+            <h1 className="text-2xl font-extrabold text-white">Perfil</h1>
+          </div>
+          <p className="text-white/70 text-sm">Configurações da conta</p>
         </div>
       </div>
 

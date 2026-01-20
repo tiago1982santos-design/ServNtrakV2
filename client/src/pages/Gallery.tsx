@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Image, Calendar, User, X, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -145,14 +146,7 @@ export default function Gallery() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
         <div className="flex items-center gap-3 p-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation("/")}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+          <BackButton />
           <div className="flex-1">
             <h1 className="text-lg font-semibold">Galeria de Fotos</h1>
             <p className="text-xs text-muted-foreground">

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { BackButton } from "@/components/BackButton";
 
 const iconMap: Record<string, typeof Sun> = {
   sun: Sun,
@@ -104,6 +105,7 @@ export default function Weather() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-2 text-white/80 mb-2">
+            <BackButton />
             <MapPin className="w-4 h-4" />
             <span className="text-sm font-medium">Lourinhã</span>
           </div>

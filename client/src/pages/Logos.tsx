@@ -1,26 +1,15 @@
 import logo1 from "@assets/generated_images/westcoast_gardens_professional_logo.png";
 import logo2 from "@assets/generated_images/westcoast_gardens_text_logo.png";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { useLocation } from "wouter";
+import { BackButton } from "@/components/BackButton";
 
 export default function Logos() {
-  const [, setLocation] = useLocation();
-
   return (
     <div className="min-h-screen bg-background p-4">
-      <Button 
-        variant="ghost" 
-        onClick={() => setLocation("/")}
-        className="mb-4"
-        data-testid="button-back-home"
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Voltar
-      </Button>
-
-      <h1 className="text-2xl font-bold mb-6 text-foreground">Propostas de Logotipo</h1>
+      <div className="flex items-center gap-2 mb-6">
+        <BackButton />
+        <h1 className="text-2xl font-bold text-foreground">Propostas de Logotipo</h1>
+      </div>
       
       <div className="space-y-6">
         <Card className="p-4">

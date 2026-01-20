@@ -24,6 +24,7 @@ import {
 import { DocumentScanDialog } from "@/components/DocumentScanDialog";
 import type { PurchaseCategory, Store, PurchaseWithDetails, Client } from "@shared/schema";
 import { User } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 
 export default function Purchases() {
   const [activeTab, setActiveTab] = useState("compras");
@@ -61,6 +62,7 @@ export default function Purchases() {
       <div className="gradient-primary pt-10 pb-6 px-5 relative overflow-hidden">
         <div className="absolute inset-0 gradient-mesh opacity-40" />
         <div className="relative z-10 flex items-center gap-3">
+          <BackButton />
           <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
             <ShoppingCart className="w-6 h-6 text-white" />
           </div>

@@ -8,6 +8,7 @@ import { Link } from "wouter";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Client } from "@shared/schema";
+import { BackButton } from "@/components/BackButton";
 
 const defaultCenter: [number, number] = [39.2417, -9.3128];
 
@@ -78,11 +79,14 @@ export default function ClientsMap() {
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border/50 px-6 py-4 pt-8">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-foreground">Mapa de Clientes</h1>
-            <p className="text-sm text-muted-foreground">
-              {clientsWithLocation.length} cliente{clientsWithLocation.length !== 1 ? "s" : ""} com localização
-            </p>
+          <div className="flex items-center gap-2">
+            <BackButton />
+            <div>
+              <h1 className="text-2xl font-display font-bold text-foreground">Mapa de Clientes</h1>
+              <p className="text-sm text-muted-foreground">
+                {clientsWithLocation.length} cliente{clientsWithLocation.length !== 1 ? "s" : ""} com localização
+              </p>
+            </div>
           </div>
           <Link href="/clients">
             <Button variant="outline" size="sm" className="rounded-xl" data-testid="button-back-to-clients">

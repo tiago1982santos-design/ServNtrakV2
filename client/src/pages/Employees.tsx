@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Employee } from "@shared/schema";
+import { BackButton } from "@/components/BackButton";
 
 const employeeFormSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -93,6 +94,7 @@ export default function EmployeesPage() {
         <div className="absolute inset-0 gradient-mesh opacity-40" />
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <BackButton />
             <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
               <Users className="w-6 h-6 text-white" />
             </div>

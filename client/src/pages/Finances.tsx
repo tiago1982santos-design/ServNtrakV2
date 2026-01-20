@@ -14,6 +14,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import type { FinancialConfig, MonthlyDistribution, ClientPaymentWithClient } from "@shared/schema";
+import { BackButton } from "@/components/BackButton";
 
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -122,7 +123,10 @@ export default function Finances() {
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border/50 px-6 py-4 pt-8">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-display font-bold text-foreground">Finanças</h1>
+          <div className="flex items-center gap-2">
+            <BackButton />
+            <h1 className="text-2xl font-display font-bold text-foreground">Finanças</h1>
+          </div>
           <Dialog open={configOpen} onOpenChange={setConfigOpen}>
             <DialogTrigger asChild>
               <Button 
