@@ -1,24 +1,72 @@
 import { useState } from "react";
-import { useAppointments } from "@/hooks/use-appointments";
+import { useAppointments, useCreateAppointment } from "@/hooks/use-appointments";
+import { useClients } from "@/hooks/use-clients";
 import { BottomNav } from "@/components/BottomNav";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, isAfter, startOfDay } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays } from "lucide-react";
+import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/BackButton";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertAppointmentSchema } from "@shared/schema";
+import { z } from "zod";
 
 export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { data: appointments, isLoading } = useAppointments();
+  const { data: clients } = useClients();
+  const createApt = useCreateAppointment();
 
   const selectedDateAppointments = appointments?.filter(apt => 
     date && isSameDay(new Date(apt.date), date)
   ) || [];
 
   const daysWithAppointments = appointments?.map(a => new Date(a.date)) || [];
+
+  const isFutureOrToday = date && (isAfter(startOfDay(date), startOfDay(new Date())) || isSameDay(date, new Date()));
+
+  const form = useForm<z.infer<typeof insertAppointmentSchema>>({
+    resolver: zodResolver(insertAppointmentSchema),
+    defaultValues: {
+      clientId: 0,
+      type: "Garden",
+      notes: "",
+      date: date || new Date(),
+    }
+  });
+
+  const handleOpenDialog = () => {
+    if (date) {
+      const dateWithTime = new Date(date);
+      dateWithTime.setHours(9, 0, 0, 0);
+      form.reset({
+        clientId: 0,
+        type: "Garden",
+        notes: "",
+        date: dateWithTime,
+      });
+    }
+    setDialogOpen(true);
+  };
+
+  const onSubmit = async (values: z.infer<typeof insertAppointmentSchema>) => {
+    try {
+      await createApt.mutateAsync(values);
+      setDialogOpen(false);
+      form.reset();
+    } catch (e) {}
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24 page-transition">
@@ -92,10 +140,20 @@ export default function CalendarPage() {
       `}</style>
 
       <div className="px-5 space-y-4">
-        <div className="section-header">
+        <div className="section-header flex items-center justify-between">
           <h2 className="section-title">
             {date ? format(date, "EEEE, d 'de' MMMM", { locale: pt }) : "Selecione uma data"}
           </h2>
+          {isFutureOrToday && (
+            <Button
+              size="icon"
+              className="rounded-full h-10 w-10 shadow-lg"
+              onClick={handleOpenDialog}
+              data-testid="button-add-appointment"
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
+          )}
         </div>
 
         {isLoading ? (
@@ -158,9 +216,127 @@ export default function CalendarPage() {
             </div>
             <h3 className="font-semibold text-foreground">Sem agendamentos</h3>
             <p className="text-sm text-muted-foreground mt-1">Nenhuma visita marcada para este dia</p>
+            {isFutureOrToday && (
+              <Button
+                className="mt-4"
+                onClick={handleOpenDialog}
+                data-testid="button-add-appointment-empty"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Agendar Serviço
+              </Button>
+            )}
           </div>
         )}
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="rounded-2xl sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Agendamento</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="clientId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cliente</FormLabel>
+                    <Select 
+                      onValueChange={(v) => field.onChange(Number(v))} 
+                      value={field.value ? field.value.toString() : ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="rounded-xl" data-testid="select-appointment-client">
+                          <SelectValue placeholder="Selecione um cliente" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {clients?.map((client) => (
+                          <SelectItem key={client.id} value={client.id.toString()}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data e Hora</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="datetime-local" 
+                        className="rounded-xl"
+                        value={field.value ? format(new Date(field.value), "yyyy-MM-dd'T'HH:mm") : ""}
+                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                        data-testid="input-appointment-datetime"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Serviço</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="rounded-xl" data-testid="select-appointment-type">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Garden">Jardim</SelectItem>
+                        <SelectItem value="Pool">Piscina</SelectItem>
+                        <SelectItem value="Jacuzzi">Jacuzzi</SelectItem>
+                        <SelectItem value="General">Geral</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notas (Opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Instruções especiais..." 
+                        className="rounded-xl" 
+                        {...field} 
+                        value={field.value || ""}
+                        data-testid="textarea-appointment-notes"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <Button 
+                type="submit" 
+                className="w-full btn-primary" 
+                disabled={createApt.isPending || !form.watch("clientId")}
+                data-testid="button-submit-appointment"
+              >
+                {createApt.isPending ? "A agendar..." : "Agendar"}
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>
