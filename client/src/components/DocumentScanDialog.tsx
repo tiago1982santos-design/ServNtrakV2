@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Camera, Check, X, ImagePlus, Trash2, ArrowLeft, FileText } from "lucide-react";
+import { Loader2, Camera, Check, X, Upload, Trash2, ArrowLeft, FileText } from "lucide-react";
 import type { PurchaseCategory, Store } from "@shared/schema";
 
 interface ExtractedItem {
@@ -283,13 +283,15 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
               </div>
             ) : (
               <Card 
-                className="p-12 text-center cursor-pointer hover-elevate border-dashed border-2"
+                className="p-8 text-center cursor-pointer hover-elevate border-dashed border-2"
                 onClick={() => fileInputRef.current?.click()}
                 data-testid="card-capture-area"
               >
-                <Camera className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <p className="font-medium text-foreground">Toque para tirar foto</p>
-                <p className="text-sm text-muted-foreground mt-1">ou selecione uma imagem</p>
+                <Camera className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="font-medium text-foreground">Tire uma foto ou carregue um ficheiro</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Pode também carregar documentos já digitalizados pelo scanner da sua impressora
+                </p>
               </Card>
             )}
 
@@ -307,11 +309,16 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.removeAttribute('capture');
+                    fileInputRef.current.click();
+                  }
+                }}
                 data-testid="button-select-image"
               >
-                <ImagePlus className="w-4 h-4 mr-2" />
-                Galeria
+                <Upload className="w-4 h-4 mr-2" />
+                Carregar Ficheiro
               </Button>
               <Button
                 className="flex-1"
