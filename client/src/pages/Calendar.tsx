@@ -18,8 +18,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertAppointmentSchema } from "@shared/schema";
 import { z } from "zod";
+
+const appointmentFormSchema = z.object({
+  clientId: z.number().min(1, "Selecione um cliente"),
+  type: z.string(),
+  notes: z.string().optional(),
+  date: z.coerce.date(),
+});
 
 export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -36,8 +42,8 @@ export default function CalendarPage() {
 
   const isFutureOrToday = date && (isAfter(startOfDay(date), startOfDay(new Date())) || isSameDay(date, new Date()));
 
-  const form = useForm<z.infer<typeof insertAppointmentSchema>>({
-    resolver: zodResolver(insertAppointmentSchema),
+  const form = useForm<z.infer<typeof appointmentFormSchema>>({
+    resolver: zodResolver(appointmentFormSchema),
     defaultValues: {
       clientId: 0,
       type: "Garden",
@@ -60,7 +66,7 @@ export default function CalendarPage() {
     setDialogOpen(true);
   };
 
-  const onSubmit = async (values: z.infer<typeof insertAppointmentSchema>) => {
+  const onSubmit = async (values: z.infer<typeof appointmentFormSchema>) => {
     try {
       await createApt.mutateAsync(values);
       setDialogOpen(false);
