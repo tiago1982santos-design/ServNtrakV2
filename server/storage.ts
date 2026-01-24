@@ -4,7 +4,7 @@ import {
   serviceLogLaborEntries, serviceLogMaterialEntries,
   purchaseCategories, stores, purchases, clientPayments,
   serviceVisits, serviceVisitServices,
-  financialConfig, monthlyDistributions, employees, pendingTasks,
+  financialConfig, monthlyDistributions, employees, pendingTasks, suggestedWorks,
   type InsertClient, type Client,
   type InsertAppointment, type Appointment,
   type InsertServiceLog, type ServiceLog,
@@ -23,7 +23,8 @@ import {
   type InsertFinancialConfig, type FinancialConfig,
   type InsertMonthlyDistribution, type MonthlyDistribution,
   type InsertEmployee, type Employee,
-  type InsertPendingTask, type PendingTask, type PendingTaskWithClient
+  type InsertPendingTask, type PendingTask, type PendingTaskWithClient,
+  type InsertSuggestedWork, type SuggestedWork, type SuggestedWorkWithClient
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -128,6 +129,13 @@ export interface IStorage {
   completePendingTask(id: number, userId: string, serviceLogId?: number): Promise<PendingTask | undefined>;
   deletePendingTask(id: number, userId: string): Promise<void>;
   getPendingTasksCount(userId: string): Promise<number>;
+  
+  // Suggested Works
+  getSuggestedWorks(userId: string, clientId?: number, includeCompleted?: boolean): Promise<SuggestedWorkWithClient[]>;
+  getSuggestedWork(id: number, userId: string): Promise<SuggestedWork | undefined>;
+  createSuggestedWork(work: InsertSuggestedWork & { userId: string }): Promise<SuggestedWork>;
+  updateSuggestedWork(id: number, userId: string, updates: Partial<InsertSuggestedWork>): Promise<SuggestedWork | undefined>;
+  deleteSuggestedWork(id: number, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -932,6 +940,54 @@ export class DatabaseStorage implements IStorage {
       .from(pendingTasks)
       .where(and(eq(pendingTasks.userId, userId), eq(pendingTasks.isCompleted, false)));
     return result[0]?.count ?? 0;
+  }
+
+  // Suggested Works
+  async getSuggestedWorks(userId: string, clientId?: number, includeCompleted: boolean = false): Promise<SuggestedWorkWithClient[]> {
+    const conditions = [eq(suggestedWorks.userId, userId)];
+    if (clientId) conditions.push(eq(suggestedWorks.clientId, clientId));
+    if (!includeCompleted) conditions.push(eq(suggestedWorks.isCompleted, false));
+
+    const works = await db
+      .select()
+      .from(suggestedWorks)
+      .where(and(...conditions))
+      .orderBy(desc(suggestedWorks.createdAt));
+
+    const worksWithClients: SuggestedWorkWithClient[] = [];
+    for (const work of works) {
+      const [client] = await db.select().from(clients).where(eq(clients.id, work.clientId));
+      if (client) {
+        worksWithClients.push({ ...work, client });
+      }
+    }
+    return worksWithClients;
+  }
+
+  async getSuggestedWork(id: number, userId: string): Promise<SuggestedWork | undefined> {
+    const [work] = await db
+      .select()
+      .from(suggestedWorks)
+      .where(and(eq(suggestedWorks.id, id), eq(suggestedWorks.userId, userId)));
+    return work;
+  }
+
+  async createSuggestedWork(work: InsertSuggestedWork & { userId: string }): Promise<SuggestedWork> {
+    const [newWork] = await db.insert(suggestedWorks).values(work).returning();
+    return newWork;
+  }
+
+  async updateSuggestedWork(id: number, userId: string, updates: Partial<InsertSuggestedWork>): Promise<SuggestedWork | undefined> {
+    const [updated] = await db
+      .update(suggestedWorks)
+      .set(updates)
+      .where(and(eq(suggestedWorks.id, id), eq(suggestedWorks.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteSuggestedWork(id: number, userId: string): Promise<void> {
+    await db.delete(suggestedWorks).where(and(eq(suggestedWorks.id, id), eq(suggestedWorks.userId, userId)));
   }
 }
 

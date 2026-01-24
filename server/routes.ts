@@ -900,5 +900,56 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
     res.status(204).end();
   });
 
+  // Suggested Works routes
+  app.get(api.suggestedWorks.list.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const clientId = req.query.clientId ? Number(req.query.clientId) : undefined;
+    const includeCompleted = req.query.includeCompleted === 'true';
+    const works = await storage.getSuggestedWorks(userId, clientId, includeCompleted);
+    res.json(works);
+  });
+
+  app.get(api.suggestedWorks.get.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const work = await storage.getSuggestedWork(Number(req.params.id), userId);
+    if (!work) return res.status(404).json({ message: 'Trabalho sugerido não encontrado' });
+    res.json(work);
+  });
+
+  app.post(api.suggestedWorks.create.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.suggestedWorks.create.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      const work = await storage.createSuggestedWork({ ...input, userId });
+      res.status(201).json(work);
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ message: e.errors.map(err => err.message).join(', ') });
+      }
+      throw e;
+    }
+  });
+
+  app.put(api.suggestedWorks.update.path, requireAuth, async (req, res) => {
+    try {
+      const input = api.suggestedWorks.update.input.parse(req.body);
+      const userId = (req.user as any).claims.sub;
+      const updated = await storage.updateSuggestedWork(Number(req.params.id), userId, input);
+      if (!updated) return res.status(404).json({ message: 'Trabalho sugerido não encontrado' });
+      res.json(updated);
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ message: e.errors.map(err => err.message).join(', ') });
+      }
+      throw e;
+    }
+  });
+
+  app.delete(api.suggestedWorks.delete.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    await storage.deleteSuggestedWork(Number(req.params.id), userId);
+    res.status(204).end();
+  });
+
   return httpServer;
 }

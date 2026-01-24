@@ -229,6 +229,24 @@ export const pendingTasks = pgTable("pending_tasks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Suggested works - extra work suggestions for clients
+export const suggestedWorks = pgTable("suggested_works", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  clientId: integer("client_id").notNull(),
+  title: text("title").notNull(), // e.g., "Lavagem de calçada", "Plantar arbustos"
+  description: text("description"), // Detailed description of the suggested work
+  notes: text("notes"), // Additional notes: measurements, quantities, materials needed
+  category: text("category").notNull(), // 'Jardim', 'Piscina', 'Jacuzzi', 'Geral', 'Limpeza', 'Instalação'
+  photos: text("photos").array(), // Photos showing where/what work is suggested
+  estimatedCost: integer("estimated_cost"), // Optional cost estimate in cents
+  isAccepted: boolean("is_accepted").default(false), // Client accepted the suggestion
+  isCompleted: boolean("is_completed").default(false), // Work has been done
+  acceptedAt: timestamp("accepted_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // === RELATIONS ===
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
@@ -429,6 +447,8 @@ export const insertMonthlyDistributionSchema = createInsertSchema(monthlyDistrib
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, userId: true, createdAt: true });
 export const insertPendingTaskSchema = createInsertSchema(pendingTasks).omit({ id: true, userId: true, createdAt: true, completedAt: true, serviceLogId: true });
 
+export const insertSuggestedWorkSchema = createInsertSchema(suggestedWorks).omit({ id: true, userId: true, createdAt: true, acceptedAt: true, completedAt: true });
+
 // === TYPES ===
 
 export type Client = typeof clients.$inferSelect;
@@ -522,5 +542,13 @@ export type InsertPendingTask = z.infer<typeof insertPendingTaskSchema>;
 
 // Extended type for pending task with client
 export type PendingTaskWithClient = PendingTask & {
+  client: Client;
+};
+
+export type SuggestedWork = typeof suggestedWorks.$inferSelect;
+export type InsertSuggestedWork = z.infer<typeof insertSuggestedWorkSchema>;
+
+// Extended type for suggested work with client
+export type SuggestedWorkWithClient = SuggestedWork & {
   client: Client;
 };

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, insertPurchaseCategorySchema, insertStoreSchema, insertPurchaseSchema, insertClientPaymentSchema, insertServiceVisitSchema, insertFinancialConfigSchema, insertMonthlyDistributionSchema, insertEmployeeSchema, insertPendingTaskSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries, purchaseCategories, stores, purchases, clientPayments, serviceVisits, serviceVisitServices, financialConfig, monthlyDistributions, employees, pendingTasks } from './schema';
+import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, insertPurchaseCategorySchema, insertStoreSchema, insertPurchaseSchema, insertClientPaymentSchema, insertServiceVisitSchema, insertFinancialConfigSchema, insertMonthlyDistributionSchema, insertEmployeeSchema, insertPendingTaskSchema, insertSuggestedWorkSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries, purchaseCategories, stores, purchases, clientPayments, serviceVisits, serviceVisitServices, financialConfig, monthlyDistributions, employees, pendingTasks, suggestedWorks } from './schema';
 
 // Robust numeric validator: preprocess to reject NaN/Infinity before coercion
 const safePositiveNumber = (max: number, fieldName: string) =>
@@ -643,6 +643,54 @@ export const api = {
       path: '/api/pending-tasks/count',
       responses: {
         200: z.object({ count: z.number() }),
+      },
+    },
+  },
+  
+  suggestedWorks: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/suggested-works',
+      query: z.object({
+        clientId: z.string().optional(),
+        includeCompleted: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof suggestedWorks.$inferSelect & { client: typeof clients.$inferSelect }>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/suggested-works/:id',
+      responses: {
+        200: z.custom<typeof suggestedWorks.$inferSelect>(),
+        404: z.object({ message: z.string() }),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/suggested-works',
+      input: insertSuggestedWorkSchema,
+      responses: {
+        201: z.custom<typeof suggestedWorks.$inferSelect>(),
+        400: z.object({ message: z.string() }),
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/suggested-works/:id',
+      input: insertSuggestedWorkSchema.partial(),
+      responses: {
+        200: z.custom<typeof suggestedWorks.$inferSelect>(),
+        404: z.object({ message: z.string() }),
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/suggested-works/:id',
+      responses: {
+        204: z.void(),
+        404: z.object({ message: z.string() }),
       },
     },
   },
