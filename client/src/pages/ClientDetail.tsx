@@ -6,8 +6,11 @@ import { useQuickPhotos, useDeleteQuickPhoto } from "@/hooks/use-quick-photos";
 import { useAppointments, useCreateAppointment, useUpdateAppointment } from "@/hooks/use-appointments";
 import { useClientServiceStats, useCreateServiceVisit } from "@/hooks/use-service-visits";
 import { useUpload } from "@/hooks/use-upload";
-import { useQuery } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil, Euro, Clock, Flower2, Sparkles, FolderPlus, Users, Timer, Check, MessageCircle, Banknote, Building2, Smartphone, CalendarDays } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil, Euro, Clock, Flower2, Sparkles, FolderPlus, Users, Timer, Check, MessageCircle, Banknote, Building2, Smartphone, CalendarDays, AlertTriangle, ChevronUp, Wrench, ClipboardList, Trash2 } from "lucide-react";
+import { CreatePendingTaskDialog } from "@/components/CreatePendingTaskDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import type { PendingTaskWithClient } from "@shared/schema";
 import { SiWhatsapp, SiFacebook } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,12 +35,54 @@ import { Badge } from "@/components/ui/badge";
 export default function ClientDetail() {
   const { id } = useParams();
   const clientId = parseInt(id || "0");
+  const queryClient = useQueryClient();
   const { data: client, isLoading } = useClient(clientId);
   const { data: logs } = useServiceLogs(id);
   const { data: appointments } = useAppointments({ clientId: id });
   const { data: quickPhotos } = useQuickPhotos(id);
   const { data: serviceStats } = useClientServiceStats(clientId);
   const deleteQuickPhoto = useDeleteQuickPhoto();
+  
+  const [showPendingTaskDialog, setShowPendingTaskDialog] = useState(false);
+  
+  const { data: pendingTasks } = useQuery<PendingTaskWithClient[]>({
+    queryKey: ["/api/pending-tasks", { clientId: id }],
+    queryFn: async () => {
+      const response = await fetch(`/api/pending-tasks?clientId=${id}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch pending tasks");
+      return response.json();
+    },
+  });
+  
+  const deletePendingTask = useMutation({
+    mutationFn: async (taskId: number) => {
+      const response = await fetch(`/api/pending-tasks/${taskId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to delete task");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks/count"] });
+    },
+  });
+  
+  const completePendingTask = useMutation({
+    mutationFn: async (taskId: number) => {
+      const response = await fetch(`/api/pending-tasks/${taskId}/complete`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to complete task");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks/count"] });
+    },
+  });
 
   if (isLoading) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-primary" /></div>;
   if (!client) return <div>Cliente não encontrado</div>;
@@ -239,6 +284,154 @@ export default function ClientDetail() {
           </div>
         </div>
       )}
+
+      {/* Pending Tasks Section */}
+      <div className="px-6 mt-6">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-bold text-lg flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-orange-500" />
+            Tarefas Pendentes
+            {pendingTasks && pendingTasks.length > 0 && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                {pendingTasks.length}
+              </Badge>
+            )}
+          </h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowPendingTaskDialog(true)}
+            className="gap-1"
+            data-testid="button-add-pending-task"
+          >
+            <Plus className="w-4 h-4" />
+            Registar
+          </Button>
+        </div>
+        
+        {pendingTasks && pendingTasks.length > 0 ? (
+          <div className="space-y-3">
+            {pendingTasks.map((task) => {
+              const ServiceIcon = task.serviceType === 'Jardim' ? Leaf :
+                                  task.serviceType === 'Piscina' ? Waves :
+                                  task.serviceType === 'Jacuzzi' ? ThermometerSun : Wrench;
+              const priorityColors = {
+                low: 'bg-gray-100 text-gray-600',
+                normal: 'bg-blue-100 text-blue-600',
+                high: 'bg-orange-100 text-orange-600',
+                urgent: 'bg-red-100 text-red-600',
+              };
+              const priorityLabels = { low: 'Baixa', normal: 'Normal', high: 'Alta', urgent: 'Urgente' };
+              
+              return (
+                <div key={task.id} className="bg-card border border-border/50 rounded-xl p-4 shadow-sm">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <ServiceIcon className={`w-4 h-4 ${
+                        task.serviceType === 'Jardim' ? 'text-green-600' :
+                        task.serviceType === 'Piscina' ? 'text-blue-600' :
+                        task.serviceType === 'Jacuzzi' ? 'text-orange-600' : 'text-gray-600'
+                      }`} />
+                      <span className="text-xs font-semibold">{task.serviceType}</span>
+                      <Badge variant="secondary" className={`text-xs ${priorityColors[task.priority as keyof typeof priorityColors] || priorityColors.normal}`}>
+                        {task.priority === 'urgent' && <AlertTriangle className="w-3 h-3 mr-1" />}
+                        {task.priority === 'high' && <ChevronUp className="w-3 h-3 mr-1" />}
+                        {priorityLabels[task.priority as keyof typeof priorityLabels] || 'Normal'}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(task.createdAt!), "d MMM", { locale: pt })}
+                    </span>
+                  </div>
+                  
+                  <p className="text-sm text-foreground mb-3">{task.description}</p>
+                  
+                  {task.photos && task.photos.length > 0 && (
+                    <div className="flex gap-2 mb-3 overflow-x-auto">
+                      {task.photos.map((photo, idx) => (
+                        <img
+                          key={idx}
+                          src={photo}
+                          alt={`Foto ${idx + 1}`}
+                          className="w-16 h-16 object-cover rounded-lg border flex-shrink-0"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-end gap-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" data-testid={`button-delete-task-${task.id}`}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Eliminar Tarefa</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem a certeza que deseja eliminar esta tarefa pendente? Esta ação não pode ser revertida.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deletePendingTask.mutate(task.id)}
+                            className="bg-red-500 hover:bg-red-600"
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" className="gap-1 btn-primary" data-testid={`button-complete-task-${task.id}`}>
+                          <Check className="w-4 h-4" />
+                          Concluir
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Concluir Tarefa</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Confirma que esta tarefa foi concluída?
+                            <div className="mt-3 p-3 bg-muted rounded-lg">
+                              <p className="text-sm font-medium text-foreground">{task.description}</p>
+                            </div>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => completePendingTask.mutate(task.id)}
+                            className="btn-primary"
+                          >
+                            Confirmar Conclusão
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-muted-foreground bg-muted/30 rounded-xl border border-dashed">
+            <ClipboardList className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Sem tarefas pendentes</p>
+          </div>
+        )}
+      </div>
+      
+      <CreatePendingTaskDialog
+        open={showPendingTaskDialog}
+        onOpenChange={setShowPendingTaskDialog}
+        clientId={clientId}
+        clientName={client.name}
+      />
 
       {/* Main Content Tabs */}
       <div className="px-6 mt-6">
