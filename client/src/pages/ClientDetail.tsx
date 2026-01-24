@@ -7,10 +7,11 @@ import { useAppointments, useCreateAppointment, useUpdateAppointment } from "@/h
 import { useClientServiceStats, useCreateServiceVisit } from "@/hooks/use-service-visits";
 import { useUpload } from "@/hooks/use-upload";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil, Euro, Clock, Flower2, Sparkles, FolderPlus, Users, Timer, Check, MessageCircle, Banknote, Building2, Smartphone, CalendarDays, AlertTriangle, ChevronUp, Wrench, ClipboardList, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil, Euro, Clock, Flower2, Sparkles, FolderPlus, Users, Timer, Check, MessageCircle, Banknote, Building2, Smartphone, CalendarDays, AlertTriangle, ChevronUp, Wrench, ClipboardList, Trash2, Lightbulb, ThumbsUp, ThumbsDown } from "lucide-react";
 import { CreatePendingTaskDialog } from "@/components/CreatePendingTaskDialog";
+import { CreateSuggestedWorkDialog } from "@/components/CreateSuggestedWorkDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import type { PendingTaskWithClient } from "@shared/schema";
+import type { PendingTaskWithClient, SuggestedWorkWithClient } from "@shared/schema";
 import { SiWhatsapp, SiFacebook } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,6 +45,7 @@ export default function ClientDetail() {
   const deleteQuickPhoto = useDeleteQuickPhoto();
   
   const [showPendingTaskDialog, setShowPendingTaskDialog] = useState(false);
+  const [showSuggestedWorkDialog, setShowSuggestedWorkDialog] = useState(false);
   
   const { data: pendingTasks } = useQuery<PendingTaskWithClient[]>({
     queryKey: ["/api/pending-tasks", { clientId: id }],
@@ -81,6 +83,53 @@ export default function ClientDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks/count"] });
+    },
+  });
+
+  const { data: suggestedWorks } = useQuery<SuggestedWorkWithClient[]>({
+    queryKey: ["/api/suggested-works", { clientId: id }],
+    queryFn: async () => {
+      const response = await fetch(`/api/suggested-works?clientId=${id}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch suggested works");
+      return response.json();
+    },
+  });
+  
+  const updateSuggestedWork = useMutation({
+    mutationFn: async ({ workId, isAccepted, isCompleted }: { workId: number; isAccepted?: boolean; isCompleted?: boolean }) => {
+      const body: Record<string, any> = {};
+      if (isAccepted !== undefined) {
+        body.isAccepted = isAccepted;
+        body.acceptedAt = isAccepted ? new Date().toISOString() : null;
+      }
+      if (isCompleted !== undefined) {
+        body.isCompleted = isCompleted;
+        body.completedAt = isCompleted ? new Date().toISOString() : null;
+      }
+      const response = await fetch(`/api/suggested-works/${workId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to update work");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/suggested-works"] });
+    },
+  });
+  
+  const deleteSuggestedWork = useMutation({
+    mutationFn: async (workId: number) => {
+      const response = await fetch(`/api/suggested-works/${workId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to delete work");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/suggested-works"] });
     },
   });
 
@@ -429,6 +478,160 @@ export default function ClientDetail() {
       <CreatePendingTaskDialog
         open={showPendingTaskDialog}
         onOpenChange={setShowPendingTaskDialog}
+        clientId={clientId}
+        clientName={client.name}
+      />
+
+      {/* Suggested Works Section */}
+      <div className="px-6 mt-6">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-bold text-lg flex items-center gap-2">
+            <Lightbulb className="w-5 h-5 text-yellow-500" />
+            Trabalhos Sugeridos
+            {suggestedWorks && suggestedWorks.filter(w => !w.isAccepted && !w.isCompleted).length > 0 && (
+              <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                {suggestedWorks.filter(w => !w.isAccepted && !w.isCompleted).length}
+              </Badge>
+            )}
+          </h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowSuggestedWorkDialog(true)}
+            className="gap-1"
+            data-testid="button-add-suggested-work"
+          >
+            <Plus className="w-4 h-4" />
+            Sugerir
+          </Button>
+        </div>
+        
+        {suggestedWorks && suggestedWorks.filter(w => !w.isAccepted && !w.isCompleted).length > 0 ? (
+          <div className="space-y-3">
+            {suggestedWorks.filter(w => !w.isAccepted && !w.isCompleted).map((work) => {
+              const CategoryIcon = work.category === 'Plantação' || work.category === 'Poda' ? Leaf :
+                                   work.category === 'Piscina' ? Waves :
+                                   work.category === 'Jacuzzi' ? ThermometerSun : Wrench;
+              const categoryColors: Record<string, string> = {
+                'Limpeza': 'text-gray-600',
+                'Plantação': 'text-green-600',
+                'Poda': 'text-lime-600',
+                'Construção': 'text-amber-600',
+                'Reparação': 'text-orange-600',
+                'Piscina': 'text-blue-600',
+                'Jacuzzi': 'text-cyan-600',
+                'Geral': 'text-gray-500',
+              };
+              
+              return (
+                <div key={work.id} className="bg-card border border-border/50 rounded-xl p-4 shadow-sm">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <CategoryIcon className={`w-4 h-4 ${categoryColors[work.category] || 'text-gray-600'}`} />
+                      <span className="text-xs font-semibold">{work.category}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(work.createdAt!), "d MMM", { locale: pt })}
+                    </span>
+                  </div>
+                  
+                  <h4 className="font-semibold text-sm mb-1">{work.title}</h4>
+                  {work.description && (
+                    <p className="text-sm text-muted-foreground mb-2">{work.description}</p>
+                  )}
+                  
+                  {work.notes && (
+                    <div className="bg-muted/50 rounded-lg p-2 mb-3">
+                      <p className="text-xs text-muted-foreground italic">{work.notes}</p>
+                    </div>
+                  )}
+                  
+                  {work.estimatedCost && (
+                    <div className="flex items-center gap-1 mb-3">
+                      <Euro className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-semibold text-green-600">
+                        {work.estimatedCost.toFixed(2)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">(estimado)</span>
+                    </div>
+                  )}
+                  
+                  {work.photos && work.photos.length > 0 && (
+                    <div className="flex gap-2 mb-3 overflow-x-auto">
+                      {work.photos.map((photo, idx) => (
+                        <img
+                          key={idx}
+                          src={photo}
+                          alt={`Foto ${idx + 1}`}
+                          className="w-16 h-16 object-cover rounded-lg border flex-shrink-0"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-end gap-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" data-testid={`button-delete-suggestion-${work.id}`}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Eliminar Sugestão</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem a certeza que deseja eliminar esta sugestão de trabalho? Esta ação não pode ser revertida.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteSuggestedWork.mutate(work.id)}
+                            className="bg-red-500 hover:bg-red-600"
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => updateSuggestedWork.mutate({ workId: work.id, isCompleted: true })}
+                      data-testid={`button-reject-suggestion-${work.id}`}
+                    >
+                      <ThumbsDown className="w-4 h-4" />
+                      Recusar
+                    </Button>
+                    
+                    <Button
+                      size="sm"
+                      className="gap-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => updateSuggestedWork.mutate({ workId: work.id, isAccepted: true })}
+                      data-testid={`button-accept-suggestion-${work.id}`}
+                    >
+                      <ThumbsUp className="w-4 h-4" />
+                      Aceitar
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-muted-foreground bg-muted/30 rounded-xl border border-dashed">
+            <Lightbulb className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Sem trabalhos sugeridos</p>
+            <p className="text-xs text-muted-foreground mt-1">Adicione sugestões de trabalhos extra</p>
+          </div>
+        )}
+      </div>
+      
+      <CreateSuggestedWorkDialog
+        open={showSuggestedWorkDialog}
+        onOpenChange={setShowSuggestedWorkDialog}
         clientId={clientId}
         clientName={client.name}
       />
