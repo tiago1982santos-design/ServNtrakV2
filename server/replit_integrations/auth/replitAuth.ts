@@ -39,16 +39,19 @@ export function getSession() {
     ttl: REMEMBER_ME_TTL / 1000,
     tableName: "sessions",
   });
+  const isProduction = process.env.NODE_ENV === "production" || !!process.env.REPL_SLUG;
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
-    resave: true,
-    saveUninitialized: true,
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production" || !!process.env.REPL_SLUG,
-      maxAge: DEFAULT_SESSION_TTL,
+      secure: isProduction,
+      maxAge: REMEMBER_ME_TTL,
       sameSite: "lax" as const,
+      path: "/",
     },
   });
 }

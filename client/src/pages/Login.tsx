@@ -18,7 +18,7 @@ interface AuthProviders {
   facebook: boolean;
 }
 
-const REMEMBERED_USER_KEY = "trackserv_remembered_user";
+const REMEMBERED_USER_KEY = "servntrak_remembered_user";
 
 interface RememberedUser {
   id: string;
@@ -28,6 +28,12 @@ interface RememberedUser {
 
 function getRememberedUser(): RememberedUser | null {
   try {
+    const oldKey = "trackserv_remembered_user";
+    const oldStored = localStorage.getItem(oldKey);
+    if (oldStored) {
+      localStorage.setItem(REMEMBERED_USER_KEY, oldStored);
+      localStorage.removeItem(oldKey);
+    }
     const stored = localStorage.getItem(REMEMBERED_USER_KEY);
     if (stored) return JSON.parse(stored);
   } catch {}

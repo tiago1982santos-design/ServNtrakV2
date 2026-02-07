@@ -1,33 +1,21 @@
-const CACHE_NAME = 'peralta-gardens-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/manifest.json',
-  '/favicon.png',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/apple-touch-icon.png'
-];
+const CACHE_VERSION = 'servntrak-v2';
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
-  );
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+        keys.map((key) => {
+          if (key !== CACHE_VERSION) {
+            return caches.delete(key);
+          }
+        })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -35,24 +23,35 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  if (url.pathname.startsWith('/api/')) return;
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/') || new Response('Offline', { status: 503 });
-      })
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => {
+            return cached || new Response('Offline - Por favor verifique a sua ligação à internet.', {
+              status: 503,
+              headers: { 'Content-Type': 'text/plain' }
+            });
+          });
+        })
     );
     return;
   }
-  
-  if (url.pathname.startsWith('/api/')) {
+
+  if (url.pathname.match(/\.(js|css)$/) || url.pathname.startsWith('/assets/')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
           if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
-            });
+            const clone = response.clone();
+            caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, clone));
           }
           return response;
         })
@@ -63,28 +62,34 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse.ok) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse);
-            });
+  if (url.pathname.match(/\.(png|jpg|jpeg|svg|ico|gif|webp|woff|woff2|ttf)$/)) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, clone));
           }
-        }).catch(() => {});
-        return cachedResponse;
-      }
+          return response;
+        });
+      })
+    );
+    return;
+  }
 
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse.ok) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return networkResponse;
-      });
-    })
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'skipWaiting') {
+    self.skipWaiting();
+  }
+  if (event.data === 'clearCache') {
+    caches.keys().then((keys) => {
+      keys.forEach((key) => caches.delete(key));
+    });
+  }
 });
