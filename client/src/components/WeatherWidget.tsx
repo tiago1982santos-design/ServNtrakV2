@@ -79,22 +79,26 @@ export function WeatherWidget({
     ? iconMap[weatherInfo.icon] || Cloud
     : nightIconMap[weatherInfo.icon] || Moon;
 
+  const isRainy = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 21].includes(weather.weatherCode);
+  const isStormy = [19, 20, 23].includes(weather.weatherCode);
+  const isClear = weather.weatherCode === 1;
+
   const iconBgClass = weather.isDay
-    ? weather.weatherCode === 0
+    ? isClear
       ? "bg-gradient-to-br from-yellow-400/30 to-orange-400/20"
-      : weather.weatherCode >= 61 && weather.weatherCode <= 67
+      : isRainy
         ? "bg-gradient-to-br from-blue-400/30 to-blue-600/20"
-        : weather.weatherCode >= 95
+        : isStormy
           ? "bg-gradient-to-br from-purple-400/30 to-gray-600/20"
           : "bg-gradient-to-br from-gray-300/30 to-gray-400/20"
     : "bg-gradient-to-br from-indigo-500/30 to-purple-600/20";
 
   const iconColorClass = weather.isDay
-    ? weather.weatherCode === 0
+    ? isClear
       ? "text-yellow-300"
-      : weather.weatherCode >= 61 && weather.weatherCode <= 67
+      : isRainy
         ? "text-blue-300"
-        : weather.weatherCode >= 95
+        : isStormy
           ? "text-purple-300"
           : "text-white"
     : "text-indigo-200";
@@ -154,7 +158,7 @@ export function WeatherWidget({
           </div>
         </div>
         <p className="text-xs text-white/50 text-center mt-3">
-          (Clique para aceder ao menu da meteorologia completo)
+          Fonte: IPMA (Clique para ver previsão completa)
         </p>
       </div>
 
@@ -164,14 +168,14 @@ export function WeatherWidget({
             <div
               key={index}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium backdrop-blur-md",
+                "flex items-start gap-3 rounded-xl px-4 py-3 text-sm font-medium backdrop-blur-md",
                 alert.severity === "danger"
                   ? "bg-red-500/20 text-red-100 border border-red-400/30"
                   : "bg-amber-500/20 text-amber-100 border border-amber-400/30"
               )}
               data-testid={`weather-alert-${alert.type}`}
             >
-              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
               <span>{alert.message}</span>
             </div>
           ))}

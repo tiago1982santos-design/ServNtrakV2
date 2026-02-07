@@ -8,21 +8,13 @@ export interface WeatherData {
   precipitation: number;
   humidity: number;
   alerts: WeatherAlert[];
+  source: "ipma";
 }
 
 export interface WeatherAlert {
-  type: "rain" | "wind" | "storm";
+  type: "rain" | "wind" | "storm" | "sea" | "cold" | "heat" | "fog" | "snow";
   message: string;
   severity: "warning" | "danger";
-}
-
-export interface HourlyForecast {
-  time: string;
-  temperature: number;
-  precipitation: number;
-  precipitationProbability: number;
-  windSpeed: number;
-  weatherCode: number;
 }
 
 export interface DailyForecast {
@@ -30,215 +22,291 @@ export interface DailyForecast {
   temperatureMax: number;
   temperatureMin: number;
   weatherCode: number;
-  precipitationSum: number;
   precipitationProbability: number;
-  windSpeedMax: number;
+  windClass: number;
+  windDirection: string;
 }
 
 export interface DetailedWeatherData extends WeatherData {
-  hourly: HourlyForecast[];
   daily: DailyForecast[];
+  todayForecast: {
+    temperatureMin: number;
+    temperatureMax: number;
+    precipitationProbability: number;
+    windDirection: string;
+    windClass: number;
+  } | null;
 }
 
-const WEATHER_CODES: Record<number, { description: string; icon: string }> = {
-  0: { description: "Céu limpo", icon: "sun" },
-  1: { description: "Principalmente limpo", icon: "sun" },
-  2: { description: "Parcialmente nublado", icon: "cloud-sun" },
-  3: { description: "Nublado", icon: "cloud" },
-  45: { description: "Nevoeiro", icon: "cloud-fog" },
-  48: { description: "Nevoeiro com geada", icon: "cloud-fog" },
-  51: { description: "Chuvisco leve", icon: "cloud-drizzle" },
-  53: { description: "Chuvisco moderado", icon: "cloud-drizzle" },
-  55: { description: "Chuvisco intenso", icon: "cloud-drizzle" },
-  56: { description: "Chuvisco gelado", icon: "cloud-drizzle" },
-  57: { description: "Chuvisco gelado intenso", icon: "cloud-drizzle" },
-  61: { description: "Chuva leve", icon: "cloud-rain" },
-  63: { description: "Chuva moderada", icon: "cloud-rain" },
-  65: { description: "Chuva forte", icon: "cloud-rain" },
-  66: { description: "Chuva gelada", icon: "cloud-rain" },
-  67: { description: "Chuva gelada intensa", icon: "cloud-rain" },
-  71: { description: "Neve leve", icon: "snowflake" },
-  73: { description: "Neve moderada", icon: "snowflake" },
-  75: { description: "Neve forte", icon: "snowflake" },
-  77: { description: "Grãos de neve", icon: "snowflake" },
-  80: { description: "Aguaceiros leves", icon: "cloud-rain" },
-  81: { description: "Aguaceiros moderados", icon: "cloud-rain" },
-  82: { description: "Aguaceiros violentos", icon: "cloud-rain" },
-  85: { description: "Aguaceiros de neve", icon: "snowflake" },
-  86: { description: "Aguaceiros de neve intensos", icon: "snowflake" },
-  95: { description: "Trovoada", icon: "cloud-lightning" },
-  96: { description: "Trovoada com granizo", icon: "cloud-lightning" },
-  99: { description: "Trovoada com granizo forte", icon: "cloud-lightning" },
+const IPMA_OBSERVATION_STATION = "1210739";
+const IPMA_CITY_ID = "1110600";
+const IPMA_WARNING_AREA = "LSB";
+
+const IPMA_WEATHER_CODES: Record<number, { description: string; icon: string }> = {
+  0: { description: "Sem informação", icon: "cloud" },
+  1: { description: "Céu limpo", icon: "sun" },
+  2: { description: "Céu pouco nublado", icon: "cloud-sun" },
+  3: { description: "Céu parcialmente nublado", icon: "cloud-sun" },
+  4: { description: "Céu muito nublado", icon: "cloud" },
+  5: { description: "Céu nublado por nuvens altas", icon: "cloud" },
+  6: { description: "Aguaceiros", icon: "cloud-rain" },
+  7: { description: "Aguaceiros fracos", icon: "cloud-drizzle" },
+  8: { description: "Aguaceiros fortes", icon: "cloud-rain" },
+  9: { description: "Chuva", icon: "cloud-rain" },
+  10: { description: "Chuva fraca", icon: "cloud-drizzle" },
+  11: { description: "Chuva forte", icon: "cloud-rain" },
+  12: { description: "Períodos de chuva", icon: "cloud-rain" },
+  13: { description: "Períodos de chuva fraca", icon: "cloud-drizzle" },
+  14: { description: "Períodos de chuva forte", icon: "cloud-rain" },
+  15: { description: "Chuvisco", icon: "cloud-drizzle" },
+  16: { description: "Neblina", icon: "cloud-fog" },
+  17: { description: "Nevoeiro", icon: "cloud-fog" },
+  18: { description: "Neve", icon: "snowflake" },
+  19: { description: "Trovoada", icon: "cloud-lightning" },
+  20: { description: "Aguaceiros com trovoada", icon: "cloud-lightning" },
+  21: { description: "Granizo", icon: "cloud-rain" },
+  22: { description: "Geada", icon: "snowflake" },
+  23: { description: "Chuva com trovoada", icon: "cloud-lightning" },
+  24: { description: "Nebulosidade convectiva", icon: "cloud" },
+  25: { description: "Céu com períodos de nublado", icon: "cloud-sun" },
+  26: { description: "Nevoeiro", icon: "cloud-fog" },
+  27: { description: "Céu nublado", icon: "cloud" },
+  28: { description: "Aguaceiros de neve", icon: "snowflake" },
+  29: { description: "Chuva e neve", icon: "snowflake" },
+  30: { description: "Chuva e neve", icon: "snowflake" },
+};
+
+const WIND_CLASS_LABELS: Record<number, string> = {
+  1: "Fraco",
+  2: "Moderado",
+  3: "Forte",
+  4: "Muito forte",
 };
 
 export function getWeatherInfo(code: number) {
-  return WEATHER_CODES[code] || { description: "Desconhecido", icon: "cloud" };
+  return IPMA_WEATHER_CODES[code] || { description: "Desconhecido", icon: "cloud" };
 }
 
-function generateAlerts(
-  currentWindSpeed: number,
-  hourlyData: HourlyForecast[]
-): WeatherAlert[] {
-  const alerts: WeatherAlert[] = [];
+export function getWindClassLabel(windClass: number): string {
+  return WIND_CLASS_LABELS[windClass] || "";
+}
+
+interface IPMAObservation {
+  intensidadeVentoKM: number;
+  temperatura: number;
+  radiacao: number;
+  idDireccVento: number;
+  precAcumulada: number;
+  intensidadeVento: number;
+  humidade: number;
+  pressao: number;
+}
+
+interface IPMAForecastDay {
+  precipitaProb: string;
+  tMin: string;
+  tMax: string;
+  predWindDir: string;
+  idWeatherType: number;
+  classWindSpeed: number;
+  longitude: string;
+  forecastDate: string;
+  classPrecInt: number;
+  latitude: string;
+}
+
+interface IPMAWarning {
+  text: string;
+  awarenessTypeName: string;
+  idAreaAviso: string;
+  startTime: string;
+  awarenessLevelID: string;
+  endTime: string;
+}
+
+function isCurrentlyDay(): boolean {
   const now = new Date();
-  const next6Hours = hourlyData.filter((h) => {
-    const time = new Date(h.time);
-    return time > now && time <= new Date(now.getTime() + 6 * 60 * 60 * 1000);
-  });
+  const hour = now.getHours();
+  return hour >= 7 && hour < 20;
+}
 
-  if (currentWindSpeed >= 50) {
-    alerts.push({
-      type: "wind",
-      message: `Vento muito forte: ${Math.round(currentWindSpeed)} km/h`,
-      severity: "danger",
-    });
-  } else if (currentWindSpeed >= 35) {
-    alerts.push({
-      type: "wind",
-      message: `Vento forte: ${Math.round(currentWindSpeed)} km/h`,
-      severity: "warning",
-    });
-  }
+function mapWarningType(awarenessTypeName: string): WeatherAlert["type"] {
+  const map: Record<string, WeatherAlert["type"]> = {
+    "Precipitação": "rain",
+    "Vento": "wind",
+    "Trovoada": "storm",
+    "Agitação Marítima": "sea",
+    "Tempo Frio": "cold",
+    "Tempo Quente": "heat",
+    "Nevoeiro": "fog",
+    "Neve": "snow",
+  };
+  return map[awarenessTypeName] || "wind";
+}
 
-  const rainHours = next6Hours.filter(
-    (h) => h.precipitation > 0.5 || (h.weatherCode >= 61 && h.weatherCode <= 67)
-  );
-  if (rainHours.length > 0) {
-    const firstRain = new Date(rainHours[0].time);
-    const hoursUntilRain = Math.round(
-      (firstRain.getTime() - now.getTime()) / (1000 * 60 * 60)
-    );
-    if (hoursUntilRain <= 1) {
-      alerts.push({
-        type: "rain",
-        message: "Chuva prevista dentro de 1 hora",
-        severity: "warning",
-      });
-    } else {
-      alerts.push({
-        type: "rain",
-        message: `Chuva prevista em ${hoursUntilRain} horas`,
-        severity: "warning",
-      });
+function mapWarningSeverity(level: string): WeatherAlert["severity"] {
+  return level === "red" || level === "orange" ? "danger" : "warning";
+}
+
+async function fetchIPMAObservation(): Promise<IPMAObservation | null> {
+  try {
+    const response = await fetch("https://api.ipma.pt/open-data/observation/meteorology/stations/observations.json");
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const timestamps = Object.keys(data).sort();
+    if (timestamps.length === 0) return null;
+
+    for (let i = timestamps.length - 1; i >= 0; i--) {
+      const stationData = data[timestamps[i]][IPMA_OBSERVATION_STATION];
+      if (stationData && stationData.temperatura !== null && stationData.temperatura !== -99) {
+        return stationData;
+      }
     }
+    return null;
+  } catch {
+    return null;
   }
-
-  const stormHours = next6Hours.filter((h) => h.weatherCode >= 95);
-  if (stormHours.length > 0) {
-    alerts.push({
-      type: "storm",
-      message: "Trovoada prevista nas próximas horas",
-      severity: "danger",
-    });
-  }
-
-  return alerts;
 }
 
-async function fetchWeather(
-  latitude: number,
-  longitude: number
-): Promise<WeatherData> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m,is_day,precipitation,relative_humidity_2m&hourly=temperature_2m,precipitation,precipitation_probability,wind_speed_10m,weather_code&timezone=auto&forecast_days=1`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Erro ao obter dados meteorológicos");
-  }
-
+async function fetchIPMAForecast(): Promise<IPMAForecastDay[]> {
+  const response = await fetch(`https://api.ipma.pt/open-data/forecast/meteorology/cities/daily/${IPMA_CITY_ID}.json`);
+  if (!response.ok) throw new Error("Erro ao obter previsão IPMA");
   const data = await response.json();
+  return data.data || [];
+}
 
-  const hourlyForecast: HourlyForecast[] = data.hourly.time.map(
-    (time: string, i: number) => ({
-      time,
-      temperature: data.hourly.temperature_2m[i],
-      precipitation: data.hourly.precipitation[i],
-      precipitationProbability: data.hourly.precipitation_probability[i],
-      windSpeed: data.hourly.wind_speed_10m[i],
-      weatherCode: data.hourly.weather_code[i],
-    })
+async function fetchIPMAWarnings(): Promise<IPMAWarning[]> {
+  try {
+    const response = await fetch("https://api.ipma.pt/open-data/forecast/warnings/warnings_www.json");
+    if (!response.ok) return [];
+    const data: IPMAWarning[] = await response.json();
+
+    const now = new Date();
+    return data.filter(
+      (w) =>
+        w.idAreaAviso === IPMA_WARNING_AREA &&
+        w.awarenessLevelID !== "green" &&
+        new Date(w.endTime) > now
+    );
+  } catch {
+    return [];
+  }
+}
+
+function buildAlerts(warnings: IPMAWarning[]): WeatherAlert[] {
+  return warnings.map((w) => ({
+    type: mapWarningType(w.awarenessTypeName),
+    message: w.text || `Aviso ${w.awarenessTypeName} (${w.awarenessLevelID === "orange" ? "Laranja" : w.awarenessLevelID === "red" ? "Vermelho" : "Amarelo"})`,
+    severity: mapWarningSeverity(w.awarenessLevelID),
+  }));
+}
+
+async function fetchWeather(): Promise<WeatherData> {
+  const [observation, forecast, warnings] = await Promise.all([
+    fetchIPMAObservation(),
+    fetchIPMAForecast(),
+    fetchIPMAWarnings(),
+  ]);
+
+  const today = forecast.find(
+    (d) => d.forecastDate === new Date().toISOString().split("T")[0]
   );
 
-  const alerts = generateAlerts(data.current.wind_speed_10m, hourlyForecast);
+  const temperature = observation
+    ? Math.round(observation.temperatura)
+    : today
+      ? Math.round((parseFloat(today.tMin) + parseFloat(today.tMax)) / 2)
+      : 0;
+
+  const weatherCode = today?.idWeatherType ?? 0;
+  const windSpeed = observation ? observation.intensidadeVentoKM : 0;
+  const humidity = observation ? observation.humidade : 0;
+  const precipitation = observation ? observation.precAcumulada : 0;
 
   return {
-    temperature: Math.round(data.current.temperature_2m),
-    weatherCode: data.current.weather_code,
-    windSpeed: data.current.wind_speed_10m,
-    isDay: data.current.is_day === 1,
-    precipitation: data.current.precipitation,
-    humidity: data.current.relative_humidity_2m,
-    alerts,
+    temperature,
+    weatherCode,
+    windSpeed,
+    isDay: isCurrentlyDay(),
+    precipitation,
+    humidity,
+    alerts: buildAlerts(warnings),
+    source: "ipma",
   };
 }
 
-async function fetchDetailedWeather(
-  latitude: number,
-  longitude: number
-): Promise<DetailedWeatherData> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m,is_day,precipitation,relative_humidity_2m&hourly=temperature_2m,precipitation,precipitation_probability,wind_speed_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=7`;
+async function fetchDetailedWeather(): Promise<DetailedWeatherData> {
+  const [observation, forecast, warnings] = await Promise.all([
+    fetchIPMAObservation(),
+    fetchIPMAForecast(),
+    fetchIPMAWarnings(),
+  ]);
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Erro ao obter dados meteorológicos");
-  }
+  const todayStr = new Date().toISOString().split("T")[0];
+  const today = forecast.find((d) => d.forecastDate === todayStr);
 
-  const data = await response.json();
+  const temperature = observation
+    ? Math.round(observation.temperatura)
+    : today
+      ? Math.round((parseFloat(today.tMin) + parseFloat(today.tMax)) / 2)
+      : 0;
 
-  const hourlyForecast: HourlyForecast[] = data.hourly.time.map(
-    (time: string, i: number) => ({
-      time,
-      temperature: data.hourly.temperature_2m[i],
-      precipitation: data.hourly.precipitation[i],
-      precipitationProbability: data.hourly.precipitation_probability[i],
-      windSpeed: data.hourly.wind_speed_10m[i],
-      weatherCode: data.hourly.weather_code[i],
-    })
-  );
+  const weatherCode = today?.idWeatherType ?? 0;
+  const windSpeed = observation ? observation.intensidadeVentoKM : 0;
+  const humidity = observation ? observation.humidade : 0;
+  const precipitation = observation ? observation.precAcumulada : 0;
 
-  const dailyForecast: DailyForecast[] = data.daily.time.map(
-    (date: string, i: number) => ({
-      date,
-      temperatureMax: Math.round(data.daily.temperature_2m_max[i]),
-      temperatureMin: Math.round(data.daily.temperature_2m_min[i]),
-      weatherCode: data.daily.weather_code[i],
-      precipitationSum: data.daily.precipitation_sum[i],
-      precipitationProbability: data.daily.precipitation_probability_max[i],
-      windSpeedMax: data.daily.wind_speed_10m_max[i],
-    })
-  );
+  const daily: DailyForecast[] = forecast.map((d) => ({
+    date: d.forecastDate,
+    temperatureMax: Math.round(parseFloat(d.tMax)),
+    temperatureMin: Math.round(parseFloat(d.tMin)),
+    weatherCode: d.idWeatherType,
+    precipitationProbability: parseFloat(d.precipitaProb),
+    windClass: d.classWindSpeed,
+    windDirection: d.predWindDir,
+  }));
 
-  const alerts = generateAlerts(data.current.wind_speed_10m, hourlyForecast);
+  const todayForecast = today
+    ? {
+        temperatureMin: Math.round(parseFloat(today.tMin)),
+        temperatureMax: Math.round(parseFloat(today.tMax)),
+        precipitationProbability: parseFloat(today.precipitaProb),
+        windDirection: today.predWindDir,
+        windClass: today.classWindSpeed,
+      }
+    : null;
 
   return {
-    temperature: Math.round(data.current.temperature_2m),
-    weatherCode: data.current.weather_code,
-    windSpeed: data.current.wind_speed_10m,
-    isDay: data.current.is_day === 1,
-    precipitation: data.current.precipitation,
-    humidity: data.current.relative_humidity_2m,
-    alerts,
-    hourly: hourlyForecast,
-    daily: dailyForecast,
+    temperature,
+    weatherCode,
+    windSpeed,
+    isDay: isCurrentlyDay(),
+    precipitation,
+    humidity,
+    alerts: buildAlerts(warnings),
+    source: "ipma",
+    daily,
+    todayForecast,
   };
 }
 
-export function useWeather(latitude = 39.2417, longitude = -9.3128) {
+export function useWeather() {
   return useQuery({
-    queryKey: ["weather", latitude, longitude],
-    queryFn: () => fetchWeather(latitude, longitude),
-    staleTime: 10 * 60 * 1000,
-    refetchInterval: 15 * 60 * 1000,
+    queryKey: ["weather-ipma"],
+    queryFn: fetchWeather,
+    staleTime: 15 * 60 * 1000,
+    refetchInterval: 30 * 60 * 1000,
     retry: 2,
   });
 }
 
-export function useDetailedWeather(latitude = 39.2417, longitude = -9.3128) {
+export function useDetailedWeather() {
   return useQuery({
-    queryKey: ["weather-detailed", latitude, longitude],
-    queryFn: () => fetchDetailedWeather(latitude, longitude),
-    staleTime: 10 * 60 * 1000,
-    refetchInterval: 15 * 60 * 1000,
+    queryKey: ["weather-ipma-detailed"],
+    queryFn: fetchDetailedWeather,
+    staleTime: 15 * 60 * 1000,
+    refetchInterval: 30 * 60 * 1000,
     retry: 2,
   });
 }
