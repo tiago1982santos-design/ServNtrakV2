@@ -265,7 +265,7 @@ export default function Profile() {
             <h2 className="text-xl font-bold">{user.firstName} {user.lastName}</h2>
             <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              TrackServ
+              ServNtrak
             </p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 {
-  "name": "TrackServ",
-  "short_name": "TrackServ",
+  "name": "ServNtrak",
+  "short_name": "ServNtrak",
   "description": "Gestão de serviços, jardins, piscinas e jacuzzis",
   "start_url": "/",
   "display": "standalone",

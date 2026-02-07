@@ -91,7 +91,7 @@ export default function Exports() {
       
       doc.setFontSize(18);
       doc.setTextColor(45, 90, 39);
-      doc.text("TrackServ", 14, 20);
+      doc.text("ServNtrak", 14, 20);
       
       doc.setFontSize(12);
       doc.setTextColor(100);
@@ -173,7 +173,7 @@ export default function Exports() {
       
       doc.setFontSize(18);
       doc.setTextColor(45, 90, 39);
-      doc.text("TrackServ", 14, 20);
+      doc.text("ServNtrak", 14, 20);
       
       doc.setFontSize(12);
       doc.setTextColor(100);
@@ -252,7 +252,7 @@ export default function Exports() {
       
       doc.setFontSize(20);
       doc.setTextColor(45, 90, 39);
-      doc.text("TrackServ", 14, 20);
+      doc.text("ServNtrak", 14, 20);
       
       doc.setFontSize(14);
       doc.setTextColor(60);
@@ -317,7 +317,7 @@ export default function Exports() {
       const finalY = (doc as any).lastAutoTable?.finalY || 200;
       doc.setFontSize(10);
       doc.setTextColor(120);
-      doc.text("Este documento foi gerado automaticamente pela aplicação TrackServ.", 14, finalY + 15);
+      doc.text("Este documento foi gerado automaticamente pela aplicação ServNtrak.", 14, finalY + 15);
 
       doc.save(`resumo_financeiro_${selectedYear}.pdf`);
       toast({ title: "Exportado", description: "Resumo financeiro gerado com sucesso" });
@@ -339,7 +339,7 @@ export default function Exports() {
       
       doc.setFontSize(18);
       doc.setTextColor(45, 90, 39);
-      doc.text("TrackServ", 14, 20);
+      doc.text("ServNtrak", 14, 20);
       
       doc.setFontSize(12);
       doc.setTextColor(100);

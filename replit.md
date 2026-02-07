@@ -1,8 +1,8 @@
-# TrackServ - Gestão de Serviços e Tarefas
+# ServNtrak - Gestão de Serviços e Tarefas
 
 ## Overview
 
-TrackServ é uma aplicação mobile-first para gestão de serviços de manutenção de jardins, piscinas e jacuzzis. A aplicação permite acompanhar clientes, agendar serviços e registar atividades concluídas. Foi construída com React no frontend e Express no backend, utilizando PostgreSQL para persistência de dados e Replit Auth para autenticação.
+ServNtrak é uma aplicação mobile-first para gestão de serviços de manutenção de jardins, piscinas e jacuzzis. A aplicação permite acompanhar clientes, agendar serviços e registar atividades concluídas. Foi construída com React no frontend e Express no backend, utilizando PostgreSQL para persistência de dados e Replit Auth para autenticação.
 
 ## User Preferences
 

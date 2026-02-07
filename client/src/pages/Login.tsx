@@ -214,7 +214,7 @@ export default function Login() {
         </div>
 
         <h1 className="text-3xl font-display font-bold text-foreground mb-1 text-center" data-testid="text-app-title">
-          TrackServ
+          ServNtrak
         </h1>
         <p className="text-muted-foreground mb-6 text-center text-sm">
           Gestão de serviços de manutenção

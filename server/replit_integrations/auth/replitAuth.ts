@@ -268,7 +268,7 @@ export async function setupAuth(app: Express) {
     });
   });
 
-  const rpName = "TrackServ";
+  const rpName = "ServNtrak";
 
   app.post("/api/auth/webauthn/register-options", isAuthenticated, async (req: any, res) => {
     try {
