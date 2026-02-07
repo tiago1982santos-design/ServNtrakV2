@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Leaf, Waves, ThermometerSun, Eye, EyeOff, Loader2, Mail, Lock, User, ArrowLeft } from "lucide-react";
+import { Leaf, Waves, ThermometerSun, Eye, EyeOff, Loader2, Mail, Lock, User, ArrowLeft, Fingerprint, Smartphone } from "lucide-react";
 import { SiGoogle, SiApple, SiFacebook } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
+import { startAuthentication } from "@simplewebauthn/browser";
 
 type AuthView = "main" | "login" | "register";
 
@@ -17,11 +18,53 @@ interface AuthProviders {
   facebook: boolean;
 }
 
+const REMEMBERED_USER_KEY = "trackserv_remembered_user";
+
+interface RememberedUser {
+  id: string;
+  identifier: string;
+  firstName: string;
+}
+
+function getRememberedUser(): RememberedUser | null {
+  try {
+    const stored = localStorage.getItem(REMEMBERED_USER_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return null;
+}
+
+function setRememberedUser(user: RememberedUser) {
+  localStorage.setItem(REMEMBERED_USER_KEY, JSON.stringify(user));
+}
+
+function clearRememberedUser() {
+  localStorage.removeItem(REMEMBERED_USER_KEY);
+}
+
 export default function Login() {
   const [view, setView] = useState<AuthView>("main");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const rememberedUser = getRememberedUser();
+
+  useEffect(() => {
+    if (rememberedUser && window.PublicKeyCredential) {
+      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then((available) => {
+        if (available) {
+          fetch(`/api/auth/webauthn/has-credentials/${rememberedUser.id}`)
+            .then((r) => r.json())
+            .then((data) => setBiometricAvailable(data.hasCredentials))
+            .catch(() => setBiometricAvailable(false));
+        }
+      });
+    }
+  }, []);
 
   const { data: providers } = useQuery<AuthProviders>({
     queryKey: ["/api/auth/providers"],
@@ -31,7 +74,10 @@ export default function Login() {
     },
   });
 
-  const [loginForm, setLoginForm] = useState({ identifier: "", password: "" });
+  const [loginForm, setLoginForm] = useState({
+    identifier: rememberedUser?.identifier || "",
+    password: "",
+  });
   const [registerForm, setRegisterForm] = useState({
     email: "",
     password: "",
@@ -41,7 +87,7 @@ export default function Login() {
   });
 
   const loginMutation = useMutation({
-    mutationFn: async (data: { identifier: string; password: string }) => {
+    mutationFn: async (data: { identifier: string; password: string; rememberMe: boolean }) => {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,7 +100,16 @@ export default function Login() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (user) => {
+      if (rememberMe) {
+        setRememberedUser({
+          id: user.id,
+          identifier: loginForm.identifier,
+          firstName: user.firstName || loginForm.identifier,
+        });
+      } else {
+        clearRememberedUser();
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: (error: Error) => {
@@ -86,7 +141,7 @@ export default function Login() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    loginMutation.mutate(loginForm);
+    loginMutation.mutate({ ...loginForm, rememberMe });
   };
 
   const handleRegister = (e: React.FormEvent) => {
@@ -97,6 +152,48 @@ export default function Login() {
   const handleGoogleLogin = () => {
     window.location.href = "/api/auth/google";
   };
+
+  const handleBiometricLogin = useCallback(async () => {
+    if (!rememberedUser) return;
+    setBiometricLoading(true);
+    try {
+      const optionsRes = await fetch("/api/auth/webauthn/login-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ userId: rememberedUser.id }),
+      });
+      if (!optionsRes.ok) throw new Error("Erro ao obter opções");
+      const optionsJSON = await optionsRes.json();
+
+      const authResp = await startAuthentication({ optionsJSON });
+
+      const verifyRes = await fetch("/api/auth/webauthn/login-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(authResp),
+      });
+      if (!verifyRes.ok) throw new Error("Verificação falhou");
+      const result = await verifyRes.json();
+
+      if (result.verified) {
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      } else {
+        throw new Error("Autenticação biométrica falhou");
+      }
+    } catch (error: any) {
+      if (error.name !== "NotAllowedError") {
+        toast({
+          title: "Erro",
+          description: error.message || "Não foi possível autenticar com biometria",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setBiometricLoading(false);
+    }
+  }, [rememberedUser, queryClient, toast]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 relative overflow-hidden">
@@ -125,6 +222,49 @@ export default function Login() {
 
         {view === "main" && (
           <div className="space-y-3">
+            {rememberedUser && biometricAvailable && (
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Olá, <span className="font-medium text-foreground">{rememberedUser.firstName}</span>
+                  </p>
+                  <Button
+                    variant="default"
+                    className="w-full gap-3"
+                    onClick={handleBiometricLogin}
+                    disabled={biometricLoading}
+                    data-testid="button-biometric-login"
+                  >
+                    {biometricLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Fingerprint className="w-5 h-5" />
+                    )}
+                    <span>Entrar com Face ID / Biometria</span>
+                  </Button>
+                  <button
+                    onClick={() => {
+                      clearRememberedUser();
+                      setBiometricAvailable(false);
+                      setLoginForm({ identifier: "", password: "" });
+                    }}
+                    className="text-xs text-muted-foreground w-full text-center"
+                    data-testid="button-forget-user"
+                  >
+                    Usar outra conta
+                  </button>
+                </CardContent>
+              </Card>
+            )}
+
+            {rememberedUser && biometricAvailable && (
+              <div className="flex items-center gap-3 py-1">
+                <Separator className="flex-1" />
+                <span className="text-xs text-muted-foreground">ou</span>
+                <Separator className="flex-1" />
+              </div>
+            )}
+
             <Card>
               <CardContent className="p-4 space-y-3">
                 <Button
@@ -251,6 +391,20 @@ export default function Login() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="remember-me"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                    data-testid="checkbox-remember-me"
+                  />
+                  <Label htmlFor="remember-me" className="text-sm text-muted-foreground cursor-pointer">
+                    Memorizar sessão
+                  </Label>
                 </div>
 
                 <Button

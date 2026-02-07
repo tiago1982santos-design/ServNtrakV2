@@ -7,25 +7,47 @@ import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { authStorage } from "./storage";
 import { z } from "zod";
+import {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} from "@simplewebauthn/server";
+
+const DEFAULT_SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 1 week
+const REMEMBER_ME_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function getRpIdFromRequest(req: any): string {
+  const host = req.get("host") || req.hostname;
+  if (host) {
+    return host.split(":")[0];
+  }
+  return process.env.RP_ID || "localhost";
+}
+
+function getOriginFromRequest(req: any): string {
+  const proto = req.protocol || "https";
+  const host = req.get("host") || req.hostname || "localhost:5000";
+  return `${proto}://${host}`;
+}
 
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: false,
-    ttl: sessionTtl,
+    ttl: REMEMBER_ME_TTL / 1000,
     tableName: "sessions",
   });
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production" || !!process.env.REPL_SLUG,
-      maxAge: sessionTtl,
+      maxAge: DEFAULT_SESSION_TTL,
       sameSite: "lax" as const,
     },
   });
@@ -42,6 +64,7 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email ou nome de utilizador é obrigatório"),
   password: z.string().min(1, "Palavra-passe é obrigatória"),
+  rememberMe: z.boolean().optional(),
 });
 
 export async function setupAuth(app: Express) {
@@ -181,12 +204,15 @@ export async function setupAuth(app: Express) {
   });
 
   app.post("/api/auth/login", (req, res, next) => {
+    let rememberMe = false;
     try {
-      loginSchema.parse(req.body);
+      const parsed = loginSchema.parse(req.body);
+      rememberMe = parsed.rememberMe || false;
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
+      return res.status(400).json({ message: "Dados inválidos" });
     }
 
     passport.authenticate("local", (err: any, user: any, info: any) => {
@@ -199,6 +225,9 @@ export async function setupAuth(app: Express) {
       req.login(user, (loginErr) => {
         if (loginErr) {
           return res.status(500).json({ message: "Erro ao iniciar sessão" });
+        }
+        if (rememberMe && req.session.cookie) {
+          req.session.cookie.maxAge = REMEMBER_ME_TTL;
         }
         return res.json(user);
       });
@@ -237,6 +266,212 @@ export async function setupAuth(app: Express) {
       apple: false,
       facebook: false,
     });
+  });
+
+  const rpName = "TrackServ";
+
+  app.post("/api/auth/webauthn/register-options", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await authStorage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "Utilizador não encontrado" });
+
+      const existingCredentials = await authStorage.getWebAuthnCredentials(userId);
+
+      const rpID = getRpIdFromRequest(req);
+      const options = await generateRegistrationOptions({
+        rpName,
+        rpID,
+        userName: user.email || user.username || userId,
+        userDisplayName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Utilizador",
+        excludeCredentials: existingCredentials.map((cred) => ({
+          id: cred.id,
+          transports: cred.transports ? (JSON.parse(cred.transports) as any) : undefined,
+        })),
+        authenticatorSelection: {
+          residentKey: "preferred",
+          userVerification: "preferred",
+          authenticatorAttachment: "platform",
+        },
+      });
+
+      (req.session as any).webauthnChallenge = options.challenge;
+      res.json(options);
+    } catch (error) {
+      console.error("WebAuthn register options error:", error);
+      res.status(500).json({ message: "Erro ao gerar opções de registo biométrico" });
+    }
+  });
+
+  app.post("/api/auth/webauthn/register-verify", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const expectedChallenge = (req.session as any).webauthnChallenge;
+      if (!expectedChallenge) {
+        return res.status(400).json({ message: "Sessão expirada, tente novamente" });
+      }
+
+      const rpID = getRpIdFromRequest(req);
+      const expectedOrigin = getOriginFromRequest(req);
+
+      const verification = await verifyRegistrationResponse({
+        response: req.body.credential,
+        expectedChallenge,
+        expectedOrigin,
+        expectedRPID: rpID,
+      });
+
+      if (verification.verified && verification.registrationInfo) {
+        const { credential } = verification.registrationInfo;
+        await authStorage.saveWebAuthnCredential({
+          id: credential.id,
+          userId,
+          publicKey: Buffer.from(credential.publicKey).toString("base64"),
+          counter: credential.counter,
+          transports: req.body.credential?.response?.transports
+            ? JSON.stringify(req.body.credential.response.transports)
+            : null,
+          deviceName: req.body.deviceName || "Dispositivo biométrico",
+        });
+
+        delete (req.session as any).webauthnChallenge;
+        return res.json({ verified: true });
+      }
+
+      res.status(400).json({ verified: false, message: "Verificação falhou" });
+    } catch (error) {
+      console.error("WebAuthn register verify error:", error);
+      res.status(500).json({ message: "Erro ao verificar registo biométrico" });
+    }
+  });
+
+  app.post("/api/auth/webauthn/login-options", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const rpID = getRpIdFromRequest(req);
+
+      let allowCredentials: any[] = [];
+      if (userId) {
+        const credentials = await authStorage.getWebAuthnCredentials(userId);
+        allowCredentials = credentials.map((cred) => ({
+          id: cred.id,
+          transports: cred.transports ? JSON.parse(cred.transports) : undefined,
+        }));
+      }
+
+      const options = await generateAuthenticationOptions({
+        rpID,
+        allowCredentials,
+        userVerification: "preferred",
+      });
+
+      (req.session as any).webauthnChallenge = options.challenge;
+      (req.session as any).webauthnUserId = userId || null;
+      res.json(options);
+    } catch (error) {
+      console.error("WebAuthn login options error:", error);
+      res.status(500).json({ message: "Erro ao gerar opções de autenticação biométrica" });
+    }
+  });
+
+  app.post("/api/auth/webauthn/login-verify", async (req, res) => {
+    try {
+      const expectedChallenge = (req.session as any).webauthnChallenge;
+      if (!expectedChallenge) {
+        return res.status(400).json({ message: "Sessão expirada, tente novamente" });
+      }
+
+      const rpID = getRpIdFromRequest(req);
+      const expectedOrigin = getOriginFromRequest(req);
+
+      const credentialId = req.body.id;
+      const storedCredential = await authStorage.getWebAuthnCredentialById(credentialId);
+      if (!storedCredential) {
+        return res.status(400).json({ message: "Credencial biométrica não encontrada" });
+      }
+
+      const verification = await verifyAuthenticationResponse({
+        response: req.body,
+        expectedChallenge,
+        expectedOrigin,
+        expectedRPID: rpID,
+        credential: {
+          id: storedCredential.id,
+          publicKey: new Uint8Array(Buffer.from(storedCredential.publicKey, "base64")),
+          counter: storedCredential.counter,
+          transports: storedCredential.transports ? JSON.parse(storedCredential.transports) : undefined,
+        },
+      });
+
+      if (verification.verified) {
+        await authStorage.updateWebAuthnCounter(credentialId, verification.authenticationInfo.newCounter);
+
+        const user = await authStorage.getUser(storedCredential.userId);
+        if (!user) {
+          return res.status(400).json({ message: "Utilizador não encontrado" });
+        }
+
+        const sessionUser = {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+        };
+
+        delete (req.session as any).webauthnChallenge;
+        delete (req.session as any).webauthnUserId;
+
+        req.login(sessionUser, (loginErr) => {
+          if (loginErr) {
+            return res.status(500).json({ message: "Erro ao iniciar sessão" });
+          }
+          if (req.session.cookie) {
+            req.session.cookie.maxAge = REMEMBER_ME_TTL;
+          }
+          return res.json({ verified: true, user: sessionUser });
+        });
+      } else {
+        res.status(400).json({ verified: false, message: "Verificação biométrica falhou" });
+      }
+    } catch (error) {
+      console.error("WebAuthn login verify error:", error);
+      res.status(500).json({ message: "Erro ao verificar autenticação biométrica" });
+    }
+  });
+
+  app.get("/api/auth/webauthn/credentials", isAuthenticated, async (req: any, res) => {
+    try {
+      const credentials = await authStorage.getWebAuthnCredentials(req.user.id);
+      res.json(
+        credentials.map((c) => ({
+          id: c.id,
+          deviceName: c.deviceName,
+          createdAt: c.createdAt,
+          lastUsedAt: c.lastUsedAt,
+        }))
+      );
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao obter credenciais" });
+    }
+  });
+
+  app.delete("/api/auth/webauthn/credentials/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await authStorage.deleteWebAuthnCredential(req.params.id, req.user.id);
+      res.json({ message: "Credencial removida" });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao remover credencial" });
+    }
+  });
+
+  app.get("/api/auth/webauthn/has-credentials/:userId", async (req, res) => {
+    try {
+      const credentials = await authStorage.getWebAuthnCredentials(req.params.userId);
+      res.json({ hasCredentials: credentials.length > 0 });
+    } catch (error) {
+      res.json({ hasCredentials: false });
+    }
   });
 }
 

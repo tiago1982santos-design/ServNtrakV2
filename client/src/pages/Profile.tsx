@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,10 @@ import {
   Bell,
   Leaf,
   Euro,
-  Settings
+  Settings,
+  Fingerprint,
+  Loader2,
+  Trash2
 } from "lucide-react";
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,6 +36,9 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/BackButton";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { startRegistration } from "@simplewebauthn/browser";
 
 const implementedFeatures = [
   {
@@ -94,6 +101,139 @@ const futureIdeas = [
   }
 ];
 
+function BiometricSection() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [registering, setRegistering] = useState(false);
+  const [platformAvailable, setPlatformAvailable] = useState(false);
+
+  useEffect(() => {
+    if (window.PublicKeyCredential) {
+      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(setPlatformAvailable);
+    }
+  }, []);
+
+  const { data: credentials = [] } = useQuery<{ id: string; deviceName: string; createdAt: string; lastUsedAt: string | null }[]>({
+    queryKey: ["/api/auth/webauthn/credentials"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/webauthn/credentials", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (credentialId: string) => {
+      const res = await fetch(`/api/auth/webauthn/credentials/${credentialId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Erro ao remover");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/webauthn/credentials"] });
+      toast({ title: "Biometria removida" });
+    },
+  });
+
+  const handleRegister = async () => {
+    setRegistering(true);
+    try {
+      const optionsRes = await fetch("/api/auth/webauthn/register-options", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!optionsRes.ok) throw new Error("Erro ao iniciar registo");
+      const optionsJSON = await optionsRes.json();
+
+      const attResp = await startRegistration({ optionsJSON });
+
+      const verifyRes = await fetch("/api/auth/webauthn/register-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ credential: attResp, deviceName: "Dispositivo biométrico" }),
+      });
+      if (!verifyRes.ok) throw new Error("Verificação falhou");
+      const result = await verifyRes.json();
+
+      if (result.verified) {
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/webauthn/credentials"] });
+        toast({ title: "Biometria registada com sucesso" });
+      }
+    } catch (error: any) {
+      if (error.name !== "NotAllowedError") {
+        toast({
+          title: "Erro",
+          description: error.message || "Não foi possível registar biometria",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  if (!platformAvailable) return null;
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Segurança</h3>
+      <div className="glass-card overflow-hidden divide-y divide-border/30">
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+              <Fingerprint className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-sm">Face ID / Biometria</p>
+              <p className="text-xs text-muted-foreground">Login rápido com biometria do dispositivo</p>
+            </div>
+          </div>
+
+          {credentials.length > 0 && (
+            <div className="space-y-2 mb-3">
+              {credentials.map((cred) => (
+                <div key={cred.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30" data-testid={`credential-${cred.id}`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Fingerprint className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm truncate">{cred.deviceName || "Dispositivo"}</span>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => deleteMutation.mutate(cred.id)}
+                    disabled={deleteMutation.isPending}
+                    data-testid={`button-delete-credential-${cred.id}`}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={handleRegister}
+            disabled={registering}
+            data-testid="button-register-biometric"
+          >
+            {registering ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Fingerprint className="w-4 h-4" />
+            )}
+            {credentials.length > 0 ? "Adicionar outro dispositivo" : "Ativar Face ID / Biometria"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { user, logout } = useAuth();
 
@@ -155,6 +295,8 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
+        <BiometricSection />
 
         <div className="space-y-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Aplicação</h3>
