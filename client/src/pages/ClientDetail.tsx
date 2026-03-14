@@ -7,7 +7,10 @@ import { useAppointments, useCreateAppointment, useUpdateAppointment } from "@/h
 import { useClientServiceStats, useCreateServiceVisit } from "@/hooks/use-service-visits";
 import { useUpload } from "@/hooks/use-upload";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil, Euro, Clock, Flower2, Sparkles, FolderPlus, Users, Timer, Check, MessageCircle, Banknote, Building2, Smartphone, CalendarDays, AlertTriangle, ChevronUp, Wrench, ClipboardList, Trash2, Lightbulb, ThumbsUp, ThumbsDown, PhoneCall } from "lucide-react";
+import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil, Euro, Clock, Flower2, Sparkles, FolderPlus, Users, Timer, Check, MessageCircle, Banknote, Building2, Smartphone, CalendarDays, AlertTriangle, ChevronUp, Wrench, ClipboardList, Trash2, Lightbulb, ThumbsUp, ThumbsDown, PhoneCall, FileText } from "lucide-react";
+import { generateServiceNote } from "@/lib/generateServiceNote";
+import { apiRequest } from "@/lib/queryClient";
+import type { ServiceLogWithEntries } from "@shared/schema";
 import { DurationInput } from "@/components/DurationInput";
 import { formatDuration } from "@/lib/utils";
 import { CreatePendingTaskDialog } from "@/components/CreatePendingTaskDialog";
@@ -34,11 +37,13 @@ import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ClientDetail() {
   const { id } = useParams();
   const clientId = parseInt(id || "0");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: client, isLoading } = useClient(clientId);
   const { data: logs } = useServiceLogs(id);
   const { data: appointments } = useAppointments({ clientId: id });
@@ -48,6 +53,23 @@ export default function ClientDetail() {
   
   const [showPendingTaskDialog, setShowPendingTaskDialog] = useState(false);
   const [showSuggestedWorkDialog, setShowSuggestedWorkDialog] = useState(false);
+  const [generatingNoteId, setGeneratingNoteId] = useState<number | null>(null);
+
+  const handleGenerateNote = async (logId: number) => {
+    if (!client) return;
+    setGeneratingNoteId(logId);
+    try {
+      const res = await fetch(`/api/service-logs/${logId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Erro ao carregar dados do serviço");
+      const fullLog: ServiceLogWithEntries = await res.json();
+      generateServiceNote(fullLog, client);
+      toast({ title: "PDF gerado", description: "A nota de despesa foi descarregada." });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível gerar a nota de despesa.", variant: "destructive" });
+    } finally {
+      setGeneratingNoteId(null);
+    }
+  };
   
   const { data: pendingTasks } = useQuery<PendingTaskWithClient[]>({
     queryKey: ["/api/pending-tasks", { clientId: id }],
@@ -690,6 +712,31 @@ export default function ClientDetail() {
                     </span>
                   </div>
                   <p className="text-sm text-foreground">{log.description}</p>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {(log.totalAmount ?? 0) > 0 ? `${(log.totalAmount ?? 0).toFixed(2)} €` : "—"}
+                      {log.billingType === "extra" && (
+                        <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0 border-amber-300 text-amber-600">
+                          Extra
+                        </Badge>
+                      )}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => handleGenerateNote(log.id)}
+                      disabled={generatingNoteId === log.id}
+                      data-testid={`button-generate-note-${log.id}`}
+                    >
+                      {generatingNoteId === log.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <FileText className="h-3.5 w-3.5" />
+                      )}
+                      Nota
+                    </Button>
+                  </div>
                 </div>
               ))
             )}
