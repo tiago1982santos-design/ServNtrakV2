@@ -7,6 +7,7 @@ export const modules: ModuleMap = {
   "./components/mockups/home-redesign/MidnightDispatch.tsx": () => import("../components/mockups/home-redesign/MidnightDispatch.tsx"),
   "./components/mockups/home-redesign/NoiteMediterranica.tsx": () => import("../components/mockups/home-redesign/NoiteMediterranica.tsx"),
   "./components/mockups/home-redesign/OrganicDashboard.tsx": () => import("../components/mockups/home-redesign/OrganicDashboard.tsx"),
+  "./components/mockups/home-redesign/QliqloqDark.tsx": () => import("../components/mockups/home-redesign/QliqloqDark.tsx"),
   "./components/mockups/home-redesign/SunnyBalanced.tsx": () => import("../components/mockups/home-redesign/SunnyBalanced.tsx"),
   "./components/mockups/home-redesign/SunnyFieldwork.tsx": () => import("../components/mockups/home-redesign/SunnyFieldwork.tsx"),
   "./components/mockups/home-redesign/SunnyPolished.tsx": () => import("../components/mockups/home-redesign/SunnyPolished.tsx"),
