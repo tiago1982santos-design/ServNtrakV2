@@ -1,9 +1,12 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { api } from "@shared/routes";
+import { serviceVisits, appointments } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import OpenAI from "openai";
 
@@ -1021,25 +1024,17 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
 
       let visit;
       if (emCurso) {
-        const { db } = await import("./db");
-        const { eq } = await import("drizzle-orm");
-        const { serviceVisits } = await import("@shared/schema");
-        const updateData: Record<string, any> = {
+        const [updated] = await db.update(serviceVisits)
+          .set({
             endTime: new Date(parsed.fim),
             actualDurationMinutes: parsed.duracaoMinutos,
-            status: "concluida",
-          };
-        if (parsed.appointmentId) {
-          updateData.appointmentId = parsed.appointmentId;
-        }
-        const [updated] = await db.update(serviceVisits)
-          .set(updateData)
+            status: "concluida" as const,
+            ...(parsed.appointmentId ? { appointmentId: parsed.appointmentId } : {}),
+          })
           .where(eq(serviceVisits.id, emCurso.id))
           .returning();
 
         if (parsed.appointmentId) {
-          const { appointments } = await import("@shared/schema");
-          const { and } = await import("drizzle-orm");
           await db.update(appointments)
             .set({ isCompleted: true })
             .where(and(
@@ -1092,9 +1087,6 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
       );
 
       if (emCurso) {
-        const { db } = await import("./db");
-        const { eq } = await import("drizzle-orm");
-        const { serviceVisits } = await import("@shared/schema");
         await db.delete(serviceVisits).where(eq(serviceVisits.id, emCurso.id));
       }
 

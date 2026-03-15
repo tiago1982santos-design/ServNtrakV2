@@ -175,10 +175,36 @@ export default function Home() {
     }
   }, []);
 
+  const handleSaida = useCallback(async (visita: VisitaConcluida) => {
+    try {
+      const res = await fetch("/api/geofencing/visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          clientId: visita.clienteId,
+          appointmentId: visita.agendamentoId,
+          inicio: visita.inicio.toISOString(),
+          fim: visita.fim.toISOString(),
+          duracaoMinutos: visita.duracaoMinutos,
+          fonte: "geofencing",
+        }),
+      });
+      if (!res.ok) {
+        console.error("Erro ao finalizar visita:", await res.text());
+      } else {
+        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+      }
+    } catch (err) {
+      console.error("Erro ao finalizar visita:", err);
+    }
+  }, [queryClient]);
+
   const geo = useGeofencing(clientesGeofencing, {
     raioMetros: 75,
     intervaloMs: 30_000,
     onEntrada: handleEntrada,
+    onSaida: handleSaida,
   });
 
   const finalizarVisita = useCallback(async (visita: VisitaConcluida, duracaoOverride?: number) => {
@@ -286,33 +312,6 @@ export default function Home() {
             <button onClick={geo.parar} className="text-amber-600 hover:text-amber-800 p-1" data-testid="button-dismiss-gps-error">
               <X className="w-4 h-4" />
             </button>
-          </div>
-        )}
-
-        {/* ── ACTIVE VISIT CARD ──────────────────── */}
-        {geo.visitaAtiva && (
-          <div
-            className="bg-gradient-to-br from-[#6B7B3A] to-[#8BA65A] rounded-[2rem] p-5 shadow-[0_12px_35px_rgba(107,123,58,0.25)] text-white relative overflow-hidden"
-            data-testid="card-active-visit"
-          >
-            <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
-                <span className="text-xs font-bold uppercase tracking-widest text-white/80">Em visita</span>
-              </div>
-              <h3 className="text-2xl font-bold mb-2 tracking-tight">{geo.visitaAtiva.clienteNome}</h3>
-              <div className="flex items-center gap-4 text-white/90 text-sm">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4" />
-                  <span>Início: {geo.visitaAtiva.inicio.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4" />
-                  <VisitaDuracaoAtiva inicio={geo.visitaAtiva.inicio} />
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -487,6 +486,33 @@ export default function Home() {
           )}
         </section>
 
+        {/* ── ACTIVE VISIT CARD ──────────────────── */}
+        {geo.visitaAtiva && (
+          <div
+            className="bg-gradient-to-br from-[#6B7B3A] to-[#8BA65A] rounded-[2rem] p-5 shadow-[0_12px_35px_rgba(107,123,58,0.25)] text-white relative overflow-hidden"
+            data-testid="card-active-visit"
+          >
+            <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-widest text-white/80">Em visita</span>
+              </div>
+              <h3 className="text-2xl font-bold mb-2 tracking-tight">{geo.visitaAtiva.clienteNome}</h3>
+              <div className="flex items-center gap-4 text-white/90 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span>Início: {geo.visitaAtiva.inicio.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  <VisitaDuracaoAtiva inicio={geo.visitaAtiva.inicio} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── URGENCY STRIP ──────────────────────── */}
         {unpaidCount > 0 && (
           <Link href="/billing" data-testid="link-unpaid-strip">
@@ -537,7 +563,7 @@ export default function Home() {
               {geo.ativo ? (
                 <>
                   <LocateOff className="w-4 h-4" />
-                  Pausar tracking GPS
+                  Pausar tracking
                   {geo.posicaoAtual && (
                     <span className="ml-1 text-xs opacity-80">
                       ({geo.ultimoUpdate ? format(geo.ultimoUpdate, "HH:mm") : "…"})
@@ -547,7 +573,7 @@ export default function Home() {
               ) : (
                 <>
                   <Locate className="w-4 h-4" />
-                  Iniciar tracking GPS
+                  Iniciar tracking
                 </>
               )}
             </button>
