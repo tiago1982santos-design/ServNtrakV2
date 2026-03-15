@@ -14,5 +14,9 @@ export const modules: ModuleMap = {
   "./components/mockups/home-redesign/SunnyFieldwork.tsx": () => import("../components/mockups/home-redesign/SunnyFieldwork.tsx"),
   "./components/mockups/home-redesign/SunnyPolished.tsx": () => import("../components/mockups/home-redesign/SunnyPolished.tsx"),
   "./components/mockups/home-redesign/TerraQuente.tsx": () => import("../components/mockups/home-redesign/TerraQuente.tsx"),
-  "./components/mockups/home-redesign/TimelineJourney.tsx": () => import("../components/mockups/home-redesign/TimelineJourney.tsx")
+  "./components/mockups/home-redesign/TimelineJourney.tsx": () => import("../components/mockups/home-redesign/TimelineJourney.tsx"),
+  "./components/mockups/nota-despesa-variants/NotaCompacta.tsx": () => import("../components/mockups/nota-despesa-variants/NotaCompacta.tsx"),
+  "./components/mockups/nota-despesa-variants/NotaModerna.tsx": () => import("../components/mockups/nota-despesa-variants/NotaModerna.tsx"),
+  "./components/mockups/nota-despesa-variants/NotaPremium.tsx": () => import("../components/mockups/nota-despesa-variants/NotaPremium.tsx"),
+  "./components/mockups/nota-despesa-variants/RelatorioServico.tsx": () => import("../components/mockups/nota-despesa-variants/RelatorioServico.tsx")
 };
