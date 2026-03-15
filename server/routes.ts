@@ -976,6 +976,7 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
         {
           userId,
           clientId: parsed.clientId,
+          appointmentId: parsed.appointmentId,
           visitDate: new Date(parsed.timestamp),
           actualDurationMinutes: 0,
           workerCount: 1,
@@ -1012,20 +1013,53 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
         return res.status(404).json({ message: "Cliente não encontrado" });
       }
 
-      const visit = await storage.createServiceVisit(
-        {
-          userId,
-          clientId: parsed.clientId,
-          appointmentId: parsed.appointmentId,
-          visitDate: new Date(parsed.inicio),
-          endTime: new Date(parsed.fim),
-          actualDurationMinutes: parsed.duracaoMinutos,
-          workerCount: 1,
-          source: "geofencing",
-          status: "concluida",
-        },
-        []
+      const existingVisits = await storage.getServiceVisits(userId, parsed.clientId);
+      const emCurso = existingVisits.find(
+        v => v.source === "geofencing" && v.status === "em_curso" && v.clientId === parsed.clientId
       );
+
+      let visit;
+      if (emCurso) {
+        const { db } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const { serviceVisits } = await import("@shared/schema");
+        const [updated] = await db.update(serviceVisits)
+          .set({
+            endTime: new Date(parsed.fim),
+            actualDurationMinutes: parsed.duracaoMinutos,
+            status: "concluida",
+          })
+          .where(eq(serviceVisits.id, emCurso.id))
+          .returning();
+
+        if (parsed.appointmentId) {
+          const { appointments } = await import("@shared/schema");
+          const { and } = await import("drizzle-orm");
+          await db.update(appointments)
+            .set({ isCompleted: true })
+            .where(and(
+              eq(appointments.id, parsed.appointmentId),
+              eq(appointments.userId, userId)
+            ));
+        }
+
+        visit = { ...updated, services: emCurso.services ?? [] };
+      } else {
+        visit = await storage.createServiceVisit(
+          {
+            userId,
+            clientId: parsed.clientId,
+            appointmentId: parsed.appointmentId,
+            visitDate: new Date(parsed.inicio),
+            endTime: new Date(parsed.fim),
+            actualDurationMinutes: parsed.duracaoMinutos,
+            workerCount: 1,
+            source: "geofencing",
+            status: "concluida",
+          },
+          []
+        );
+      }
 
       res.json(visit);
     } catch (err) {

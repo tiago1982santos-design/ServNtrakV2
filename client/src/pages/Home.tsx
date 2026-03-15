@@ -175,13 +175,7 @@ export default function Home() {
     }
   }, []);
 
-  const geo = useGeofencing(clientesGeofencing, {
-    raioMetros: 75,
-    intervaloMs: 30_000,
-    onEntrada: handleEntrada,
-  });
-
-  const guardarVisita = useCallback(async (visita: VisitaConcluida, duracaoAjustada?: number) => {
+  const handleSaida = useCallback(async (visita: VisitaConcluida) => {
     try {
       const res = await fetch("/api/geofencing/visit", {
         method: "POST",
@@ -192,17 +186,48 @@ export default function Home() {
           appointmentId: visita.agendamentoId,
           inicio: visita.inicio.toISOString(),
           fim: visita.fim.toISOString(),
-          duracaoMinutos: duracaoAjustada ?? visita.duracaoMinutos,
+          duracaoMinutos: visita.duracaoMinutos,
         }),
       });
       if (!res.ok) {
-        console.error("Erro ao guardar visita:", await res.text());
+        console.error("Erro ao finalizar visita automática:", await res.text());
+      } else {
+        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+      }
+    } catch (err) {
+      console.error("Erro ao finalizar visita automática:", err);
+    }
+  }, [queryClient]);
+
+  const geo = useGeofencing(clientesGeofencing, {
+    raioMetros: 75,
+    intervaloMs: 30_000,
+    onEntrada: handleEntrada,
+    onSaida: handleSaida,
+  });
+
+  const ajustarDuracaoVisita = useCallback(async (visita: VisitaConcluida, duracaoAjustada: number) => {
+    try {
+      const res = await fetch("/api/geofencing/visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          clientId: visita.clienteId,
+          appointmentId: visita.agendamentoId,
+          inicio: visita.inicio.toISOString(),
+          fim: visita.fim.toISOString(),
+          duracaoMinutos: duracaoAjustada,
+        }),
+      });
+      if (!res.ok) {
+        console.error("Erro ao ajustar visita:", await res.text());
         return;
       }
       geo.confirmarVisita(visita);
       queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
     } catch (err) {
-      console.error("Erro ao guardar visita:", err);
+      console.error("Erro ao ajustar visita:", err);
     }
   }, [geo, queryClient]);
 
@@ -341,7 +366,7 @@ export default function Home() {
                   className="bg-[#6B7B3A] text-white p-2.5 rounded-xl active:scale-95 transition-transform"
                   onClick={() => {
                     const mins = parseInt(ajustarMinutos);
-                    if (mins > 0) guardarVisita(visita, mins);
+                    if (mins > 0) ajustarDuracaoVisita(visita, mins);
                     setAjustarVisita(null);
                     setAjustarMinutos("");
                   }}
@@ -361,7 +386,7 @@ export default function Home() {
               <div className="flex gap-2">
                 <button
                   className="flex-1 bg-[#6B7B3A] text-white font-bold py-3 rounded-full flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-[0_4px_12px_rgba(107,123,58,0.2)]"
-                  onClick={() => guardarVisita(visita)}
+                  onClick={() => geo.confirmarVisita(visita)}
                   data-testid="button-confirm-visit"
                 >
                   <Check className="w-4 h-4" /> Confirmar
