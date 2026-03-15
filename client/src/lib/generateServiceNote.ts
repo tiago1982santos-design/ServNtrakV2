@@ -56,24 +56,19 @@ export async function generateServiceNote(
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 16;
-  const logoSize = 24;
+  const logoSize = 28;
   const textStartX = margin + logoSize + 6;
 
   try {
     const logoData = await loadImageAsDataUrl(logoUrl);
-    doc.addImage(logoData, "PNG", margin, 10, logoSize, logoSize);
+    doc.addImage(logoData, "PNG", margin, 12, logoSize, logoSize);
   } catch {
     doc.setFontSize(20);
     doc.setTextColor(...COLORS.brand);
-    doc.text("Peralta Gardens", margin, 20);
+    doc.text("Peralta Gardens", margin, 24);
   }
 
-  let y = 14;
-  doc.setFontSize(14);
-  doc.setTextColor(...COLORS.brand);
-  doc.text("Peralta Gardens", textStartX, y);
-
-  y += 5;
+  let y = 18;
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.grey);
   doc.text("Manutenção de Jardins, Piscinas e Jacuzzis", textStartX, y);
@@ -83,18 +78,18 @@ export async function generateServiceNote(
 
   doc.setFontSize(14);
   doc.setTextColor(...COLORS.dark);
-  doc.text("Nota de Despesa", pageWidth - margin, 16, { align: "right" });
+  doc.text("Nota de Despesa", pageWidth - margin, 18, { align: "right" });
 
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.grey);
   doc.text(
     `Data: ${format(new Date(log.date), "d 'de' MMMM 'de' yyyy", { locale: pt })}`,
     pageWidth - margin,
-    23,
+    25,
     { align: "right" }
   );
 
-  y = 10 + logoSize + 6;
+  y = 12 + logoSize + 6;
   doc.setDrawColor(...COLORS.lightGrey);
   doc.setLineWidth(0.3);
   doc.line(margin, y, pageWidth - margin, y);

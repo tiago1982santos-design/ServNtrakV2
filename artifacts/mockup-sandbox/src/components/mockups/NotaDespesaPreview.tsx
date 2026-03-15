@@ -48,16 +48,13 @@ export default function NotaDespesaPreview() {
             <img
               src="/__mockup/logo.png"
               alt="Peralta Gardens"
-              style={{ width: 72, height: 72, objectFit: "contain", flexShrink: 0 }}
+              style={{ width: 80, height: 80, objectFit: "contain", flexShrink: 0 }}
             />
-            <div style={{ paddingTop: 4 }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: brandGreen, letterSpacing: -0.3 }}>
-                Peralta Gardens
-              </div>
-              <div style={{ fontSize: 10, color: grey, marginTop: 3 }}>
+            <div style={{ paddingTop: 14 }}>
+              <div style={{ fontSize: 10, color: grey }}>
                 Manutenção de Jardins, Piscinas e Jacuzzis
               </div>
-              <div style={{ fontSize: 10, color: grey, marginTop: 2 }}>
+              <div style={{ fontSize: 10, color: grey, marginTop: 3 }}>
                 Lourinhã, Portugal · Tel: 912 000 000 · info@peraltagardens.pt
               </div>
             </div>
