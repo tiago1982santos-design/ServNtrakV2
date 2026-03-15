@@ -27,6 +27,19 @@ The Home page was redesigned from a dark-green gradient to a warm amber/orange "
   6. "Mais": Tarefas Pendentes, Funcionários, Compras e Despesas
 - **BottomNav** updated: amber active state (`bg-orange-50`, `text-amber-500`), warm `border-orange-100` top border
 
+## Geofencing — Registo Automático de Visitas
+
+### How It Works
+- **Hook**: `client/src/hooks/useGeofencing.ts` — uses browser `watchPosition` + 30s interval polling to detect proximity (75m radius) to client locations
+- **Flow**: When user enters a client's geofence → active visit card shown (green, "Em visita"). When user leaves → confirmation card appears with duration. User can Confirm, Adjust duration, or Ignore.
+- **Backend**: `POST /api/geofencing/visit` — Zod-validated endpoint that creates a `serviceVisits` record with `source: "geofencing"` and `status: "concluida"`, verifies client ownership, and marks linked appointment as completed
+- **Schema additions**: `serviceVisits` table has `end_time`, `source` (default "manual"), `status` (default "concluida") columns; `actual_duration_minutes` is nullable
+
+### Key Files
+- `client/src/hooks/useGeofencing.ts` — GPS tracking hook
+- `client/src/pages/Home.tsx` — UI integration (tracking button, active visit card, confirmation cards)
+- `server/routes.ts` — `/api/geofencing/visit` endpoint
+
 ## Scheduling Rules
 
 ### Business Hours

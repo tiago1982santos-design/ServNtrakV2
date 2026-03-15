@@ -2,19 +2,23 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAppointments } from "@/hooks/use-appointments";
 import { useUnpaidExtraServices } from "@/hooks/use-service-logs";
 import { useWeather, getWeatherInfo } from "@/hooks/use-weather";
+import { useGeofencing, type VisitaConcluida, type ClienteComLocalizacao } from "@/hooks/useGeofencing";
 import { format, isToday, startOfDay, differenceInMinutes } from "date-fns";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Sun, Cloud, CloudSun, CloudRain, CloudDrizzle, Moon, CloudMoon,
   AlertTriangle, ChevronRight, Play, MapPin, Navigation2,
   Droplets, Leaf, CheckCircle2, Map, FileText, Camera,
   BarChart2, Loader2, CalendarClock, ShoppingBag, Users, ClipboardList,
+  Locate, LocateOff, Clock, X, Check, Pencil,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 import { QuickPhotoCaptureButton } from "@/components/QuickPhotoCaptureButton";
 import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@shared/routes";
 
 const SERVICE_CONFIG = {
   Garden:  { label: "Jardim",  Icon: Leaf,     badge: "bg-[#F0F4E8] text-[#6B7B3A]" },
@@ -85,9 +89,25 @@ function CountdownBadge({ date }: { date: Date }) {
   );
 }
 
+function VisitaDuracaoAtiva({ inicio }: { inicio: Date }) {
+  const [minutos, setMinutos] = useState(0);
+  useEffect(() => {
+    const calc = () => setMinutos(Math.max(0, Math.round((Date.now() - inicio.getTime()) / 60_000)));
+    calc();
+    const t = setInterval(calc, 30_000);
+    return () => clearInterval(t);
+  }, [inicio]);
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return <span className="tabular-nums font-bold">{h > 0 ? `${h}h ${m}min` : `${m} min`}</span>;
+}
+
 export default function Home() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+  const [ajustarVisita, setAjustarVisita] = useState<VisitaConcluida | null>(null);
+  const [ajustarMinutos, setAjustarMinutos] = useState("");
 
   const todayStart = useMemo(() => startOfDay(new Date()).toISOString(), []);
   const [currentTime, setCurrentTime] = useState(format(new Date(), "HH:mm"));
@@ -121,6 +141,49 @@ export default function Home() {
   const unpaidTotal = unpaidServices?.reduce((s, x) => s + (x.totalAmount ?? 0), 0) ?? 0;
   const unpaidCount = unpaidServices?.length ?? 0;
   const progressFraction = todayAppointments.length > 0 ? completedToday.length / todayAppointments.length : 0;
+
+  const clientesGeofencing: ClienteComLocalizacao[] = useMemo(() =>
+    todayAppointments
+      .filter(ag => !ag.isCompleted && ag.client?.latitude && ag.client?.longitude)
+      .map(ag => ({
+        id: ag.client.id,
+        nome: ag.client.name,
+        latitude: ag.client.latitude!,
+        longitude: ag.client.longitude!,
+        agendamentoId: ag.id,
+      })),
+    [todayAppointments]
+  );
+
+  const geo = useGeofencing(clientesGeofencing, {
+    raioMetros: 75,
+    intervaloMs: 30_000,
+  });
+
+  const guardarVisita = useCallback(async (visita: VisitaConcluida, duracaoAjustada?: number) => {
+    try {
+      const res = await fetch("/api/geofencing/visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          agendamentoId: visita.agendamentoId,
+          clienteId: visita.clienteId,
+          inicio: visita.inicio.toISOString(),
+          fim: visita.fim.toISOString(),
+          duracaoMinutos: duracaoAjustada ?? visita.duracaoMinutos,
+        }),
+      });
+      if (!res.ok) {
+        console.error("Erro ao guardar visita:", await res.text());
+        return;
+      }
+      geo.confirmarVisita(visita);
+      queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+    } catch (err) {
+      console.error("Erro ao guardar visita:", err);
+    }
+  }, [geo, queryClient]);
 
   const quickActions = [
     { href: "/map",     Icon: Map,      label: "Mapa",      color: "bg-amber-50 text-amber-600 border-amber-200" },
@@ -172,6 +235,134 @@ export default function Home() {
       </div>
 
       <div className="px-4 py-6 space-y-5">
+
+        {/* ── GPS ERROR ALERT ────────────────────── */}
+        {geo.erro && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3" data-testid="alert-gps-error">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">Problema com GPS</p>
+              <p className="text-xs text-amber-700 mt-0.5">{geo.erro}</p>
+            </div>
+            <button onClick={geo.parar} className="text-amber-600 hover:text-amber-800 p-1" data-testid="button-dismiss-gps-error">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* ── ACTIVE VISIT CARD ──────────────────── */}
+        {geo.visitaAtiva && (
+          <div
+            className="bg-gradient-to-br from-[#6B7B3A] to-[#8BA65A] rounded-[2rem] p-5 shadow-[0_12px_35px_rgba(107,123,58,0.25)] text-white relative overflow-hidden"
+            data-testid="card-active-visit"
+          >
+            <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-widest text-white/80">Em visita</span>
+              </div>
+              <h3 className="text-2xl font-bold mb-2 tracking-tight">{geo.visitaAtiva.clienteNome}</h3>
+              <div className="flex items-center gap-4 text-white/90 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span>Início: {geo.visitaAtiva.inicio.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  <VisitaDuracaoAtiva inicio={geo.visitaAtiva.inicio} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── VISIT CONFIRMATION CARDS ────────────── */}
+        {geo.visitasPendentesConfirmacao.map(visita => (
+          <div
+            key={`${visita.clienteId}-${visita.inicio.getTime()}`}
+            className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(200,120,50,0.08)] border border-[#DCE4C8] p-5 space-y-4"
+            data-testid={`card-confirm-visit-${visita.clienteId}`}
+          >
+            <div className="flex items-start gap-3">
+              <div className="bg-[#F0F4E8] p-2.5 rounded-full">
+                <CheckCircle2 className="w-5 h-5 text-[#6B7B3A]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#6B7B3A] mb-1">Visita concluída</p>
+                <h4 className="font-bold text-[#2D1B0E] text-lg truncate">{visita.clienteNome}</h4>
+              </div>
+            </div>
+            <div className="bg-[#F9F7F3] rounded-2xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-[#2D1B0E]">
+                <Clock className="w-4 h-4 text-[#9B7B5E]" />
+                <span className="tabular-nums">
+                  {visita.inicio.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                  {" → "}
+                  {visita.fim.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+              <span className="font-bold text-[#6B7B3A] text-sm tabular-nums">{visita.duracaoMinutos} min</span>
+            </div>
+
+            {ajustarVisita?.clienteId === visita.clienteId && ajustarVisita.inicio.getTime() === visita.inicio.getTime() ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  className="flex-1 border border-orange-200 rounded-xl px-3 py-2.5 text-sm text-[#2D1B0E] bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  placeholder="Duração real (min)"
+                  value={ajustarMinutos}
+                  onChange={e => setAjustarMinutos(e.target.value)}
+                  autoFocus
+                  data-testid="input-adjust-duration"
+                />
+                <button
+                  className="bg-[#6B7B3A] text-white p-2.5 rounded-xl active:scale-95 transition-transform"
+                  onClick={() => {
+                    const mins = parseInt(ajustarMinutos);
+                    if (mins > 0) guardarVisita(visita, mins);
+                    setAjustarVisita(null);
+                    setAjustarMinutos("");
+                  }}
+                  data-testid="button-save-adjusted"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+                <button
+                  className="bg-gray-100 text-gray-500 p-2.5 rounded-xl active:scale-95 transition-transform"
+                  onClick={() => { setAjustarVisita(null); setAjustarMinutos(""); }}
+                  data-testid="button-cancel-adjust"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  className="flex-1 bg-[#6B7B3A] text-white font-bold py-3 rounded-full flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-[0_4px_12px_rgba(107,123,58,0.2)]"
+                  onClick={() => guardarVisita(visita)}
+                  data-testid="button-confirm-visit"
+                >
+                  <Check className="w-4 h-4" /> Confirmar
+                </button>
+                <button
+                  className="bg-amber-50 text-amber-700 font-bold py-3 px-4 rounded-full flex items-center justify-center gap-1.5 border border-amber-200 active:scale-[0.98] transition-transform"
+                  onClick={() => { setAjustarVisita(visita); setAjustarMinutos(String(visita.duracaoMinutos)); }}
+                  data-testid="button-adjust-visit"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Ajustar
+                </button>
+                <button
+                  className="bg-gray-50 text-gray-500 font-bold py-3 px-4 rounded-full border border-gray-200 active:scale-[0.98] transition-transform"
+                  onClick={() => geo.confirmarVisita(visita)}
+                  data-testid="button-ignore-visit"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
 
         {/* ── NEXT ACTION HERO ───────────────────── */}
         <section>
@@ -277,10 +468,10 @@ export default function Home() {
           </Link>
         )}
 
-        {/* ── QUICK ACTIONS ──────────────────────── */}
+        {/* ── QUICK ACTIONS + TRACKING ────────────── */}
         <section>
           <div className="flex justify-between items-center px-2">
-            {quickActions.map((action, i) => (
+            {quickActions.map((action) => (
               <Link key={action.href} href={action.href} data-testid={`link-quick-${action.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`}>
                 <button className="flex flex-col items-center gap-2.5 group outline-none">
                   <div className={cn("w-16 h-16 rounded-[1.25rem] flex items-center justify-center shadow-[0_4px_12px_rgba(200,120,50,0.06)] border group-active:scale-95 transition-transform", action.color)}>
@@ -290,6 +481,37 @@ export default function Home() {
                 </button>
               </Link>
             ))}
+          </div>
+
+          {/* ── GPS TRACKING BUTTON ────────────────── */}
+          <div className="mt-4">
+            <button
+              onClick={geo.ativo ? geo.parar : geo.iniciar}
+              className={cn(
+                "w-full py-3.5 rounded-[1.5rem] font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-[0_4px_15px_rgba(200,120,50,0.08)]",
+                geo.ativo
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-[0_4px_15px_rgba(249,115,22,0.3)]"
+                  : "bg-white border border-orange-100 text-[#9B7B5E] hover:bg-orange-50/30"
+              )}
+              data-testid="button-toggle-tracking"
+            >
+              {geo.ativo ? (
+                <>
+                  <LocateOff className="w-4 h-4" />
+                  Pausar tracking GPS
+                  {geo.posicaoAtual && (
+                    <span className="ml-1 text-xs opacity-80">
+                      ({geo.ultimoUpdate ? format(geo.ultimoUpdate, "HH:mm") : "…"})
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Locate className="w-4 h-4" />
+                  Iniciar tracking GPS
+                </>
+              )}
+            </button>
           </div>
         </section>
 

@@ -167,10 +167,13 @@ export const serviceVisits = pgTable("service_visits", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
   clientId: integer("client_id").notNull(),
-  appointmentId: integer("appointment_id"), // Optional link to original appointment
+  appointmentId: integer("appointment_id"),
   visitDate: timestamp("visit_date").notNull(),
-  actualDurationMinutes: integer("actual_duration_minutes").notNull(), // Real time spent
-  workerCount: integer("worker_count").notNull().default(1), // Number of workers
+  endTime: timestamp("end_time"),
+  actualDurationMinutes: integer("actual_duration_minutes"),
+  workerCount: integer("worker_count").notNull().default(1),
+  source: text("source").default("manual"),
+  status: text("status").default("concluida"),
   notes: text("notes"),
   completedAt: timestamp("completed_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),

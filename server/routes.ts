@@ -951,5 +951,49 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
     res.status(204).end();
   });
 
+  // ── GEOFENCING ENDPOINT ──────────────────────────────────────────
+  const geofencingVisitSchema = z.object({
+    clienteId: z.number().int().positive(),
+    agendamentoId: z.number().int().positive().optional(),
+    inicio: z.string().datetime(),
+    fim: z.string().datetime(),
+    duracaoMinutos: z.number().int().min(1).max(720),
+  });
+
+  app.post("/api/geofencing/visit", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const parsed = geofencingVisitSchema.parse(req.body);
+
+      const client = await storage.getClient(parsed.clienteId, userId);
+      if (!client) {
+        return res.status(404).json({ message: "Cliente não encontrado" });
+      }
+
+      const visit = await storage.createServiceVisit(
+        {
+          userId,
+          clientId: parsed.clienteId,
+          appointmentId: parsed.agendamentoId,
+          visitDate: new Date(parsed.inicio),
+          endTime: new Date(parsed.fim),
+          actualDurationMinutes: parsed.duracaoMinutos,
+          workerCount: 1,
+          source: "geofencing",
+          status: "concluida",
+        },
+        []
+      );
+
+      res.json(visit);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors.map(e => e.message).join(', ') });
+      }
+      console.error("Geofencing visit error:", err);
+      res.status(500).json({ message: "Erro ao registar visita" });
+    }
+  });
+
   return httpServer;
 }
