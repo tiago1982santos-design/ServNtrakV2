@@ -175,38 +175,13 @@ export default function Home() {
     }
   }, []);
 
-  const handleSaida = useCallback(async (visita: VisitaConcluida) => {
-    try {
-      const res = await fetch("/api/geofencing/visit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          clientId: visita.clienteId,
-          appointmentId: visita.agendamentoId,
-          inicio: visita.inicio.toISOString(),
-          fim: visita.fim.toISOString(),
-          duracaoMinutos: visita.duracaoMinutos,
-        }),
-      });
-      if (!res.ok) {
-        console.error("Erro ao finalizar visita automática:", await res.text());
-      } else {
-        queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
-      }
-    } catch (err) {
-      console.error("Erro ao finalizar visita automática:", err);
-    }
-  }, [queryClient]);
-
   const geo = useGeofencing(clientesGeofencing, {
     raioMetros: 75,
     intervaloMs: 30_000,
     onEntrada: handleEntrada,
-    onSaida: handleSaida,
   });
 
-  const ajustarDuracaoVisita = useCallback(async (visita: VisitaConcluida, duracaoAjustada: number) => {
+  const finalizarVisita = useCallback(async (visita: VisitaConcluida, duracaoOverride?: number) => {
     try {
       const res = await fetch("/api/geofencing/visit", {
         method: "POST",
@@ -217,19 +192,37 @@ export default function Home() {
           appointmentId: visita.agendamentoId,
           inicio: visita.inicio.toISOString(),
           fim: visita.fim.toISOString(),
-          duracaoMinutos: duracaoAjustada,
+          duracaoMinutos: duracaoOverride ?? visita.duracaoMinutos,
+          fonte: "geofencing",
         }),
       });
       if (!res.ok) {
-        console.error("Erro ao ajustar visita:", await res.text());
+        console.error("Erro ao guardar visita:", await res.text());
         return;
       }
       geo.confirmarVisita(visita);
       queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
     } catch (err) {
-      console.error("Erro ao ajustar visita:", err);
+      console.error("Erro ao guardar visita:", err);
     }
   }, [geo, queryClient]);
+
+  const ignorarVisita = useCallback(async (visita: VisitaConcluida) => {
+    try {
+      await fetch("/api/geofencing/discard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          clientId: visita.clienteId,
+          appointmentId: visita.agendamentoId,
+        }),
+      });
+    } catch (err) {
+      console.error("Erro ao descartar visita:", err);
+    }
+    geo.confirmarVisita(visita);
+  }, [geo]);
 
   const quickActions = [
     { href: "/map",     Icon: Map,      label: "Mapa",      color: "bg-amber-50 text-amber-600 border-amber-200" },
@@ -366,7 +359,7 @@ export default function Home() {
                   className="bg-[#6B7B3A] text-white p-2.5 rounded-xl active:scale-95 transition-transform"
                   onClick={() => {
                     const mins = parseInt(ajustarMinutos);
-                    if (mins > 0) ajustarDuracaoVisita(visita, mins);
+                    if (mins > 0) finalizarVisita(visita, mins);
                     setAjustarVisita(null);
                     setAjustarMinutos("");
                   }}
@@ -386,7 +379,7 @@ export default function Home() {
               <div className="flex gap-2">
                 <button
                   className="flex-1 bg-[#6B7B3A] text-white font-bold py-3 rounded-full flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-[0_4px_12px_rgba(107,123,58,0.2)]"
-                  onClick={() => geo.confirmarVisita(visita)}
+                  onClick={() => finalizarVisita(visita)}
                   data-testid="button-confirm-visit"
                 >
                   <Check className="w-4 h-4" /> Confirmar
@@ -400,7 +393,7 @@ export default function Home() {
                 </button>
                 <button
                   className="bg-gray-50 text-gray-500 font-bold py-3 px-4 rounded-full border border-gray-200 active:scale-[0.98] transition-transform"
-                  onClick={() => geo.confirmarVisita(visita)}
+                  onClick={() => ignorarVisita(visita)}
                   data-testid="button-ignore-visit"
                 >
                   <X className="w-4 h-4" />

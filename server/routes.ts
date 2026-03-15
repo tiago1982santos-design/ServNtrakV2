@@ -976,7 +976,6 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
         {
           userId,
           clientId: parsed.clientId,
-          appointmentId: parsed.appointmentId,
           visitDate: new Date(parsed.timestamp),
           actualDurationMinutes: 0,
           workerCount: 1,
@@ -1002,6 +1001,7 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
     inicio: z.string().datetime(),
     fim: z.string().datetime(),
     duracaoMinutos: z.number().int().min(1).max(720),
+    fonte: z.string().optional().default("geofencing"),
   });
 
   app.post("/api/geofencing/visit", requireAuth, async (req, res) => {
@@ -1054,7 +1054,7 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
             endTime: new Date(parsed.fim),
             actualDurationMinutes: parsed.duracaoMinutos,
             workerCount: 1,
-            source: "geofencing",
+            source: parsed.fonte,
             status: "concluida",
           },
           []
@@ -1068,6 +1068,38 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
       }
       console.error("Geofencing visit error:", err);
       res.status(500).json({ message: "Erro ao registar visita" });
+    }
+  });
+
+  const geofencingDiscardSchema = z.object({
+    clientId: z.number().int().positive(),
+    appointmentId: z.number().int().positive().optional(),
+  });
+
+  app.post("/api/geofencing/discard", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const parsed = geofencingDiscardSchema.parse(req.body);
+
+      const existingVisits = await storage.getServiceVisits(userId, parsed.clientId);
+      const emCurso = existingVisits.find(
+        v => v.source === "geofencing" && v.status === "em_curso" && v.clientId === parsed.clientId
+      );
+
+      if (emCurso) {
+        const { db } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const { serviceVisits } = await import("@shared/schema");
+        await db.delete(serviceVisits).where(eq(serviceVisits.id, emCurso.id));
+      }
+
+      res.status(204).end();
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors.map(e => e.message).join(', ') });
+      }
+      console.error("Geofencing discard error:", err);
+      res.status(500).json({ message: "Erro ao descartar visita" });
     }
   });
 
