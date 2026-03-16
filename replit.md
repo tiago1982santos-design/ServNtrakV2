@@ -135,7 +135,7 @@ The Home page was redesigned from a dark-green gradient to a warm amber/orange "
 - `@tanstack/react-query` - Data fetching and caching
 - `zod` / `drizzle-zod` - Runtime validation and type generation
 - `jspdf` / `jspdf-autotable` - PDF generation for exports
-- `xlsx` - Excel file generation for exports
+- CSV export utility (built-in) - Spreadsheet-compatible file generation for exports
 
 ### UI Framework Dependencies
 - Full shadcn/ui component library (accordion, dialog, form, etc.)

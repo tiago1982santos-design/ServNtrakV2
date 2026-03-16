@@ -10,9 +10,28 @@ import { pt } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+
 import type { Client, PurchaseWithDetails, ClientPayment } from "@shared/schema";
 import { BackButton } from "@/components/BackButton";
+
+function exportToCsv(filename: string, rows: Record<string, unknown>[]) {
+  if (rows.length === 0) return;
+  const headers = Object.keys(rows[0]);
+  const escape = (v: unknown) => {
+    const s = String(v ?? "");
+    return s.includes(",") || s.includes('"') || s.includes("\n")
+      ? `"${s.replace(/"/g, '""')}"`
+      : s;
+  };
+  const csv = [headers.map(escape).join(","), ...rows.map(r => headers.map(h => escape(r[h])).join(","))].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const MONTHS = [
   { value: "1", label: "Janeiro" },
@@ -149,10 +168,7 @@ export default function Exports() {
         "Notas": p.notes || "-"
       }));
 
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Pagamentos");
-      XLSX.writeFile(wb, `pagamentos_${monthName.toLowerCase()}_${selectedYear}.xlsx`);
+      exportToCsv(`pagamentos_${monthName.toLowerCase()}_${selectedYear}.csv`, data);
       toast({ title: "Exportado", description: "Excel gerado com sucesso" });
     } catch (error) {
       toast({ title: "Erro", description: "Erro ao gerar Excel", variant: "destructive" });
@@ -234,10 +250,7 @@ export default function Exports() {
         "Cliente Associado": p.client?.name || "-"
       }));
 
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Despesas");
-      XLSX.writeFile(wb, `despesas_${monthName.toLowerCase()}_${selectedYear}.xlsx`);
+      exportToCsv(`despesas_${monthName.toLowerCase()}_${selectedYear}.csv`, data);
       toast({ title: "Exportado", description: "Excel gerado com sucesso" });
     } catch (error) {
       toast({ title: "Erro", description: "Erro ao gerar Excel", variant: "destructive" });
@@ -404,10 +417,7 @@ export default function Exports() {
         };
       });
 
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Clientes");
-      XLSX.writeFile(wb, `clientes_peralta_gardens.xlsx`);
+      exportToCsv(`clientes_peralta_gardens.csv`, data);
       toast({ title: "Exportado", description: "Excel de clientes gerado com sucesso" });
     } catch (error) {
       toast({ title: "Erro", description: "Erro ao gerar Excel", variant: "destructive" });
