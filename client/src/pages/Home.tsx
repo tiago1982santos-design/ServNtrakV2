@@ -368,7 +368,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-24 overflow-x-hidden w-full max-w-[480px] mx-auto relative">
+    <div className="min-h-screen bg-slate-50 font-sans pb-24 overflow-x-hidden w-full max-w-2xl mx-auto relative">
 
       {/* ── HEADER ─────────────────────────────── */}
       <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex justify-between items-center shadow-sm">
