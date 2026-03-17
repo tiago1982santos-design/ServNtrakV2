@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useAppointments } from "@/hooks/use-appointments";
 import { useUnpaidExtraServices } from "@/hooks/use-service-logs";
-import { useWeather, getWeatherInfo } from "@/hooks/use-weather";
+import { useDetailedWeather, getWeatherInfo, getWindClassLabel } from "@/hooks/use-weather";
 import { useGeofencing, type VisitaConcluida, type ClienteComLocalizacao } from "@/hooks/useGeofencing";
 import { format, isToday, startOfDay, differenceInMinutes } from "date-fns";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -56,7 +56,7 @@ const NIGHT_ICONS: Record<string, typeof Moon> = {
 };
 
 function WeatherStrip() {
-  const { data: weather, isLoading } = useWeather();
+  const { data: weather, isLoading } = useDetailedWeather();
 
   if (isLoading || !weather) {
     return (
@@ -80,17 +80,31 @@ function WeatherStrip() {
   );
 }
 
+function getDayLabel(dateStr: string) {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const diff = Math.round((date.getTime() - today.getTime()) / 86_400_000);
+  if (diff === 0) return "Hoje";
+  if (diff === 1) return "Amanhã";
+  return date.toLocaleDateString("pt-PT", { weekday: "short" });
+}
+
 function WeatherCard() {
-  const { data: weather, isLoading } = useWeather();
+  const { data: weather, isLoading } = useDetailedWeather();
   const [, navigate] = useLocation();
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4 shadow-sm animate-pulse mb-6">
-        <div className="w-14 h-14 rounded-xl bg-slate-100" />
-        <div className="flex-1 space-y-2">
-          <div className="w-20 h-6 bg-slate-100 rounded" />
-          <div className="w-32 h-4 bg-slate-100 rounded" />
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm animate-pulse mb-6">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-14 h-14 rounded-xl bg-slate-100" />
+          <div className="flex-1 space-y-2">
+            <div className="w-20 h-6 bg-slate-100 rounded" />
+            <div className="w-32 h-4 bg-slate-100 rounded" />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          {[1,2,3,4].map(i => <div key={i} className="flex-1 h-16 bg-slate-100 rounded-xl" />)}
         </div>
       </div>
     );
@@ -114,56 +128,104 @@ function WeatherCard() {
     ? isClear ? "text-amber-500" : isRainy ? "text-blue-500" : isStormy ? "text-purple-500" : "text-slate-500"
     : "text-indigo-400";
 
+  const upcomingDays = weather.daily.slice(0, 5);
+
   return (
     <div
-      className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-6 cursor-pointer active:scale-[0.99] transition-transform"
+      className="bg-white rounded-2xl border border-slate-200 shadow-sm mb-6 overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
       onClick={() => navigate("/weather")}
       data-testid="weather-card"
     >
-      <div className="flex items-center gap-4">
-        <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center shrink-0", iconBg)}>
-          <WeatherIcon className={cn("w-8 h-8", iconColor)} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-slate-900">{Math.round(weather.temperature)}°</span>
-            <span className="text-sm text-slate-400 font-medium">C</span>
+      {/* Current conditions */}
+      <div className="p-4">
+        <div className="flex items-center gap-4">
+          <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center shrink-0", iconBg)}>
+            <WeatherIcon className={cn("w-8 h-8", iconColor)} />
           </div>
-          <p className="text-sm text-slate-500 mt-0.5 capitalize">{info.description}</p>
-        </div>
-        <div className="flex flex-col gap-1.5 items-end shrink-0">
-          {weather.windSpeed >= 10 && (
-            <div className="flex items-center gap-1 text-slate-400 text-xs font-medium">
-              <Wind className="w-3.5 h-3.5" />
-              <span>{Math.round(weather.windSpeed)} km/h</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-bold text-slate-900">{Math.round(weather.temperature)}°</span>
+              <span className="text-sm text-slate-400 font-medium">C</span>
+              {weather.todayForecast && (
+                <span className="text-xs text-slate-400 font-medium ml-1">
+                  {weather.todayForecast.temperatureMin}° / {weather.todayForecast.temperatureMax}°
+                </span>
+              )}
             </div>
-          )}
-          {weather.precipitation > 0 && (
-            <div className="flex items-center gap-1 text-blue-400 text-xs font-medium">
-              <Droplets className="w-3.5 h-3.5" />
-              <span>{weather.precipitation} mm</span>
-            </div>
-          )}
-          <span className="text-[10px] text-slate-300 font-medium">IPMA</span>
+            <p className="text-sm text-slate-500 mt-0.5 capitalize">{info.description}</p>
+          </div>
+          <div className="flex flex-col gap-1.5 items-end shrink-0">
+            {weather.windSpeed >= 10 && (
+              <div className="flex items-center gap-1 text-slate-400 text-xs font-medium">
+                <Wind className="w-3.5 h-3.5" />
+                <span>{Math.round(weather.windSpeed)} km/h</span>
+              </div>
+            )}
+            {weather.todayForecast && weather.todayForecast.precipitationProbability > 0 && (
+              <div className="flex items-center gap-1 text-blue-400 text-xs font-medium">
+                <Droplets className="w-3.5 h-3.5" />
+                <span>{weather.todayForecast.precipitationProbability}%</span>
+              </div>
+            )}
+            <span className="text-[10px] text-slate-300 font-medium">IPMA</span>
+          </div>
         </div>
+
+        {weather.alerts.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {weather.alerts.map((alert, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl",
+                  alert.severity === "danger"
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                )}
+              >
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{alert.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {weather.alerts.length > 0 && (
-        <div className="mt-3 space-y-1.5">
-          {weather.alerts.map((alert, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl",
-                alert.severity === "danger"
-                  ? "bg-red-50 text-red-700 border border-red-200"
-                  : "bg-amber-50 text-amber-700 border border-amber-200"
-              )}
-            >
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{alert.message}</span>
-            </div>
-          ))}
+      {/* Daily forecast strip */}
+      {upcomingDays.length > 0 && (
+        <div className="border-t border-slate-100 flex divide-x divide-slate-100">
+          {upcomingDays.map((day, i) => {
+            const dayInfo = getWeatherInfo(day.weatherCode);
+            const DayIcon = DAY_ICONS[dayInfo.icon] ?? Cloud;
+            const rainProb = day.precipitationProbability;
+            return (
+              <div
+                key={day.date}
+                className={cn(
+                  "flex-1 flex flex-col items-center py-3 px-1 gap-1",
+                  i === 0 && "bg-[#206F4C]/5"
+                )}
+              >
+                <span className={cn(
+                  "text-[10px] font-bold uppercase tracking-wide",
+                  i === 0 ? "text-[#206F4C]" : "text-slate-400"
+                )}>
+                  {getDayLabel(day.date)}
+                </span>
+                <DayIcon className={cn("w-5 h-5", i === 0 ? "text-[#206F4C]" : "text-slate-400")} strokeWidth={1.5} />
+                {rainProb > 20 && (
+                  <div className="flex items-center gap-0.5 text-blue-400">
+                    <Droplets className="w-2.5 h-2.5" />
+                    <span className="text-[9px] font-bold">{rainProb}%</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1 text-[10px]">
+                  <span className="text-slate-400">{day.temperatureMin}°</span>
+                  <span className="font-bold text-slate-700">{day.temperatureMax}°</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
