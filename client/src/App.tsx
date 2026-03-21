@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { SplashScreen } from "@/components/SplashScreen";
+import AssistantChat from "@/components/AssistantChat";
 
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
@@ -50,27 +51,30 @@ function Router() {
   }
 
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/clients" component={Clients} />
-      <Route path="/clients/:id" component={ClientDetail} />
-      <Route path="/map" component={ClientsMap} />
-      <Route path="/weather" component={Weather} />
-      <Route path="/calendar" component={CalendarPage} />
-      <Route path="/reminders" component={Reminders} />
-      <Route path="/billing" component={Billing} />
-      <Route path="/purchases" component={Purchases} />
-      <Route path="/reports" component={Reports} />
-      <Route path="/payments" component={Payments} />
-      <Route path="/profile" component={Profile} />
-      <Route path="/logos" component={Logos} />
-      <Route path="/gallery" component={Gallery} />
-      <Route path="/finances" component={Finances} />
-      <Route path="/exports" component={Exports} />
-      <Route path="/employees" component={Employees} />
-      <Route path="/pending-tasks" component={PendingTasks} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/clients" component={Clients} />
+        <Route path="/clients/:id" component={ClientDetail} />
+        <Route path="/map" component={ClientsMap} />
+        <Route path="/weather" component={Weather} />
+        <Route path="/calendar" component={CalendarPage} />
+        <Route path="/reminders" component={Reminders} />
+        <Route path="/billing" component={Billing} />
+        <Route path="/purchases" component={Purchases} />
+        <Route path="/reports" component={Reports} />
+        <Route path="/payments" component={Payments} />
+        <Route path="/profile" component={Profile} />
+        <Route path="/logos" component={Logos} />
+        <Route path="/gallery" component={Gallery} />
+        <Route path="/finances" component={Finances} />
+        <Route path="/exports" component={Exports} />
+        <Route path="/employees" component={Employees} />
+        <Route path="/pending-tasks" component={PendingTasks} />
+        <Route component={NotFound} />
+      </Switch>
+      <AssistantChat />
+    </>
   );
 }
 
