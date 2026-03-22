@@ -245,7 +245,7 @@ export const suggestedWorks = pgTable("suggested_works", {
   notes: text("notes"), // Additional notes: measurements, quantities, materials needed
   category: text("category").notNull(), // 'Jardim', 'Piscina', 'Jacuzzi', 'Geral', 'Limpeza', 'Instalação'
   photos: text("photos").array(), // Photos showing where/what work is suggested
-  estimatedCost: integer("estimated_cost"), // Optional cost estimate in cents
+  estimatedCost: doublePrecision("estimated_cost"), // Optional cost estimate in euros
   estimatedDurationMinutes: integer("estimated_duration_minutes"), // Optional duration estimate in minutes
   isAccepted: boolean("is_accepted").default(false), // Client accepted the suggestion
   isRejected: boolean("is_rejected").default(false), // Client rejected the suggestion
