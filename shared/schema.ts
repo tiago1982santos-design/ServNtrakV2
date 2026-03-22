@@ -581,6 +581,19 @@ export const passwordResetTokensRelations = relations(passwordResetTokens, ({ on
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
+// Push Subscriptions
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  deviceInfo: text("device_info"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
 export type AppointmentPreview = {
   clientId: number;
   clientName: string;

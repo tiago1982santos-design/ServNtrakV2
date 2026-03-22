@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,11 +89,6 @@ const implementedFeatures = [
 ];
 
 const futureIdeas = [
-  {
-    title: "Notificações Push",
-    description: "Alertas no telemóvel para compromissos.",
-    source: "sugestão"
-  },
   {
     title: "Rotas Otimizadas",
     description: "Planear a melhor rota para vários clientes.",
@@ -398,6 +394,109 @@ function PasswordSection() {
   );
 }
 
+function PushNotificationSection() {
+  const { state, subscribe, unsubscribe, sendTest } = usePushNotifications();
+  const { toast } = useToast();
+  const [testing, setTesting] = useState(false);
+
+  if (state === "unsupported") {
+    return (
+      <div className="glass-card p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center">
+            <Bell className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-sm">Notificações Push</p>
+            <p className="text-xs text-muted-foreground">Não suportado neste navegador</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass-card p-4 space-y-3">
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+          state === "granted" ? "bg-green-500/10" : "bg-amber-500/10"
+        }`}>
+          <Bell className={`w-5 h-5 ${state === "granted" ? "text-green-600" : "text-amber-600"}`} />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-sm">Notificações Push</p>
+          <p className="text-xs text-muted-foreground">
+            {state === "granted" ? "Ativas neste dispositivo" :
+             state === "denied" ? "Bloqueadas pelo navegador" :
+             state === "loading" ? "A verificar..." :
+             "Recebe alertas de compromissos"}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        {state === "granted" ? (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 gap-2"
+              onClick={async () => {
+                setTesting(true);
+                const ok = await sendTest();
+                setTesting(false);
+                toast({
+                  title: ok ? "Notificação enviada" : "Erro",
+                  description: ok ? "Verifica o teu dispositivo." : "Não foi possível enviar.",
+                  variant: ok ? "default" : "destructive",
+                });
+              }}
+              disabled={testing}
+              data-testid="button-test-push"
+            >
+              {testing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
+              Testar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 gap-2 text-destructive hover:text-destructive"
+              onClick={async () => {
+                const ok = await unsubscribe();
+                if (ok) toast({ title: "Notificações desativadas" });
+              }}
+              data-testid="button-disable-push"
+            >
+              Desativar
+            </Button>
+          </>
+        ) : state === "denied" ? (
+          <p className="text-xs text-muted-foreground">
+            Para ativar, altera as permissões de notificações nas definições do navegador.
+          </p>
+        ) : state !== "loading" ? (
+          <Button
+            size="sm"
+            className="w-full gap-2"
+            onClick={async () => {
+              const ok = await subscribe();
+              if (ok) {
+                toast({ title: "Notificações ativadas", description: "Receberás alertas neste dispositivo." });
+              } else if (Notification.permission === "denied") {
+                toast({ title: "Permissão negada", description: "Verifica as definições do navegador.", variant: "destructive" });
+              }
+            }}
+            data-testid="button-enable-push"
+          >
+            <Bell className="w-3 h-3" />
+            Ativar Notificações
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { user, logout } = useAuth();
 
@@ -463,6 +562,8 @@ export default function Profile() {
         <PasswordSection />
 
         <BiometricSection />
+
+        <PushNotificationSection />
 
         <div className="space-y-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Aplicação</h3>

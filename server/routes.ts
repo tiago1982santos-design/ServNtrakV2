@@ -8,6 +8,7 @@ import { api } from "@shared/routes";
 import { serviceVisits, appointments } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
+import { saveSubscription, removeSubscription, sendPushToUser, getVapidPublicKey } from "./pushService";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -1188,6 +1189,71 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
     } catch (err: any) {
       console.error("Assistente Claude error:", err);
       res.status(500).json({ message: "Erro no assistente" });
+    }
+  });
+
+  // --- Push Notifications ---
+
+  app.get("/api/push/vapid-public-key", (_req, res) => {
+    res.json({ key: getVapidPublicKey() });
+  });
+
+  app.post("/api/push/subscribe", requireAuth, async (req, res) => {
+    try {
+      const { subscription, deviceInfo } = z.object({
+        subscription: z.object({
+          endpoint: z.string().url(),
+          keys: z.object({
+            p256dh: z.string(),
+            auth: z.string(),
+          }),
+        }),
+        deviceInfo: z.string().optional(),
+      }).parse(req.body);
+
+      await saveSubscription(req.user!.id, subscription, deviceInfo);
+      res.json({ success: true });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("Push subscribe error:", err);
+      res.status(500).json({ message: "Erro ao registar notificação" });
+    }
+  });
+
+  app.post("/api/push/unsubscribe", requireAuth, async (req, res) => {
+    try {
+      const { endpoint } = z.object({
+        endpoint: z.string().url(),
+      }).parse(req.body);
+
+      await removeSubscription(endpoint, req.user!.id);
+      res.json({ success: true });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Erro ao remover notificação" });
+    }
+  });
+
+  app.post("/api/push/test", requireAuth, async (req, res) => {
+    try {
+      const result = await sendPushToUser(req.user!.id, {
+        title: "ServNtrak",
+        body: "Notificações push ativas! 🌿",
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
+        url: "/",
+      });
+      if (result.sent === 0) {
+        return res.status(422).json({ ...result, message: "Nenhuma notificação enviada" });
+      }
+      res.json(result);
+    } catch (err) {
+      console.error("Push test error:", err);
+      res.status(500).json({ message: "Erro ao enviar notificação de teste" });
     }
   });
 

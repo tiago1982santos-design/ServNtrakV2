@@ -119,6 +119,15 @@ The Home page was redesigned from a dark-green gradient to a warm amber/orange "
 - **Features**: Global totals (4 summary cards), top-10 bar chart (recharts), sortable client list (by margin €, revenue, margin %, hours), color-coded margin badges
 - **Access**: "Rentabilidade por Cliente" button on Reports page
 
+### Push Notifications
+- **Service Worker** (`client/public/sw.js`): Handles `push` events and `notificationclick` (opens app to specified URL)
+- **Backend** (`server/pushService.ts`): Web Push API with VAPID keys, saves/removes subscriptions, sends notifications to user devices
+- **Frontend hook** (`client/src/hooks/use-push-notifications.ts`): Subscribe/unsubscribe/test with state management
+- **Profile section**: Toggle notifications on/off, test button, handles denied/unsupported states
+- **DB table**: `push_subscriptions` (userId, endpoint, p256dh, auth, deviceInfo)
+- **Endpoints**: `GET /api/push/vapid-public-key`, `POST /api/push/subscribe`, `POST /api/push/unsubscribe`, `POST /api/push/test`
+- **Env vars**: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
+
 ### Automatic Appointment Generation
 - **Calendar "Gerar Mês" button**: Opens a modal to auto-generate monthly appointments based on client service contracts
 - **Logic**: Reads each client's `hasGarden/hasPool/hasJacuzzi` flags and `*VisitFrequency` settings (`seasonal`, `once_monthly`, `on_demand`)
