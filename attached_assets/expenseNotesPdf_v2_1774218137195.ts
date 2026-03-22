@@ -1,3 +1,18 @@
+/**
+ * expenseNotesPdf.ts
+ * Gerador de PDF para Notas de Despesa.
+ * Usa o documentTemplate.ts para cabeçalho/rodapé.
+ *
+ * Localização sugerida: client/src/lib/expenseNotesPdf.ts
+ *
+ * Uso:
+ *   import { generateExpenseNotePdf } from "@/lib/expenseNotesPdf";
+ *   const doc = generateExpenseNotePdf(expenseNote);
+ *   doc.save(`ND-${expenseNote.noteNumber}.pdf`);
+ *   // ou para Web Share:
+ *   const blob = doc.output("blob");
+ */
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -10,9 +25,9 @@ import {
 import type { ExpenseNoteWithDetails } from "@shared/schema";
 import { getStrings, type Language } from "@/lib/documentStrings";
 
-const PRIMARY_COLOR: [number, number, number] = [83, 129, 53];
-const HEADER_BG: [number, number, number] = [240, 246, 235];
-const EDITED_COLOR: [number, number, number] = [180, 100, 0];
+const PRIMARY_COLOR: [number, number, number] = [83, 129, 53];   // #538135 verde
+const HEADER_BG: [number, number, number] = [240, 246, 235];      // verde muito claro
+const EDITED_COLOR: [number, number, number] = [180, 100, 0];    // laranja — linha editada
 
 export function generateExpenseNotePdf(
   note: ExpenseNoteWithDetails,
@@ -23,12 +38,14 @@ export function generateExpenseNotePdf(
 
   let y = CONTENT_START_Y;
 
+  // ── Título do documento ────────────────────────────────────
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   doc.setTextColor(...PRIMARY_COLOR);
   doc.text(s.expenseNote.title, MARGIN, y);
   y += 7;
 
+  // Número e data
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(80, 80, 80);
@@ -39,11 +56,13 @@ export function generateExpenseNotePdf(
   doc.text(`${s.expenseNote.date}: ${dateStr}`, PAGE_WIDTH - MARGIN, y, { align: "right" });
   y += 2;
 
+  // Linha separadora
   doc.setDrawColor(...PRIMARY_COLOR);
   doc.setLineWidth(0.4);
   doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
   y += 6;
 
+  // ── Dados do cliente ───────────────────────────────────────
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(40, 40, 40);
@@ -69,6 +88,7 @@ export function generateExpenseNotePdf(
 
   y += 4;
 
+  // ── Referência ao serviceLog ───────────────────────────────
   if (note.serviceLog) {
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8);
@@ -84,6 +104,7 @@ export function generateExpenseNotePdf(
     y += 6;
   }
 
+  // ── Tabela de itens ────────────────────────────────────────
   const typeLabels = s.expenseNote.typeLabels;
 
   const tableRows = note.items.map((item) => [
@@ -94,6 +115,7 @@ export function generateExpenseNotePdf(
     `${item.total.toFixed(2)} €`,
   ]);
 
+  // Calcular total geral
   const grandTotal = note.items.reduce((sum, item) => sum + item.total, 0);
 
   autoTable(doc, {
@@ -119,6 +141,7 @@ export function generateExpenseNotePdf(
     alternateRowStyles: {
       fillColor: [250, 253, 248],
     },
+    // Linhas editadas em laranja
     didParseCell: (data) => {
       if (data.section === "body") {
         const item = note.items[data.row.index];
@@ -132,6 +155,7 @@ export function generateExpenseNotePdf(
 
   const finalY = (doc as any).lastAutoTable.finalY ?? y + 40;
 
+  // ── Nota sobre itens editados (se existirem) ───────────────
   const editedItems = note.items.filter((i) => i.sourceType === "edited");
   if (editedItems.length > 0) {
     let noteY = finalY + 6;
@@ -150,6 +174,7 @@ export function generateExpenseNotePdf(
     });
   }
 
+  // ── Observações gerais ─────────────────────────────────────
   if (note.notes) {
     let obsY = finalY + (editedItems.length > 0 ? editedItems.length * 4 + 14 : 8);
     doc.setFont("helvetica", "normal");
@@ -161,11 +186,16 @@ export function generateExpenseNotePdf(
     doc.text(lines, MARGIN, obsY);
   }
 
+  // ── Aplicar template (logo + rodapé) em todas as páginas ──
   applyDocumentTemplate(doc);
 
   return doc;
 }
 
+/**
+ * Partilha o PDF via Web Share API (WhatsApp, email, etc.)
+ * Fallback para download se Web Share não disponível.
+ */
 export async function shareExpenseNotePdf(
   note: ExpenseNoteWithDetails,
   lang?: Language | null
@@ -182,5 +212,6 @@ export async function shareExpenseNotePdf(
     }
   }
 
+  // Fallback: download directo
   doc.save(fileName);
 }

@@ -45,6 +45,7 @@ export const clients = pgTable("clients", {
   perVisitRate: doublePrecision("per_visit_rate"), // Fixed rate per visit in euros
   // Payment method: 'cash', 'bank_transfer', 'mbway'
   paymentMethod: text("payment_method"),
+  preferredLanguage: text("preferred_language").notNull().default("pt"),
   // Day of month when scheduled transfer is made (only for bank_transfer)
   scheduledTransferDay: integer("scheduled_transfer_day"),
   createdAt: timestamp("created_at").defaultNow(),
