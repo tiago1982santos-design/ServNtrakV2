@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,7 @@ import { SiGoogle, SiApple, SiFacebook } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { startAuthentication } from "@simplewebauthn/browser";
 
-type AuthView = "main" | "login" | "register";
+type AuthView = "main" | "login" | "register" | "forgot-password" | "reset-password";
 
 interface AuthProviders {
   google: boolean;
@@ -56,6 +57,20 @@ export default function Login() {
   const [biometricLoading, setBiometricLoading] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [resetToken, setResetToken] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetSuccess, setResetSuccess] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (token) {
+      setResetToken(token);
+      setView("reset-password");
+    }
+  }, []);
 
   const rememberedUser = getRememberedUser();
 
@@ -139,6 +154,48 @@ export default function Login() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Erro ao enviar email");
+      }
+      return res.json();
+    },
+    onSuccess: () => setResetSuccess(true),
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (data: { token: string; newPassword: string }) => {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Erro ao redefinir palavra-passe");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Sucesso", description: "Palavra-passe redefinida. Podes iniciar sessão." });
+      setLocation("/");
+      setView("login");
     },
     onError: (error: Error) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -399,18 +456,28 @@ export default function Login() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="remember-me"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                    data-testid="checkbox-remember-me"
-                  />
-                  <Label htmlFor="remember-me" className="text-sm text-muted-foreground cursor-pointer">
-                    Memorizar sessão
-                  </Label>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="remember-me"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                      data-testid="checkbox-remember-me"
+                    />
+                    <Label htmlFor="remember-me" className="text-sm text-muted-foreground cursor-pointer">
+                      Memorizar sessão
+                    </Label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setView("forgot-password")}
+                    className="text-xs text-muted-foreground hover:text-primary"
+                    data-testid="link-forgot-password"
+                  >
+                    Esqueceste a palavra-passe?
+                  </button>
                 </div>
 
                 <Button
@@ -561,6 +628,113 @@ export default function Login() {
                 >
                   Já tem conta? Iniciar sessão
                 </button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {view === "forgot-password" && (
+          <Card>
+            <CardContent className="p-5">
+              <button
+                onClick={() => { setView("login"); setResetSuccess(false); }}
+                className="flex items-center gap-1 text-sm text-muted-foreground mb-4 hover:text-primary rounded-md px-2 py-1 -ml-2"
+                data-testid="button-back-to-login"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Voltar
+              </button>
+
+              <h2 className="text-lg font-semibold mb-1">Recuperar palavra-passe</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Indica o teu email e enviamos um link de recuperação.
+              </p>
+
+              {resetSuccess ? (
+                <div className="text-center space-y-3 py-4">
+                  <Mail className="w-10 h-10 text-primary mx-auto" />
+                  <p className="text-sm font-medium">Email enviado</p>
+                  <p className="text-xs text-muted-foreground">
+                    Se o email existir na nossa base de dados, receberás um link em breve.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="forgot-email"
+                        type="email"
+                        placeholder="Email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        className="pl-10"
+                        data-testid="input-forgot-email"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full"
+                    disabled={forgotPasswordMutation.isPending || !forgotEmail}
+                    onClick={() => forgotPasswordMutation.mutate(forgotEmail)}
+                    data-testid="button-send-reset-link"
+                  >
+                    {forgotPasswordMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : null}
+                    Enviar link de recuperação
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {view === "reset-password" && (
+          <Card>
+            <CardContent className="p-5">
+              <h2 className="text-lg font-semibold mb-1">Nova palavra-passe</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Escolhe uma nova palavra-passe para a tua conta.
+              </p>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-password-input">Nova palavra-passe</Label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="reset-password-input"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Mínimo 6 caracteres"
+                      value={resetNewPassword}
+                      onChange={(e) => setResetNewPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      autoComplete="new-password"
+                      data-testid="input-reset-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={resetPasswordMutation.isPending || !resetNewPassword || resetNewPassword.length < 6}
+                  onClick={() => resetPasswordMutation.mutate({ token: resetToken, newPassword: resetNewPassword })}
+                  data-testid="button-reset-password"
+                >
+                  {resetPasswordMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : null}
+                  Redefinir palavra-passe
+                </Button>
               </div>
             </CardContent>
           </Card>

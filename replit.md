@@ -109,7 +109,8 @@ The Home page was redesigned from a dark-green gradient to a warm amber/orange "
 - Session storage in PostgreSQL via `connect-pg-simple`
 - Protected API routes use `requireAuth` middleware checking `req.isAuthenticated()`
 - User ID accessed via `(req.user as any).id` in route handlers
-- Login page supports: social login buttons, email/password login, account registration
+- Login page supports: social login buttons, email/password login, account registration, password reset
+- **Password Reset**: `POST /api/auth/forgot-password` sends hashed-token email via Resend; `POST /api/auth/reset-password` validates SHA-256 hashed token and updates password. Uses `passwordResetTokens` table. Tokens expire after 1 hour. Requires `RESEND_API_KEY` env var (optional `APP_BASE_URL` for custom domain).
 
 ### Shared Code Pattern
 - `shared/schema.ts` - Drizzle table definitions and Zod insert schemas

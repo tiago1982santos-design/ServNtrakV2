@@ -5,8 +5,13 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { authStorage } from "./storage";
 import { z } from "zod";
+import { db } from "../../db";
+import { passwordResetTokens } from "@shared/schema";
+import { eq, and, gt } from "drizzle-orm";
+import { sendPasswordResetEmail } from "../../email";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -518,6 +523,94 @@ export async function setupAuth(app: Express) {
       res.json({ hasCredentials: credentials.length > 0 });
     } catch (error) {
       res.json({ hasCredentials: false });
+    }
+  });
+
+  function hashToken(token: string): string {
+    return crypto.createHash("sha256").update(token).digest("hex");
+  }
+
+  // --- Forgot Password ---
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const genericMsg = "Se o email existir, receberás um link de recuperação.";
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+
+      const user = await authStorage.getUserByEmail(email);
+      if (!user) {
+        return res.json({ message: genericMsg });
+      }
+
+      await db.delete(passwordResetTokens)
+        .where(eq(passwordResetTokens.userId, user.id));
+
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+      await db.insert(passwordResetTokens).values({
+        userId: user.id,
+        token: tokenHash,
+        expiresAt,
+      });
+
+      const baseUrl = process.env.APP_BASE_URL
+        || `${req.protocol}://${req.get("host")}`;
+
+      sendPasswordResetEmail(email, rawToken, baseUrl).catch((emailErr) => {
+        console.error("Failed to send password reset email:", emailErr);
+      });
+
+      return res.json({ message: genericMsg });
+    } catch (err) {
+      console.error("Forgot password error:", err);
+      return res.json({ message: genericMsg });
+    }
+  });
+
+  // --- Reset Password ---
+  const resetPasswordSchema = z.object({
+    token: z.string().min(1, "Token é obrigatório"),
+    newPassword: z.string().min(6, "A palavra-passe deve ter pelo menos 6 caracteres"),
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const input = resetPasswordSchema.parse(req.body);
+      const tokenHash = hashToken(input.token);
+
+      const [resetRecord] = await db
+        .select()
+        .from(passwordResetTokens)
+        .where(
+          and(
+            eq(passwordResetTokens.token, tokenHash),
+            gt(passwordResetTokens.expiresAt, new Date()),
+          )
+        )
+        .limit(1);
+
+      if (!resetRecord || resetRecord.usedAt) {
+        return res.status(400).json({ message: "Link inválido ou expirado" });
+      }
+
+      const newHash = await bcrypt.hash(input.newPassword, 12);
+      await authStorage.updateUserPassword(resetRecord.userId, newHash);
+
+      await db.update(passwordResetTokens)
+        .set({ usedAt: new Date() })
+        .where(eq(passwordResetTokens.id, resetRecord.id));
+
+      return res.json({ message: "Palavra-passe redefinida com sucesso" });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("Reset password error:", err);
+      return res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
 }
