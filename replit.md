@@ -135,6 +135,14 @@ The Home page was redesigned from a dark-green gradient to a warm amber/orange "
 - **Endpoints**: `POST /api/appointments/generate-preview` (returns preview list), `POST /api/appointments/generate-confirm` (creates selected appointments)
 - **Deduplication**: Skips clients who already have appointments for the selected month+type
 
+### Expense Notes (Notas de Despesa)
+- **DB tables**: `expense_notes` (header with noteNumber, clientId, serviceLogId, status draft/issued) + `expense_note_items` (description, type, quantity, unitPrice, total, sourceType auto/manual/edited, editReason)
+- **Backend** (`server/storage.ts`): Full CRUD with ownership enforcement, issued-note immutability, sequential numbering (ND-YYYY-NNN)
+- **Endpoints**: `GET/POST /api/expense-notes`, `GET/PATCH/DELETE /api/expense-notes/:id`, `PUT /api/expense-notes/:id/items`, `GET /api/expense-notes/:id/pdf`, `POST /api/expense-notes/from-service-log/:logId`
+- **PDF generation** (frontend): `client/src/lib/expenseNotesPdf.ts` using jsPDF + jspdf-autotable, with document template (`client/src/lib/documentTemplate.ts`) for header/logo/footer
+- **From service log**: Auto-populates items from labor entries, material entries, and extra billing
+- **Edited items**: Require `editReason`, shown in orange/italic in PDF with warning footnote
+
 ### Shared Code Pattern
 - `shared/schema.ts` - Drizzle table definitions and Zod insert schemas
 - `shared/routes.ts` - API route definitions with path, method, input/output schemas

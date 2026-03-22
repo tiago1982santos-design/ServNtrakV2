@@ -5,6 +5,7 @@ import {
   purchaseCategories, stores, purchases, clientPayments,
   serviceVisits, serviceVisitServices,
   financialConfig, monthlyDistributions, employees, pendingTasks, suggestedWorks,
+  expenseNotes, expenseNoteItems,
   type InsertClient, type Client,
   type InsertAppointment, type Appointment,
   type InsertServiceLog, type ServiceLog,
@@ -26,7 +27,9 @@ import {
   type InsertPendingTask, type PendingTask, type PendingTaskWithClient,
   type InsertSuggestedWork, type SuggestedWork, type SuggestedWorkWithClient,
   type ClientProfitabilityData,
-  type AppointmentPreview
+  type AppointmentPreview,
+  type InsertExpenseNote, type ExpenseNote,
+  type InsertExpenseNoteItem, type ExpenseNoteItem, type ExpenseNoteWithDetails,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -141,6 +144,15 @@ export interface IStorage {
   createSuggestedWork(work: InsertSuggestedWork & { userId: string }): Promise<SuggestedWork>;
   updateSuggestedWork(id: number, userId: string, updates: Partial<InsertSuggestedWork>): Promise<SuggestedWork | undefined>;
   deleteSuggestedWork(id: number, userId: string): Promise<void>;
+
+  // Expense Notes
+  getExpenseNotes(userId: string, clientId?: number): Promise<ExpenseNoteWithDetails[]>;
+  getExpenseNote(id: number, userId: string): Promise<ExpenseNoteWithDetails | undefined>;
+  createExpenseNote(note: InsertExpenseNote & { userId: string }, items: Omit<InsertExpenseNoteItem, 'expenseNoteId'>[]): Promise<ExpenseNoteWithDetails>;
+  updateExpenseNote(id: number, userId: string, updates: Partial<InsertExpenseNote>): Promise<ExpenseNote | undefined>;
+  updateExpenseNoteItems(noteId: number, userId: string, items: Omit<InsertExpenseNoteItem, 'expenseNoteId'>[]): Promise<ExpenseNoteItem[]>;
+  deleteExpenseNote(id: number, userId: string): Promise<void>;
+  generateNoteNumber(userId: string): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1171,6 +1183,185 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSuggestedWork(id: number, userId: string): Promise<void> {
     await db.delete(suggestedWorks).where(and(eq(suggestedWorks.id, id), eq(suggestedWorks.userId, userId)));
+  }
+
+  async generateNoteNumber(userId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const existing = await db
+      .select()
+      .from(expenseNotes)
+      .where(
+        and(
+          eq(expenseNotes.userId, userId),
+          sql`EXTRACT(YEAR FROM ${expenseNotes.createdAt}) = ${year}`
+        )
+      );
+    const seq = String(existing.length + 1).padStart(3, "0");
+    return `ND-${year}-${seq}`;
+  }
+
+  async getExpenseNotes(userId: string, clientId?: number): Promise<ExpenseNoteWithDetails[]> {
+    const conditions = [eq(expenseNotes.userId, userId)];
+    if (clientId) conditions.push(eq(expenseNotes.clientId, clientId));
+
+    const notes = await db
+      .select()
+      .from(expenseNotes)
+      .where(and(...conditions))
+      .orderBy(desc(expenseNotes.createdAt));
+
+    const result: ExpenseNoteWithDetails[] = [];
+    for (const note of notes) {
+      const [client] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.id, note.clientId));
+      if (!client) continue;
+
+      const items = await db
+        .select()
+        .from(expenseNoteItems)
+        .where(eq(expenseNoteItems.expenseNoteId, note.id));
+
+      let serviceLog = null;
+      if (note.serviceLogId) {
+        const [log] = await db
+          .select()
+          .from(serviceLogs)
+          .where(eq(serviceLogs.id, note.serviceLogId));
+        serviceLog = log ?? null;
+      }
+
+      result.push({ ...note, client, items, serviceLog });
+    }
+    return result;
+  }
+
+  async getExpenseNote(id: number, userId: string): Promise<ExpenseNoteWithDetails | undefined> {
+    const [note] = await db
+      .select()
+      .from(expenseNotes)
+      .where(and(eq(expenseNotes.id, id), eq(expenseNotes.userId, userId)));
+    if (!note) return undefined;
+
+    const [client] = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.id, note.clientId));
+    if (!client) return undefined;
+
+    const items = await db
+      .select()
+      .from(expenseNoteItems)
+      .where(eq(expenseNoteItems.expenseNoteId, note.id));
+
+    let serviceLog = null;
+    if (note.serviceLogId) {
+      const [log] = await db
+        .select()
+        .from(serviceLogs)
+        .where(eq(serviceLogs.id, note.serviceLogId));
+      serviceLog = log ?? null;
+    }
+
+    return { ...note, client, items, serviceLog };
+  }
+
+  async createExpenseNote(
+    note: InsertExpenseNote & { userId: string },
+    items: Omit<InsertExpenseNoteItem, "expenseNoteId">[]
+  ): Promise<ExpenseNoteWithDetails> {
+    const noteNumber = note.noteNumber ?? (await this.generateNoteNumber(note.userId));
+
+    const [newNote] = await db
+      .insert(expenseNotes)
+      .values({ ...note, noteNumber })
+      .returning();
+
+    const createdItems: ExpenseNoteItem[] = [];
+    for (const item of items) {
+      const total = Math.round(item.quantity * item.unitPrice * 100) / 100;
+      const [newItem] = await db
+        .insert(expenseNoteItems)
+        .values({ ...item, expenseNoteId: newNote.id, total })
+        .returning();
+      createdItems.push(newItem);
+    }
+
+    const [client] = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.id, newNote.clientId));
+
+    let serviceLog = null;
+    if (newNote.serviceLogId) {
+      const [log] = await db
+        .select()
+        .from(serviceLogs)
+        .where(eq(serviceLogs.id, newNote.serviceLogId));
+      serviceLog = log ?? null;
+    }
+
+    return { ...newNote, client: client!, items: createdItems, serviceLog };
+  }
+
+  async updateExpenseNote(
+    id: number,
+    userId: string,
+    updates: Partial<InsertExpenseNote>
+  ): Promise<ExpenseNote | undefined> {
+    const [existing] = await db
+      .select()
+      .from(expenseNotes)
+      .where(and(eq(expenseNotes.id, id), eq(expenseNotes.userId, userId)));
+    if (!existing) return undefined;
+    if (existing.status === "issued") {
+      throw new Error("Não é possível editar uma nota já emitida.");
+    }
+
+    const [updated] = await db
+      .update(expenseNotes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(expenseNotes.id, id), eq(expenseNotes.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async updateExpenseNoteItems(
+    noteId: number,
+    userId: string,
+    items: Omit<InsertExpenseNoteItem, "expenseNoteId">[]
+  ): Promise<ExpenseNoteItem[]> {
+    const [note] = await db
+      .select()
+      .from(expenseNotes)
+      .where(and(eq(expenseNotes.id, noteId), eq(expenseNotes.userId, userId)));
+    if (!note) throw new Error("Nota não encontrada.");
+    if (note.status === "issued") throw new Error("Não é possível editar itens de uma nota já emitida.");
+
+    await db
+      .delete(expenseNoteItems)
+      .where(eq(expenseNoteItems.expenseNoteId, noteId));
+
+    const createdItems: ExpenseNoteItem[] = [];
+    for (const item of items) {
+      const total = Math.round(item.quantity * item.unitPrice * 100) / 100;
+      const [newItem] = await db
+        .insert(expenseNoteItems)
+        .values({ ...item, expenseNoteId: noteId, total })
+        .returning();
+      createdItems.push(newItem);
+    }
+    return createdItems;
+  }
+
+  async deleteExpenseNote(id: number, userId: string): Promise<void> {
+    await db
+      .delete(expenseNoteItems)
+      .where(eq(expenseNoteItems.expenseNoteId, id));
+    await db
+      .delete(expenseNotes)
+      .where(and(eq(expenseNotes.id, id), eq(expenseNotes.userId, userId)));
   }
 }
 
