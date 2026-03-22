@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useAppointments, useCreateAppointment } from "@/hooks/use-appointments";
 import { useClients } from "@/hooks/use-clients";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
-import { format, isSameDay, isAfter, startOfDay } from "date-fns";
+import { format, isSameDay, isAfter, startOfDay, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus, AlertTriangle, ClipboardList } from "lucide-react";
+import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus, AlertTriangle, ClipboardList, Wand2, Trash2, CheckCheck } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/BackButton";
@@ -21,7 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { PendingTaskWithClient } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import type { PendingTaskWithClient, AppointmentPreview } from "@shared/schema";
 
 const appointmentFormSchema = z.object({
   clientId: z.number().min(1, "Selecione um cliente"),
@@ -36,7 +37,52 @@ export default function CalendarPage() {
   const { data: appointments, isLoading } = useAppointments();
   const { data: clients } = useClients();
   const createApt = useCreateAppointment();
-  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [previewMonth, setPreviewMonth] = useState(new Date().getMonth() + 1);
+  const [previewYear, setPreviewYear] = useState(new Date().getFullYear());
+  const [previewList, setPreviewList] = useState<AppointmentPreview[]>([]);
+  const [removedIndexes, setRemovedIndexes] = useState<Set<number>>(new Set());
+
+  const generatePreviewMutation = useMutation({
+    mutationFn: async ({ year, month }: { year: number; month: number }) => {
+      const res = await fetch("/api/appointments/generate-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ year, month }),
+      });
+      if (!res.ok) throw new Error("Erro ao gerar preview");
+      return res.json() as Promise<AppointmentPreview[]>;
+    },
+    onSuccess: (data) => {
+      setPreviewList(data);
+      setRemovedIndexes(new Set());
+    },
+    onError: () => toast({ title: "Erro", description: "Não foi possível gerar o preview.", variant: "destructive" }),
+  });
+
+  const confirmGenerateMutation = useMutation({
+    mutationFn: async (appts: AppointmentPreview[]) => {
+      const res = await fetch("/api/appointments/generate-confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ appointments: appts }),
+      });
+      if (!res.ok) throw new Error("Erro ao confirmar");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      setGenerateOpen(false);
+      setPreviewList([]);
+      toast({ title: "Agendamentos criados", description: `${data.created} agendamento(s) adicionados.` });
+    },
+    onError: () => toast({ title: "Erro", description: "Não foi possível criar os agendamentos.", variant: "destructive" }),
+  });
+
   const { data: allPendingTasks } = useQuery<PendingTaskWithClient[]>({
     queryKey: ["/api/pending-tasks"],
     queryFn: async () => {
@@ -92,6 +138,18 @@ export default function CalendarPage() {
         <div className="flex items-center gap-2 mb-2">
           <BackButton />
           <h1 className="text-2xl font-extrabold text-white">Agenda</h1>
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
+              onClick={() => setGenerateOpen(true)}
+              data-testid="button-generate-appointments"
+            >
+              <Wand2 className="w-4 h-4" />
+              Gerar Mês
+            </Button>
+          </div>
         </div>
         <p className="text-white/70 text-sm">Gerir agendamentos e visitas</p>
       </div>
@@ -247,6 +305,132 @@ export default function CalendarPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
+        <DialogContent className="rounded-2xl sm:max-w-md max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Gerar Agendamentos</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex gap-3 items-end">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-sm font-medium">Mês</label>
+              <Select
+                value={previewMonth.toString()}
+                onValueChange={(v) => setPreviewMonth(Number(v))}
+              >
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"].map((m, i) => (
+                    <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-24 space-y-1.5">
+              <label className="text-sm font-medium">Ano</label>
+              <Select
+                value={previewYear.toString()}
+                onValueChange={(v) => setPreviewYear(Number(v))}
+              >
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[new Date().getFullYear(), new Date().getFullYear() + 1].map(y => (
+                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              onClick={() => generatePreviewMutation.mutate({ year: previewYear, month: previewMonth })}
+              disabled={generatePreviewMutation.isPending}
+              className="shrink-0"
+              data-testid="button-preview-generate"
+            >
+              {generatePreviewMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pré-visualizar"}
+            </Button>
+          </div>
+
+          {previewList.length > 0 && (
+            <>
+              <p className="text-xs text-muted-foreground mt-1">
+                {previewList.length - removedIndexes.size} agendamento(s) para criar.
+                Clica em <Trash2 className="w-3 h-3 inline" /> para remover um agendamento da lista.
+              </p>
+
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {previewList.map((appt, idx) => {
+                  const removed = removedIndexes.has(idx);
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-opacity ${
+                        removed ? "opacity-30 line-through" : ""
+                      } ${
+                        appt.type === "Garden" ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950" :
+                        appt.type === "Pool" ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950" :
+                        "border-cyan-200 bg-cyan-50 dark:border-cyan-800 dark:bg-cyan-950"
+                      }`}
+                      data-testid={`preview-appointment-${idx}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{appt.clientName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(parseISO(appt.date), "d 'de' MMMM", { locale: pt })} — {
+                            appt.type === 'Garden' ? 'Jardim' :
+                            appt.type === 'Pool' ? 'Piscina' : 'Jacuzzi'
+                          }
+                        </p>
+                        <p className="text-xs text-muted-foreground/70 truncate">{appt.reason}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const next = new Set(removedIndexes);
+                          next.has(idx) ? next.delete(idx) : next.add(idx);
+                          setRemovedIndexes(next);
+                        }}
+                        className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                        data-testid={`button-remove-preview-${idx}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <Button
+                className="w-full gap-2 mt-2"
+                disabled={confirmGenerateMutation.isPending || previewList.length === removedIndexes.size}
+                onClick={() => {
+                  const toCreate = previewList.filter((_, i) => !removedIndexes.has(i));
+                  confirmGenerateMutation.mutate(toCreate);
+                }}
+                data-testid="button-confirm-generate"
+              >
+                {confirmGenerateMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCheck className="w-4 h-4" />
+                )}
+                Confirmar {previewList.length - removedIndexes.size} agendamento(s)
+              </Button>
+            </>
+          )}
+
+          {previewList.length === 0 && !generatePreviewMutation.isPending && generatePreviewMutation.isSuccess && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Todos os clientes já têm agendamentos para este mês.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="rounded-2xl sm:max-w-md">

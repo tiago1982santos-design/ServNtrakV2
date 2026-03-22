@@ -25,7 +25,8 @@ import {
   type InsertEmployee, type Employee,
   type InsertPendingTask, type PendingTask, type PendingTaskWithClient,
   type InsertSuggestedWork, type SuggestedWork, type SuggestedWorkWithClient,
-  type ClientProfitabilityData
+  type ClientProfitabilityData,
+  type AppointmentPreview
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -43,6 +44,8 @@ export interface IStorage {
   createAppointment(appointment: InsertAppointment & { userId: string }): Promise<Appointment>;
   updateAppointment(id: number, userId: string, updates: Partial<InsertAppointment>): Promise<Appointment | undefined>;
   deleteAppointment(id: number, userId: string): Promise<void>;
+  generateAppointmentPreview(userId: string, year: number, month: number): Promise<AppointmentPreview[]>;
+  confirmAppointments(userId: string, appointments: AppointmentPreview[]): Promise<number>;
 
   // Service Logs
   getServiceLogs(userId: string, clientId?: number): Promise<ServiceLog[]>;
@@ -268,6 +271,114 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAppointment(id: number, userId: string): Promise<void> {
     await db.delete(appointments).where(and(eq(appointments.id, id), eq(appointments.userId, userId)));
+  }
+
+  async generateAppointmentPreview(userId: string, year: number, month: number): Promise<AppointmentPreview[]> {
+    const userClients = await this.getClients(userId);
+    const existingAppointments = await db
+      .select()
+      .from(appointments)
+      .where(eq(appointments.userId, userId));
+
+    const isHighSeason = month >= 4 && month <= 9;
+    const previews: AppointmentPreview[] = [];
+
+    const getDaysForVisits = (count: number, y: number, m: number): string[] => {
+      const daysInMonth = new Date(y, m, 0).getDate();
+      const fmt = (d: number) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (count === 1) return [fmt(Math.round(daysInMonth / 2))];
+      if (count === 2) return [fmt(8), fmt(22)];
+      if (count === 4) return [7, 14, 21, 28].map(d => fmt(d));
+      return [];
+    };
+
+    const hasExisting = (clientId: number, type: string): boolean => {
+      return existingAppointments.some(a => {
+        const d = new Date(a.date);
+        return (
+          a.clientId === clientId &&
+          a.type === type &&
+          d.getFullYear() === year &&
+          d.getMonth() + 1 === month
+        );
+      });
+    };
+
+    for (const client of userClients) {
+      if (client.hasGarden && client.gardenVisitFrequency !== 'on_demand') {
+        if (!hasExisting(client.id, 'Garden')) {
+          let count = 0;
+          let reason = '';
+          if (client.gardenVisitFrequency === 'once_monthly') {
+            count = 1;
+            reason = 'Jardim — acordo especial 1x/mês';
+          } else {
+            count = isHighSeason ? 2 : 1;
+            reason = isHighSeason ? 'Jardim sazonal — época alta 2x/mês' : 'Jardim sazonal — época baixa 1x/mês';
+          }
+          const days = getDaysForVisits(count, year, month);
+          days.forEach(date => {
+            previews.push({ clientId: client.id, clientName: client.name, date, type: 'Garden', reason });
+          });
+        }
+      }
+
+      if (client.hasPool && client.poolVisitFrequency !== 'on_demand') {
+        if (!hasExisting(client.id, 'Pool')) {
+          let count = 0;
+          let reason = '';
+          if (client.poolVisitFrequency === 'once_monthly') {
+            count = 2;
+            reason = 'Piscina — 2x/mês';
+          } else {
+            count = isHighSeason ? 4 : 2;
+            reason = isHighSeason ? 'Piscina sazonal — época alta 4x/mês' : 'Piscina sazonal — época baixa 2x/mês';
+          }
+          const days = getDaysForVisits(count, year, month);
+          days.forEach(date => {
+            previews.push({ clientId: client.id, clientName: client.name, date, type: 'Pool', reason });
+          });
+        }
+      }
+
+      if (client.hasJacuzzi && client.jacuzziVisitFrequency !== 'on_demand') {
+        if (!hasExisting(client.id, 'Jacuzzi')) {
+          let count = 0;
+          let reason = '';
+          if (client.jacuzziVisitFrequency === 'once_monthly') {
+            count = 2;
+            reason = 'Jacuzzi — 2x/mês';
+          } else {
+            count = isHighSeason ? 4 : 2;
+            reason = isHighSeason ? 'Jacuzzi sazonal — época alta 4x/mês' : 'Jacuzzi sazonal — época baixa 2x/mês';
+          }
+          const days = getDaysForVisits(count, year, month);
+          days.forEach(date => {
+            previews.push({ clientId: client.id, clientName: client.name, date, type: 'Jacuzzi', reason });
+          });
+        }
+      }
+    }
+
+    return previews.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async confirmAppointments(userId: string, appts: AppointmentPreview[]): Promise<number> {
+    let created = 0;
+    for (const appt of appts) {
+      const date = new Date(appt.date);
+      date.setHours(0, 0, 0, 0);
+      await db.insert(appointments).values({
+        userId,
+        clientId: appt.clientId,
+        date,
+        type: appt.type,
+        notes: appt.reason,
+        isCompleted: false,
+      });
+      created++;
+    }
+    return created;
   }
 
   // Service Logs

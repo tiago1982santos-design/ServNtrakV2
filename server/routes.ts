@@ -172,6 +172,45 @@ export async function registerRoutes(
     res.status(204).end();
   });
 
+  app.post("/api/appointments/generate-preview", requireAuth, async (req, res) => {
+    try {
+      const { year, month } = z.object({
+        year: z.number().int().min(2020).max(2100),
+        month: z.number().int().min(1).max(12),
+      }).parse(req.body);
+      const userId = req.user!.id;
+      const preview = await storage.generateAppointmentPreview(userId, year, month);
+      res.json(preview);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.post("/api/appointments/generate-confirm", requireAuth, async (req, res) => {
+    try {
+      const { appointments: appts } = z.object({
+        appointments: z.array(z.object({
+          clientId: z.number(),
+          clientName: z.string(),
+          date: z.string(),
+          type: z.string(),
+          reason: z.string(),
+        }))
+      }).parse(req.body);
+      const userId = req.user!.id;
+      const count = await storage.confirmAppointments(userId, appts);
+      res.json({ created: count });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
   // --- Service Logs ---
 
   app.get(api.serviceLogs.list.path, requireAuth, async (req, res) => {

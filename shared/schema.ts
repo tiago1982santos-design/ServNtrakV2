@@ -581,6 +581,14 @@ export const passwordResetTokensRelations = relations(passwordResetTokens, ({ on
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
+export type AppointmentPreview = {
+  clientId: number;
+  clientName: string;
+  date: string;
+  type: string;
+  reason: string;
+};
+
 export type ClientProfitabilityData = {
   clientId: number;
   clientName: string;

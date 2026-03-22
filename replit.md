@@ -119,6 +119,13 @@ The Home page was redesigned from a dark-green gradient to a warm amber/orange "
 - **Features**: Global totals (4 summary cards), top-10 bar chart (recharts), sortable client list (by margin €, revenue, margin %, hours), color-coded margin badges
 - **Access**: "Rentabilidade por Cliente" button on Reports page
 
+### Automatic Appointment Generation
+- **Calendar "Gerar Mês" button**: Opens a modal to auto-generate monthly appointments based on client service contracts
+- **Logic**: Reads each client's `hasGarden/hasPool/hasJacuzzi` flags and `*VisitFrequency` settings (`seasonal`, `once_monthly`, `on_demand`)
+- **Seasonal rules**: Apr-Sep (high season) = more visits; Oct-Mar (low season) = fewer visits
+- **Endpoints**: `POST /api/appointments/generate-preview` (returns preview list), `POST /api/appointments/generate-confirm` (creates selected appointments)
+- **Deduplication**: Skips clients who already have appointments for the selected month+type
+
 ### Shared Code Pattern
 - `shared/schema.ts` - Drizzle table definitions and Zod insert schemas
 - `shared/routes.ts` - API route definitions with path, method, input/output schemas
