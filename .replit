@@ -52,6 +52,3 @@ integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_object_storag
 [userenv]
 
 [userenv.shared]
-VAPID_PUBLIC_KEY = "BL_cxTztyrhnzaviqBBkF7LnmPWJXrFz5vK603EncBTL2IPDakJJGkiTn0JljrnTQroWSHfPQy-yOsKNgRku9jY"
-VAPID_PRIVATE_KEY = "Vt2KuJTirN653VB5CCkMa3hF1pvLP_XUZOxwdfKDrbU"
-VAPID_EMAIL = "mailto:servntrak@peralta.pt"
