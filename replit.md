@@ -17,8 +17,53 @@ ServNtrak é uma aplicação mobile-first para gestão de serviços de manutenç
 - Código substituído pela versão `tiago1982santos-design/ServNtrak` (branch `main`).
 - Novas funcionalidades: scan de faturas (OCR via Anthropic), página de Compras com deteção de duplicados (`invoice_number`), histórico de preços de produtos, notas de despesa com edições auditadas, orçamentos (`quotes`/`quote_items`), passkeys WebAuthn.
 - Novas dependências: `@anthropic-ai/sdk`, `@google-cloud/storage`, `@simplewebauthn/*`, `@uppy/*`, `openai`, `leaflet`, `web-push`, `jspdf`, `passport-google-oauth20`, `cross-env`.
-- Dados migrados do Railway Postgres 18 (production) para a BD Replit Neon via `psql COPY` streaming (pg_dump 16 incompatível com servidor 18). Tabelas com dados restauradas: `users` (1), `clients` (20), `purchase_categories` (16), `stores` (8), `purchases` (23), `client_payments` (12), `expense_notes` (3), `expense_note_items` (3), `push_subscriptions` (1). Sequences reiniciadas após import.
+
+### Migração de dados Railway → Replit (Neon)
+
+Migrados via streaming `psql COPY` (pg_dump 16 incompatível com servidor Postgres 18 do Railway). FKs desactivadas via `session_replication_role=replica` durante o import; sequences reiniciadas globalmente após. Tabelas `sessions` e `password_reset_tokens` foram propositadamente truncadas no destino (segurança).
+
+**Parity check completo (Railway vs Replit Neon) — 100% das linhas migradas:**
+
+| Tabela | Railway | Replit | Status |
+|---|---:|---:|---|
+| appointments | 0 | 0 | OK |
+| client_payments | 12 | 12 | OK |
+| clients | 20 | 20 | OK |
+| conversations | 0 | 0 | OK |
+| employees | 0 | 0 | OK |
+| expense_note_edits | 0 | 0 | OK |
+| expense_note_items | 3 | 3 | OK |
+| expense_notes | 3 | 3 | OK |
+| financial_config | 0 | 0 | OK |
+| messages | 0 | 0 | OK |
+| monthly_distributions | 0 | 0 | OK |
+| password_reset_tokens | 0 | 0 | OK (limpo) |
+| pending_tasks | 0 | 0 | OK |
+| purchase_categories | 16 | 16 | OK |
+| purchases | 23 | 23 | OK |
+| push_subscriptions | 1 | 1 | OK |
+| quick_photos | 0 | 0 | OK |
+| quote_items | 0 | 0 | OK |
+| quotes | 0 | 0 | OK |
+| reminders | 0 | 0 | OK |
+| service_log_labor_entries | 0 | 0 | OK |
+| service_log_material_entries | 0 | 0 | OK |
+| service_logs | 0 | 0 | OK |
+| service_visit_services | 0 | 0 | OK |
+| service_visits | 0 | 0 | OK |
+| sessions | 2 | 0 | OK (limpo) |
+| stores | 8 | 8 | OK |
+| suggested_works | 0 | 0 | OK |
+| users | 1 | 1 | OK |
+| webauthn_credentials | 0 | 0 | OK |
+
+As tabelas operacionais (appointments, service_logs, etc.) estavam vazias **na origem (Railway)** — não é dado em falta. O utilizador ainda não tinha começado a registar visitas no sistema antigo.
+
 - Railway deixa de ser usado. O secret `RAILWAY_DATABASE_URL` pode ser removido após confirmação.
+
+### Hardening de segurança
+
+- VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_EMAIL movidos do bloco `[userenv.shared]` do `.replit` (que está em controlo de versões) para Replit Secrets propriamente ditos. O `.replit` deixou de conter valores sensíveis.
 
 ## Home Page Design — "Dia de Sol (Polido)"
 
