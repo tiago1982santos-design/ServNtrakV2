@@ -85,7 +85,7 @@ export function WeatherWidget({
 
   const iconBgClass = weather.isDay
     ? isClear
-      ? "bg-gradient-to-br from-yellow-400/30 to-yellow-500/20"
+      ? "bg-gradient-to-br from-primary/30 to-primary/20"
       : isRainy
         ? "bg-gradient-to-br from-blue-400/30 to-blue-600/20"
         : isStormy
@@ -95,7 +95,7 @@ export function WeatherWidget({
 
   const iconColorClass = weather.isDay
     ? isClear
-      ? "text-yellow-300"
+      ? "text-primary"
       : isRainy
         ? "text-blue-300"
         : isStormy

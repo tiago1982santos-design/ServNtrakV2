@@ -21,7 +21,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-primary/15 z-50 rounded-t-3xl shadow-[0_-10px_40px_hsl(var(--primary)/0.08)]"
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-border z-50 rounded-t-3xl shadow-[0_-10px_40px_hsl(var(--primary)/0.08)]"
       data-testid="bottom-navigation"
     >
       <div className="flex justify-around items-center mx-auto h-16 px-2">

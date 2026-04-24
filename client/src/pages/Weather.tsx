@@ -242,7 +242,7 @@ export default function Weather() {
 
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-muted-foreground">{day.temperatureMin}°</span>
-                      <div className="w-12 h-1.5 bg-gradient-to-r from-blue-400 to-yellow-400 rounded-full" />
+                      <div className="w-12 h-1.5 bg-gradient-to-r from-blue-400 to-primary rounded-full" />
                       <span className="font-medium text-foreground">{day.temperatureMax}°</span>
                     </div>
                   </div>
