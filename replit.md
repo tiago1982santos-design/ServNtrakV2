@@ -64,6 +64,8 @@ As tabelas operacionais (appointments, service_logs, etc.) estavam vazias **na o
 ### Hardening de segurança
 
 - VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_EMAIL movidos do bloco `[userenv.shared]` do `.replit` (que está em controlo de versões) para Replit Secrets propriamente ditos. O `.replit` deixou de conter valores sensíveis.
+- Após a migração, os três secrets ficaram com valores trocados/inválidos e as notificações push estavam desativadas. Foram regerados (par VAPID novo via `web-push generate-vapid-keys`) e regravados nos Secrets. A subscrição push antiga (1 registo) deixou de ser válida; o servidor remove-a automaticamente quando o endpoint devolve 404/410 e o utilizador volta a subscrever em Perfil → Notificações Push.
+- `server/pushService.ts` faz `.trim()` aos três secrets ao lê-los, para tolerar espaços/quebras de linha acidentais ao colar valores no painel de Secrets.
 
 ## Home Page Design — "Dia de Sol (Polido)"
 

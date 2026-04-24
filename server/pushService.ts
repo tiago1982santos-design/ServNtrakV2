@@ -3,9 +3,9 @@ import { db } from "./db";
 import { pushSubscriptions } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY!;
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY!;
-const VAPID_EMAIL_RAW = process.env.VAPID_EMAIL;
+const VAPID_PUBLIC_KEY = (process.env.VAPID_PUBLIC_KEY ?? "").trim();
+const VAPID_PRIVATE_KEY = (process.env.VAPID_PRIVATE_KEY ?? "").trim();
+const VAPID_EMAIL_RAW = process.env.VAPID_EMAIL?.trim();
 const VAPID_EMAIL =
   VAPID_EMAIL_RAW && /^(mailto:|https?:\/\/)/i.test(VAPID_EMAIL_RAW)
     ? VAPID_EMAIL_RAW
@@ -17,15 +17,27 @@ if (VAPID_EMAIL_RAW && VAPID_EMAIL_RAW !== VAPID_EMAIL) {
   );
 }
 
+let pushEnabled = false;
+
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   try {
     webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    pushEnabled = true;
+    console.log("[pushService] Notificações push ativadas (VAPID configurada).");
   } catch (err: any) {
     console.warn(
       "[pushService] Notificações push desativadas: configuração VAPID inválida —",
       err?.message || err,
     );
   }
+} else {
+  console.warn(
+    "[pushService] Notificações push desativadas: VAPID_PUBLIC_KEY e/ou VAPID_PRIVATE_KEY em falta nos Secrets.",
+  );
+}
+
+export function isPushEnabled(): boolean {
+  return pushEnabled;
 }
 
 export async function saveSubscription(
