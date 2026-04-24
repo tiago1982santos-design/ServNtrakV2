@@ -134,12 +134,12 @@ export default function Billing() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                  <CalendarDays className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <h2 className="font-bold text-lg text-foreground">Valor por Visita</h2>
               </div>
-              <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">{perVisitClients.length} clientes</span>
+              <span className="text-sm font-semibold text-muted-foreground">{perVisitClients.length} clientes</span>
             </div>
 
             {perVisitClients.length > 0 ? (
@@ -165,7 +165,7 @@ export default function Billing() {
                             </Link>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <span className="font-bold text-amber-700 dark:text-amber-400">{client.perVisitRate?.toFixed(2)} €</span>
+                            <span className="font-bold text-foreground">{client.perVisitRate?.toFixed(2)} €</span>
                           </td>
                         </tr>
                       ))}

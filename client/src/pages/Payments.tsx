@@ -146,13 +146,13 @@ export default function Payments() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
+          <Card className="bg-gradient-to-br from-destructive/10 to-destructive/5 border-destructive/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-1">
-                <Clock className="w-4 h-4 text-orange-600" />
+                <Clock className="w-4 h-4 text-destructive" />
                 <span className="text-xs text-muted-foreground">Pendente</span>
               </div>
-              <p className="text-lg font-bold text-orange-600" data-testid="text-total-unpaid">
+              <p className="text-lg font-bold text-destructive" data-testid="text-total-unpaid">
                 {totalUnpaid.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}
               </p>
               <p className="text-xs text-muted-foreground">{unpaidPayments.length} cliente(s)</p>
@@ -181,12 +181,12 @@ export default function Payments() {
             {unpaidPayments.length > 0 && (
               <div>
                 <h2 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <AlertCircle className="w-4 h-4 text-destructive" />
                   Pendentes ({unpaidPayments.length})
                 </h2>
                 <div className="space-y-2">
                   {unpaidPayments.map((payment) => (
-                    <Card key={payment.id} className="border-orange-200 dark:border-orange-800/30">
+                    <Card key={payment.id} className="border-destructive/20">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between gap-3">
                           <Link href={`/clients/${payment.clientId}`} className="flex-1 min-w-0">

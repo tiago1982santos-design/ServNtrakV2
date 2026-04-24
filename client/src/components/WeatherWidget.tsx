@@ -85,7 +85,7 @@ export function WeatherWidget({
 
   const iconBgClass = weather.isDay
     ? isClear
-      ? "bg-gradient-to-br from-yellow-400/30 to-orange-400/20"
+      ? "bg-gradient-to-br from-yellow-400/30 to-yellow-500/20"
       : isRainy
         ? "bg-gradient-to-br from-blue-400/30 to-blue-600/20"
         : isStormy
@@ -171,7 +171,7 @@ export function WeatherWidget({
                 "flex items-start gap-3 rounded-xl px-4 py-3 text-sm font-medium backdrop-blur-md",
                 alert.severity === "danger"
                   ? "bg-red-500/20 text-red-100 border border-red-400/30"
-                  : "bg-amber-500/20 text-amber-100 border border-amber-400/30"
+                  : "bg-destructive/30 text-destructive-foreground border border-destructive/40"
               )}
               data-testid={`weather-alert-${alert.type}`}
             >
@@ -203,14 +203,14 @@ export function WeatherWidgetCompact({ className }: { className?: string }) {
     <div
       className={cn(
         "flex items-center gap-1.5 text-white/90",
-        hasAlert && "text-amber-200",
+        hasAlert && "text-destructive-foreground",
         className
       )}
       data-testid="weather-compact"
     >
       <WeatherIcon className="w-4 h-4" />
       <span className="text-sm font-medium">{weather.temperature}°</span>
-      {hasAlert && <AlertTriangle className="w-3 h-3 text-amber-300" />}
+      {hasAlert && <AlertTriangle className="w-3 h-3 text-destructive-foreground" />}
     </div>
   );
 }

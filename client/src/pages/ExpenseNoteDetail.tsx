@@ -70,7 +70,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 const TYPE_BADGE: Record<string, string> = {
   service: "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
-  material: "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
+  material: "bg-muted text-muted-foreground",
   labor: "bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400",
 };
 
@@ -288,7 +288,7 @@ export default function ExpenseNoteDetail() {
                         {TYPE_LABELS[item.type] ?? item.type}
                       </span>
                       {item.sourceType === "edited" && (
-                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400">
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/10 text-destructive">
                           <AlertCircle className="w-2.5 h-2.5" /> Editado
                         </span>
                       )}
@@ -301,7 +301,7 @@ export default function ExpenseNoteDetail() {
                       = {item.total.toFixed(2)} €
                     </p>
                     {item.sourceType === "edited" && item.editReason && (
-                      <p className="text-xs text-orange-600 italic mt-0.5">
+                      <p className="text-xs text-destructive italic mt-0.5">
                         Motivo: {item.editReason}
                       </p>
                     )}
@@ -337,7 +337,7 @@ export default function ExpenseNoteDetail() {
               Histórico de alterações
             </p>
             {note.edits.map((edit) => (
-              <div key={edit.id} className="border-l-2 border-orange-300 pl-3 space-y-0.5">
+              <div key={edit.id} className="border-l-2 border-destructive/30 pl-3 space-y-0.5">
                 <p className="text-xs text-muted-foreground">
                   {format(new Date(edit.editedAt!), "d 'de' MMMM yyyy 'às' HH:mm", { locale: pt })}
                 </p>
@@ -620,13 +620,13 @@ function ItemsEditDialog({
                 className={cn(
                   "rounded-xl border p-4 space-y-3",
                   edited
-                    ? "border-orange-300 bg-orange-50/50 dark:border-orange-700/40 dark:bg-orange-900/10"
+                    ? "border-destructive/30 bg-destructive/5"
                     : "border-border bg-muted/20"
                 )}
               >
                 {/* Aviso de item editado */}
                 {edited && (
-                  <div className="flex items-center gap-1.5 text-orange-600 text-xs font-medium">
+                  <div className="flex items-center gap-1.5 text-destructive text-xs font-medium">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     Alterado em relação ao registo original — preenche o motivo
                   </div>

@@ -62,7 +62,7 @@ const typeLabels: Record<ItemDraft["type"], string> = {
 
 const typeBadgeClass: Record<ItemDraft["type"], string> = {
   service:  "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
-  material: "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
+  material: "bg-muted text-muted-foreground",
   labor:    "bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400",
 };
 
@@ -84,7 +84,7 @@ function generateQuotePdf(quote: any) {
   // Header
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
-  doc.setTextColor(217, 119, 6); // amber-600
+  doc.setTextColor(45, 106, 79); // primary green
   doc.text("ORÇAMENTO", PAGE_W / 2, 28, { align: "center" });
 
   doc.setFontSize(10);

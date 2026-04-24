@@ -13,7 +13,7 @@ type SortKey = "grossMargin" | "totalReceived" | "totalWorkerHours" | "grossMarg
 function MarginBadge({ percent }: { percent: number | null }) {
   if (percent === null) return <Badge variant="outline">Sem dados</Badge>;
   if (percent >= 60) return <Badge className="bg-green-100 text-green-800 border-green-200">{percent}%</Badge>;
-  if (percent >= 30) return <Badge className="bg-amber-100 text-amber-800 border-amber-200">{percent}%</Badge>;
+  if (percent >= 30) return <Badge className="bg-muted text-muted-foreground border-border">{percent}%</Badge>;
   return <Badge className="bg-red-100 text-red-800 border-red-200">{percent}%</Badge>;
 }
 

@@ -26,7 +26,7 @@ const SERVICE_COLORS: Record<string, string> = {
   Garden:  "bg-green-100 text-green-700 border-green-200",
   Pool:    "bg-blue-100 text-blue-700 border-blue-200",
   Jacuzzi: "bg-cyan-100 text-cyan-700 border-cyan-200",
-  General: "bg-amber-100 text-amber-700 border-amber-200",
+  General: "bg-muted text-muted-foreground border-border",
 };
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -61,7 +61,7 @@ function WeatherStrip() {
   if (isLoading || !weather) {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-        <Sun className="w-4 h-4 text-amber-400" strokeWidth={2.5} />
+        <Sun className="w-4 h-4 text-muted-foreground" strokeWidth={2.5} />
         <span>--°C</span>
       </div>
     );
@@ -74,7 +74,7 @@ function WeatherStrip() {
 
   return (
     <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-      <WeatherIcon className="w-4 h-4 text-amber-500" strokeWidth={2.5} />
+      <WeatherIcon className="w-4 h-4 text-muted-foreground" strokeWidth={2.5} />
       <span>{Math.round(weather.temperature)}°C</span>
     </div>
   );
@@ -114,10 +114,10 @@ function WeatherCard() {
   const isStormy = [19, 20, 23].includes(weather.weatherCode);
 
   const iconBg = weather.isDay
-    ? isClear ? "bg-amber-50" : isRainy ? "bg-blue-50" : isStormy ? "bg-purple-50" : "bg-slate-100"
+    ? isClear ? "bg-muted" : isRainy ? "bg-blue-50" : isStormy ? "bg-purple-50" : "bg-slate-100"
     : "bg-indigo-50";
   const iconColor = weather.isDay
-    ? isClear ? "text-amber-500" : isRainy ? "text-blue-500" : isStormy ? "text-purple-500" : "text-slate-500"
+    ? isClear ? "text-muted-foreground" : isRainy ? "text-blue-500" : isStormy ? "text-purple-500" : "text-slate-500"
     : "text-indigo-400";
 
   const upcomingHours = weather.hourly.slice(0, 8);
@@ -172,7 +172,7 @@ function WeatherCard() {
                   "flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl",
                   alert.severity === "danger"
                     ? "bg-red-50 text-red-700 border border-red-200"
-                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                    : "bg-muted text-muted-foreground border border-border"
                 )}
               >
                 <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -196,16 +196,16 @@ function WeatherCard() {
                   key={h.datetime}
                   className={cn(
                     "shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px]",
-                    isFirst ? "bg-[#206F4C]/8 border border-[#206F4C]/15" : ""
+                    isFirst ? "bg-primary/10 border border-primary/20" : ""
                   )}
                 >
                   <span className={cn(
                     "text-[10px] font-bold",
-                    isFirst ? "text-[#206F4C]" : "text-slate-400"
+                    isFirst ? "text-primary" : "text-slate-400"
                   )}>
                     {h.hour}
                   </span>
-                  <HIcon className={cn("w-5 h-5", isFirst ? "text-[#206F4C]" : "text-slate-400")} strokeWidth={1.5} />
+                  <HIcon className={cn("w-5 h-5", isFirst ? "text-primary" : "text-slate-400")} strokeWidth={1.5} />
                   {h.precipitationProbability > 20 && (
                     <div className="flex items-center gap-0.5 text-blue-400">
                       <Droplets className="w-2.5 h-2.5" />
@@ -235,9 +235,9 @@ function CountdownBadge({ date }: { date: Date }) {
     return () => clearInterval(t);
   }, []);
   const minutes = differenceInMinutes(date, new Date());
-  if (minutes <= 0) return <span className="text-[11px] font-bold text-[#206F4C] bg-[#206F4C]/10 px-2 py-0.5 rounded-full">A decorrer</span>;
-  if (minutes < 60) return <span className="text-[11px] font-bold text-[#206F4C] bg-[#206F4C]/10 px-2 py-0.5 rounded-full animate-pulse">em {minutes} min</span>;
-  return <span className="text-[11px] font-bold text-[#206F4C] bg-[#206F4C]/10 px-2 py-0.5 rounded-full">em {Math.floor(minutes / 60)}h</span>;
+  if (minutes <= 0) return <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">A decorrer</span>;
+  if (minutes < 60) return <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full animate-pulse">em {minutes} min</span>;
+  return <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">em {Math.floor(minutes / 60)}h</span>;
 }
 
 function VisitaDuracaoAtiva({ inicio }: { inicio: Date }) {
@@ -384,13 +384,13 @@ export default function Home() {
 
         {/* ── GPS ERROR ──────────────────────────── */}
         {geo.erro && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 mb-4" data-testid="alert-gps-error">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-4 flex items-start gap-3 mb-4" data-testid="alert-gps-error">
+            <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-800">Problema com GPS</p>
-              <p className="text-xs text-amber-700 mt-0.5">{geo.erro}</p>
+              <p className="text-sm font-semibold text-destructive">Problema com GPS</p>
+              <p className="text-xs text-destructive/80 mt-0.5">{geo.erro}</p>
             </div>
-            <button onClick={geo.parar} className="text-amber-600 hover:text-amber-800 p-1" data-testid="button-dismiss-gps-error">
+            <button onClick={geo.parar} className="text-destructive hover:text-destructive/80 p-1" data-testid="button-dismiss-gps-error">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -400,15 +400,15 @@ export default function Home() {
         {geo.visitasPendentesConfirmacao.map(visita => (
           <div
             key={`${visita.clienteId}-${visita.inicio.getTime()}`}
-            className="bg-white rounded-2xl shadow-md border border-[#206F4C]/20 p-5 space-y-4 mb-4"
+            className="bg-white rounded-2xl shadow-md border border-primary/20 p-5 space-y-4 mb-4"
             data-testid={`card-confirm-visit-${visita.clienteId}`}
           >
             <div className="flex items-start gap-3">
-              <div className="bg-[#206F4C]/10 p-2.5 rounded-full">
-                <CheckCircle2 className="w-5 h-5 text-[#206F4C]" />
+              <div className="bg-primary/10 p-2.5 rounded-full">
+                <CheckCircle2 className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold uppercase tracking-widest text-[#206F4C] mb-1">Visita concluída</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Visita concluída</p>
                 <h4 className="font-bold text-slate-900 text-lg truncate">{visita.clienteNome}</h4>
               </div>
             </div>
@@ -421,14 +421,14 @@ export default function Home() {
                   {visita.fim.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
-              <span className="font-bold text-[#206F4C] text-sm tabular-nums">{visita.duracaoMinutos} min</span>
+              <span className="font-bold text-primary text-sm tabular-nums">{visita.duracaoMinutos} min</span>
             </div>
 
             {ajustarVisita?.clienteId === visita.clienteId && ajustarVisita.inicio.getTime() === visita.inicio.getTime() ? (
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#206F4C]/30"
+                  className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                   placeholder="Duração real (min)"
                   value={ajustarMinutos}
                   onChange={e => setAjustarMinutos(e.target.value)}
@@ -436,7 +436,7 @@ export default function Home() {
                   data-testid="input-adjust-duration"
                 />
                 <button
-                  className="bg-[#206F4C] text-white p-2.5 rounded-xl active:scale-95 transition-transform"
+                  className="bg-primary text-white p-2.5 rounded-xl active:scale-95 transition-transform"
                   onClick={() => {
                     const mins = parseInt(ajustarMinutos);
                     if (mins > 0) finalizarVisita(visita, mins);
@@ -458,7 +458,7 @@ export default function Home() {
             ) : (
               <div className="flex gap-2">
                 <button
-                  className="flex-1 bg-[#206F4C] hover:bg-[#1a5a3d] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
+                  className="flex-1 bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
                   onClick={() => finalizarVisita(visita)}
                   data-testid="button-confirm-visit"
                 >
@@ -486,7 +486,7 @@ export default function Home() {
         {/* ── ACTIVE VISIT CARD ──────────────────── */}
         {geo.visitaAtiva && (
           <div
-            className="bg-[#206F4C] rounded-2xl p-5 shadow-lg text-white relative overflow-hidden mb-4"
+            className="bg-primary rounded-2xl p-5 shadow-lg text-white relative overflow-hidden mb-4"
             data-testid="card-active-visit"
           >
             <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
@@ -514,7 +514,7 @@ export default function Home() {
         <WeatherCard />
 
         {/* ── STATS STRIP ───────────────────────── */}
-        <div className="bg-[#206F4C] text-white rounded-xl p-3 mb-6 flex items-center justify-between shadow-md">
+        <div className="bg-primary text-white rounded-xl p-3 mb-6 flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2.5">
             <Clock className="w-4 h-4 text-green-200" strokeWidth={2.5} />
             {isLoading ? (
@@ -532,12 +532,12 @@ export default function Home() {
         {/* ── TIMELINE ──────────────────────────── */}
         {isLoading ? (
           <div className="flex justify-center py-10">
-            <Loader2 className="w-7 h-7 text-[#206F4C] animate-spin" />
+            <Loader2 className="w-7 h-7 text-primary animate-spin" />
           </div>
         ) : todayAppointments.length > 0 ? (
           <div className="relative pl-3 mb-6">
             {/* Connector line */}
-            <div className="absolute top-4 bottom-8 left-[23.5px] w-0.5 bg-[#206F4C]/20 rounded-full" />
+            <div className="absolute top-4 bottom-8 left-[23.5px] w-0.5 bg-primary/20 rounded-full" />
 
             <div className="space-y-5">
               {todayAppointments.map((apt) => {
@@ -552,13 +552,13 @@ export default function Home() {
                     {/* Timeline Node */}
                     <div className="relative z-10 flex flex-col items-center mt-1 shrink-0">
                       {isCompleted && (
-                        <div className="w-6 h-6 rounded-full bg-[#206F4C] text-white flex items-center justify-center shadow-sm">
+                        <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm">
                           <Check className="w-3.5 h-3.5" strokeWidth={3} />
                         </div>
                       )}
                       {isNext && (
-                        <div className="w-6 h-6 rounded-full bg-white border-[3px] border-[#206F4C] flex items-center justify-center shadow-md ring-4 ring-[#206F4C]/10">
-                          <div className="w-2 h-2 rounded-full bg-[#206F4C] animate-pulse" />
+                        <div className="w-6 h-6 rounded-full bg-white border-[3px] border-primary flex items-center justify-center shadow-md ring-4 ring-primary/10">
+                          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                         </div>
                       )}
                       {isPending && (
@@ -573,7 +573,7 @@ export default function Home() {
                       <div className={cn(
                         "rounded-2xl p-4 transition-all",
                         isNext
-                          ? "bg-white border-2 border-[#206F4C] shadow-lg shadow-[#206F4C]/5 scale-[1.02]"
+                          ? "bg-white border-2 border-primary shadow-lg shadow-primary/5 scale-[1.02]"
                           : isCompleted
                             ? "bg-white/60 border border-slate-200"
                             : "bg-white border border-slate-200 shadow-sm"
@@ -582,7 +582,7 @@ export default function Home() {
                           <div className="flex items-center gap-2">
                             <span className={cn(
                               "text-[15px] font-bold",
-                              isCompleted ? "text-slate-400" : isNext ? "text-[#206F4C]" : "text-slate-700"
+                              isCompleted ? "text-slate-400" : isNext ? "text-primary" : "text-slate-700"
                             )}>
                               {format(aptDate, "HH:mm")}
                             </span>
@@ -616,7 +616,7 @@ export default function Home() {
                         {isNext && apt.client.address && (
                           <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2.5">
                             <button
-                              className="flex-1 bg-[#206F4C] hover:bg-[#1a5a3d] text-white text-[13px] font-bold py-2.5 rounded-xl transition-colors flex justify-center items-center gap-2"
+                              className="flex-1 bg-primary hover:bg-primary/90 text-white text-[13px] font-bold py-2.5 rounded-xl transition-colors flex justify-center items-center gap-2"
                               onClick={e => {
                                 e.preventDefault();
                                 window.open(`https://maps.google.com/maps?q=${encodeURIComponent(apt.client.address!)}`, "_blank");
@@ -648,13 +648,13 @@ export default function Home() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col items-center text-center mb-6 shadow-sm" data-testid="card-no-appointments">
-            <div className="w-14 h-14 bg-[#206F4C]/10 rounded-full flex items-center justify-center mb-4">
-              <CalendarClock className="w-7 h-7 text-[#206F4C]" />
+            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <CalendarClock className="w-7 h-7 text-primary" />
             </div>
             <h3 className="font-bold text-slate-900 text-lg">Sem trabalhos para hoje</h3>
             <p className="text-slate-500 text-sm mt-1">Aproveite o seu dia!</p>
             <Link href="/calendar">
-              <button className="mt-4 text-sm font-bold text-[#206F4C] bg-[#206F4C]/10 border border-[#206F4C]/20 px-4 py-2 rounded-full" data-testid="button-schedule-appointment">
+              <button className="mt-4 text-sm font-bold text-primary bg-primary/10 border border-primary/20 px-4 py-2 rounded-full" data-testid="button-schedule-appointment">
                 Agendar trabalho
               </button>
             </Link>
@@ -664,16 +664,16 @@ export default function Home() {
         {/* ── PENDING PAYMENTS ──────────────────── */}
         {unpaidCount > 0 && (
           <Link href="/billing" data-testid="link-unpaid-strip">
-            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
-              <div className="bg-amber-100 p-2 rounded-full mt-0.5 shrink-0">
-                <AlertCircle className="w-5 h-5 text-amber-600" strokeWidth={2.5} />
+            <div className="mb-6 bg-destructive/10 border border-destructive/20 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+              <div className="bg-destructive/20 p-2 rounded-full mt-0.5 shrink-0">
+                <AlertCircle className="w-5 h-5 text-destructive" strokeWidth={2.5} />
               </div>
               <div className="flex-1">
-                <h4 className="text-[14px] font-bold text-amber-900">Pagamentos Pendentes</h4>
-                <p className="text-[13px] text-amber-700 mt-0.5 font-medium" data-testid="text-unpaid-total">
+                <h4 className="text-[14px] font-bold text-destructive">Pagamentos Pendentes</h4>
+                <p className="text-[13px] text-destructive/80 mt-0.5 font-medium" data-testid="text-unpaid-total">
                   Tem {unpaidTotal.toFixed(2)}€ ({unpaidCount} serviço{unpaidCount !== 1 ? "s" : ""}) por cobrar.
                 </p>
-                <span className="mt-3 inline-block text-[12px] font-bold text-amber-700 bg-amber-200/50 px-3 py-1.5 rounded-lg">
+                <span className="mt-3 inline-block text-[12px] font-bold text-destructive bg-destructive/20 px-3 py-1.5 rounded-lg">
                   Cobrar Agora
                 </span>
               </div>
@@ -686,10 +686,10 @@ export default function Home() {
           <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Ações Rápidas</h3>
           <div className="flex gap-4 overflow-x-auto pb-2 snap-x hide-scrollbar px-1">
             {[
-              { href: "/calendar", Icon: Plus,     label: "Novo Serviço", bg: "bg-[#206F4C]/10", text: "text-[#206F4C]",  border: "border-[#206F4C]/20" },
+              { href: "/calendar", Icon: Plus,     label: "Novo Serviço", bg: "bg-primary/10", text: "text-primary",  border: "border-primary/20" },
               { href: "/clients",  Icon: UserPlus, label: "Novo Cliente", bg: "bg-blue-50",      text: "text-blue-600",   border: "border-blue-200" },
               { href: "/gallery",  Icon: Camera,   label: "Foto Rápida",  bg: "bg-blue-50",      text: "text-blue-600",   border: "border-blue-200" },
-              { href: "/map",      Icon: Map, label: "Mapa", bg: "bg-orange-50", text: "text-orange-500", border: "border-orange-200" },
+              { href: "/map",      Icon: Map, label: "Mapa", bg: "bg-primary/5", text: "text-primary", border: "border-primary/15" },
               { href: "/reports",  Icon: BarChart2, label: "Relatórios", bg: "bg-slate-100", text: "text-slate-600", border: "border-slate-200" },
             ].map((action, i) => (
               <Link key={i} href={action.href} className="snap-start shrink-0" data-testid={`link-quick-${action.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-")}`}>
@@ -709,8 +709,8 @@ export default function Home() {
           <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Mais</h3>
           {([
             { onClick: () => setScanOpen(true), Icon: Camera,      label: "Digitalizar Fatura",  desc: "Tirar foto e registar compra automaticamente", iconBg: "bg-rose-100/70 text-rose-700" },
-            { href: "/pending-tasks", Icon: ClipboardList, label: "Tarefas Pendentes",   desc: "Ver todas as tarefas por fazer",               iconBg: "bg-amber-100/70 text-amber-700" },
-            { href: "/employees",     Icon: Users,         label: "Funcionários",         desc: "Gerir equipa e salários",                      iconBg: "bg-orange-100/70 text-orange-700" },
+            { href: "/pending-tasks", Icon: ClipboardList, label: "Tarefas Pendentes",   desc: "Ver todas as tarefas por fazer",               iconBg: "bg-primary/10 text-primary" },
+            { href: "/employees",     Icon: Users,         label: "Funcionários",         desc: "Gerir equipa e salários",                      iconBg: "bg-muted text-muted-foreground" },
             { href: "/purchases",     Icon: ShoppingBag,   label: "Compras e Despesas",   desc: "Gerir materiais e gastos",                     iconBg: "bg-green-100/70 text-green-700" },
             { href: "/expense-notes", Icon: FileText,      label: "Notas de Despesa",     desc: "Documentos de serviços prestados",             iconBg: "bg-teal-100/70 text-teal-700" },
             { href: "/quotes",        Icon: ClipboardList, label: "Orçamentos",           desc: "Criar e enviar propostas aos clientes",        iconBg: "bg-indigo-100/70 text-indigo-700" },
@@ -752,7 +752,7 @@ export default function Home() {
           className={cn(
             "w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] border",
             geo.ativo
-              ? "bg-[#206F4C] border-[#206F4C] text-white shadow-md"
+              ? "bg-primary border-primary text-white shadow-md"
               : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
           )}
           data-testid="button-toggle-tracking"

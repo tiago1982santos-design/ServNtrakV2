@@ -130,7 +130,7 @@ export default function Clients() {
     { key: "all", label: "Todos", icon: Users, color: "text-foreground" },
     { key: "garden", label: "Jardim", icon: Leaf, color: "text-green-600 dark:text-green-400" },
     { key: "pool", label: "Piscina", icon: Waves, color: "text-blue-600 dark:text-blue-400" },
-    { key: "jacuzzi", label: "Jacuzzi", icon: ThermometerSun, color: "text-orange-600 dark:text-orange-400" },
+    { key: "jacuzzi", label: "Jacuzzi", icon: ThermometerSun, color: "text-muted-foreground" },
   ];
 
   return (
@@ -177,10 +177,10 @@ export default function Clients() {
               <p className="text-[10px] text-muted-foreground">Piscina</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
+          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <CardContent className="p-3 text-center">
-              <Euro className="w-4 h-4 mx-auto mb-1 text-amber-600 dark:text-amber-400" />
-              <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{stats.monthlyRevenue}€</p>
+              <Euro className="w-4 h-4 mx-auto mb-1 text-primary" />
+              <p className="text-lg font-bold text-primary">{stats.monthlyRevenue}€</p>
               <p className="text-[10px] text-muted-foreground">Mensal</p>
             </CardContent>
           </Card>
@@ -262,7 +262,7 @@ export default function Clients() {
                         </div>
                       )}
                       {getPaymentStatus(client) === 'pending' && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center border-2 border-background" title="Pagamento pendente">
+                        <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-destructive flex items-center justify-center border-2 border-background" title="Pagamento pendente">
                           <AlertCircle className="w-3 h-3 text-white" />
                         </div>
                       )}
@@ -309,7 +309,7 @@ export default function Clients() {
                             </Badge>
                           )}
                           {client.hasJacuzzi && (
-                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-0">
+                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground border-0">
                               <ThermometerSun className="w-2.5 h-2.5 mr-1" />
                               Jacuzzi
                             </Badge>

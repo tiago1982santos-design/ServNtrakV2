@@ -249,7 +249,7 @@ export default function CalendarPage() {
                     apt.type === "Garden" ? "bg-gradient-to-br from-green-100 to-green-50 text-green-700" :
                     apt.type === "Pool" ? "bg-gradient-to-br from-blue-100 to-blue-50 text-blue-700" :
                     apt.type === "Jacuzzi" ? "bg-gradient-to-br from-cyan-100 to-cyan-50 text-cyan-700" :
-                    "bg-gradient-to-br from-amber-100 to-amber-50 text-amber-700"
+                    "bg-gradient-to-br from-muted to-muted/50 text-muted-foreground"
                   )}>
                     <span className="text-lg leading-none">{format(new Date(apt.date), "HH")}</span>
                     <span className="text-[10px] leading-none mt-0.5">{format(new Date(apt.date), "mm")}</span>
@@ -269,7 +269,7 @@ export default function CalendarPage() {
                         apt.type === "Garden" ? "bg-green-100 text-green-700" :
                         apt.type === "Pool" ? "bg-blue-100 text-blue-700" :
                         apt.type === "Jacuzzi" ? "bg-cyan-100 text-cyan-700" :
-                        "bg-amber-100 text-amber-700"
+                        "bg-muted text-muted-foreground"
                       )}>
                         {apt.type === 'Garden' ? 'Jardim' : apt.type === 'Pool' ? 'Piscina' : apt.type === 'Jacuzzi' ? 'Jacuzzi' : apt.type}
                       </span>
@@ -467,7 +467,7 @@ export default function CalendarPage() {
                                 <span className="flex items-center gap-2">
                                   {client.name}
                                   {hasPendingTasks && (
-                                    <ClipboardList className="w-3 h-3 text-amber-500" />
+                                    <ClipboardList className="w-3 h-3 text-destructive" />
                                   )}
                                 </span>
                               </SelectItem>
@@ -477,17 +477,17 @@ export default function CalendarPage() {
                       </Select>
                       
                       {clientPendingTasks && clientPendingTasks.length > 0 && (
-                        <div className="mt-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800" data-testid="alert-pending-tasks">
+                        <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20" data-testid="alert-pending-tasks">
                           <div className="flex items-start gap-2">
-                            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                            <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-amber-800 dark:text-amber-400">
+                              <p className="text-sm font-medium text-destructive">
                                 {clientPendingTasks.length} tarefa{clientPendingTasks.length !== 1 ? 's' : ''} pendente{clientPendingTasks.length !== 1 ? 's' : ''}
                               </p>
                               <ul className="mt-1 space-y-1">
                                 {clientPendingTasks.slice(0, 3).map(task => (
-                                  <li key={task.id} className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1">
-                                    <span className="w-1 h-1 rounded-full bg-amber-500" />
+                                  <li key={task.id} className="text-xs text-destructive flex items-center gap-1">
+                                    <span className="w-1 h-1 rounded-full bg-destructive" />
                                     <span className="truncate">{task.description}</span>
                                     {(task.priority === 'urgent' || task.priority === 'high') && (
                                       <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-red-100 text-red-600">
@@ -497,7 +497,7 @@ export default function CalendarPage() {
                                   </li>
                                 ))}
                                 {clientPendingTasks.length > 3 && (
-                                  <li className="text-xs text-amber-600 dark:text-amber-400">
+                                  <li className="text-xs text-destructive">
                                     +{clientPendingTasks.length - 3} mais...
                                   </li>
                                 )}

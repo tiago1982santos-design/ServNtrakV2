@@ -577,9 +577,9 @@ function PushNotificationSection() {
     <div className="glass-card p-4 space-y-3">
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-          state === "granted" ? "bg-green-500/10" : "bg-amber-500/10"
+          state === "granted" ? "bg-green-500/10" : "bg-destructive/10"
         }`}>
-          <Bell className={`w-5 h-5 ${state === "granted" ? "text-green-600" : "text-amber-600"}`} />
+          <Bell className={`w-5 h-5 ${state === "granted" ? "text-green-600" : "text-destructive"}`} />
         </div>
         <div className="flex-1">
           <p className="font-semibold text-sm">Notificações Push</p>
@@ -778,8 +778,8 @@ export default function Profile() {
                   className="w-full p-4 flex items-center gap-3 transition-colors hover:bg-muted/30 active:bg-muted/50"
                   data-testid="button-future-ideas"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                    <Lightbulb className="w-5 h-5 text-amber-600" />
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Lightbulb className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 text-left">
                     <p className="font-semibold text-sm">Ideias Futuras</p>
@@ -791,7 +791,7 @@ export default function Profile() {
               <DialogContent className="max-w-md max-h-[85vh]">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <Lightbulb className="w-5 h-5 text-amber-500" />
+                    <Lightbulb className="w-5 h-5 text-primary" />
                     Ideias Futuras
                   </DialogTitle>
                 </DialogHeader>
@@ -805,7 +805,7 @@ export default function Profile() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <p className="font-semibold text-sm">{idea.title}</p>
-                          <Badge variant="secondary" className="text-[10px] shrink-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                          <Badge variant="secondary" className="text-[10px] shrink-0 bg-muted text-muted-foreground">
                             <Sparkles className="w-3 h-3 mr-1" />
                             {idea.source}
                           </Badge>

@@ -62,7 +62,7 @@ export default function PendingTasks() {
   const priorityColors = {
     low: "bg-gray-100 text-gray-600",
     normal: "bg-blue-100 text-blue-600",
-    high: "bg-orange-100 text-orange-600",
+    high: "bg-destructive/10 text-destructive",
     urgent: "bg-red-100 text-red-600",
   };
 
@@ -105,12 +105,12 @@ export default function PendingTasks() {
 
       {(urgentCount > 0 || highCount > 0) && (
         <div className="px-5 -mt-3 mb-4">
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/30 border border-red-100 dark:border-red-900/50 rounded-xl p-3 flex items-center gap-3">
+          <div className="bg-gradient-to-r from-red-50 to-destructive/5 dark:from-red-950/30 dark:to-destructive/10 border border-red-100 dark:border-red-900/50 rounded-xl p-3 flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
             <p className="text-sm">
               {urgentCount > 0 && <span className="font-semibold text-red-600">{urgentCount} urgente{urgentCount !== 1 ? "s" : ""}</span>}
               {urgentCount > 0 && highCount > 0 && " e "}
-              {highCount > 0 && <span className="font-semibold text-orange-600">{highCount} prioritária{highCount !== 1 ? "s" : ""}</span>}
+              {highCount > 0 && <span className="font-semibold text-destructive">{highCount} prioritária{highCount !== 1 ? "s" : ""}</span>}
             </p>
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function PendingTasks() {
                       <ServiceIcon className={`w-4 h-4 ${
                         task.serviceType === "Jardim" ? "text-green-600" :
                         task.serviceType === "Piscina" ? "text-blue-600" :
-                        task.serviceType === "Jacuzzi" ? "text-orange-600" : "text-gray-600"
+                        task.serviceType === "Jacuzzi" ? "text-muted-foreground" : "text-gray-600"
                       }`} />
                     </div>
                     <div>

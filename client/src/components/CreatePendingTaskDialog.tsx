@@ -127,14 +127,14 @@ export function CreatePendingTaskDialog({ open, onOpenChange, clientId, clientNa
   const serviceTypeOptions = [
     { value: "Jardim", label: "Jardim", icon: Leaf, color: "text-green-600" },
     { value: "Piscina", label: "Piscina", icon: Waves, color: "text-blue-600" },
-    { value: "Jacuzzi", label: "Jacuzzi", icon: ThermometerSun, color: "text-orange-600" },
+    { value: "Jacuzzi", label: "Jacuzzi", icon: ThermometerSun, color: "text-muted-foreground" },
     { value: "Geral", label: "Geral", icon: Wrench, color: "text-gray-600" },
   ];
 
   const priorityOptions = [
     { value: "low", label: "Baixa", color: "text-gray-500" },
     { value: "normal", label: "Normal", color: "text-blue-600" },
-    { value: "high", label: "Alta", color: "text-orange-600" },
+    { value: "high", label: "Alta", color: "text-destructive" },
     { value: "urgent", label: "Urgente", color: "text-red-600" },
   ];
 
@@ -181,7 +181,7 @@ export function CreatePendingTaskDialog({ open, onOpenChange, clientId, clientNa
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center gap-2">
                         {option.value === "urgent" && <AlertTriangle className="w-4 h-4 text-red-600" />}
-                        {option.value === "high" && <ChevronUp className="w-4 h-4 text-orange-600" />}
+                        {option.value === "high" && <ChevronUp className="w-4 h-4 text-destructive" />}
                         <span className={option.color}>{option.label}</span>
                       </div>
                     </SelectItem>

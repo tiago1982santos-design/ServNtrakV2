@@ -271,7 +271,7 @@ export default function Login() {
           <div className="w-11 h-11 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-700 dark:text-blue-400 shadow-sm z-10 -mt-2">
             <Waves className="w-5 h-5" />
           </div>
-          <div className="w-11 h-11 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-700 dark:text-orange-400 shadow-sm rotate-[6deg]">
+          <div className="w-11 h-11 bg-primary/10 dark:bg-primary/20 rounded-2xl flex items-center justify-center text-primary shadow-sm rotate-[6deg]">
             <ThermometerSun className="w-5 h-5" />
           </div>
         </div>

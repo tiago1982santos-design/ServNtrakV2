@@ -78,7 +78,7 @@ export default function Reminders() {
       services.push({ type: "Piscina", icon: Waves, color: "text-blue-600" });
     }
     if (client.hasJacuzzi && client.jacuzziVisitFrequency === "on_demand") {
-      services.push({ type: "Jacuzzi", icon: ThermometerSun, color: "text-orange-600" });
+      services.push({ type: "Jacuzzi", icon: ThermometerSun, color: "text-muted-foreground" });
     }
     return services;
   };
@@ -182,8 +182,8 @@ export default function Reminders() {
             {todayReminders.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
-                  <Bell className="w-4 h-4 text-amber-500" />
-                  <h2 className="text-sm font-semibold text-amber-600 uppercase tracking-wider">Hoje</h2>
+                  <Bell className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-semibold text-primary uppercase tracking-wider">Hoje</h2>
                 </div>
                 <div className="space-y-3">
                   {todayReminders.map((reminder) => (
@@ -255,7 +255,7 @@ function ReminderCard({
       className={cn(
         "bg-card border rounded-xl p-4 shadow-sm",
         variant === "overdue" && "border-red-200 bg-red-50/50 dark:bg-red-900/10 dark:border-red-900/30",
-        variant === "today" && "border-amber-200 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-900/30",
+        variant === "today" && "border-primary/20 bg-primary/5",
         variant === "upcoming" && "border-border"
       )}
       data-testid={`reminder-card-${reminder.id}`}
@@ -265,7 +265,7 @@ function ReminderCard({
           "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
           reminder.type === "Garden" && "bg-green-100 text-green-700",
           reminder.type === "Pool" && "bg-blue-100 text-blue-700",
-          reminder.type === "Jacuzzi" && "bg-orange-100 text-orange-700",
+          reminder.type === "Jacuzzi" && "bg-muted text-muted-foreground",
           reminder.type === "General" && "bg-gray-100 text-gray-700"
         )}>
           <TypeIcon className="w-5 h-5" />
@@ -286,7 +286,7 @@ function ReminderCard({
             <p className={cn(
               "text-xs",
               variant === "overdue" && "text-red-600 font-medium",
-              variant === "today" && "text-amber-600 font-medium",
+              variant === "today" && "text-primary font-medium",
               variant === "upcoming" && "text-muted-foreground"
             )}>
               {format(new Date(reminder.nextDue), "d 'de' MMMM", { locale: pt })}

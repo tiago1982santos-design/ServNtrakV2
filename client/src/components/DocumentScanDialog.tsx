@@ -477,11 +477,11 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
                   placeholder="Ex: FR 2026/1234 (opcional)"
                   className={cn(
                     "h-9 text-sm",
-                    isDuplicateInvoice && "border-orange-400 bg-orange-50"
+                    isDuplicateInvoice && "border-destructive bg-destructive/10"
                   )}
                 />
                 {isDuplicateInvoice && (
-                  <div className="flex items-center gap-1.5 mt-1 text-orange-600">
+                  <div className="flex items-center gap-1.5 mt-1 text-destructive">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <p className="text-xs font-medium">
                       Esta fatura já foi registada anteriormente.

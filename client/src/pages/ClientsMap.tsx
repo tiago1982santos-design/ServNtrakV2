@@ -143,7 +143,7 @@ export default function ClientsMap() {
                           </span>
                         )}
                         {client.hasJacuzzi && (
-                          <span className="flex items-center gap-1 text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded">
+                          <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                             <ThermometerSun className="w-3 h-3" /> Jacuzzi
                           </span>
                         )}

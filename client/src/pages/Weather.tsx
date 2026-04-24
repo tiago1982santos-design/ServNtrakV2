@@ -143,7 +143,7 @@ export default function Weather() {
                     "flex items-start gap-3 rounded-xl px-4 py-3 text-sm font-medium",
                     alert.severity === "danger"
                       ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                      : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                      : "bg-destructive/10 text-destructive"
                   )}
                   data-testid={`weather-alert-${alert.type}`}
                 >
@@ -169,8 +169,8 @@ export default function Weather() {
                 </div>
               </div>
               <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center">
-                  <ArrowUp className="w-5 h-5 text-orange-500" />
+                <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                  <ArrowUp className="w-5 h-5 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Máxima</p>
@@ -242,7 +242,7 @@ export default function Weather() {
 
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-muted-foreground">{day.temperatureMin}°</span>
-                      <div className="w-12 h-1.5 bg-gradient-to-r from-blue-400 to-orange-400 rounded-full" />
+                      <div className="w-12 h-1.5 bg-gradient-to-r from-blue-400 to-yellow-400 rounded-full" />
                       <span className="font-medium text-foreground">{day.temperatureMax}°</span>
                     </div>
                   </div>

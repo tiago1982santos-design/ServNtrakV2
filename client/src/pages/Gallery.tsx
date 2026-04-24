@@ -258,7 +258,7 @@ export default function Gallery() {
                           <Badge
                             className={`absolute bottom-1 left-1 text-[10px] px-1 py-0 ${
                               photo.type === "before"
-                                ? "bg-orange-500/90 text-white"
+                                ? "bg-muted text-muted-foreground"
                                 : "bg-green-500/90 text-white"
                             }`}
                           >
@@ -298,7 +298,7 @@ export default function Gallery() {
                 <Badge
                   className={`${
                     lightboxPhoto.type === "before"
-                      ? "bg-orange-500 text-white"
+                      ? "bg-muted text-muted-foreground"
                       : "bg-green-500 text-white"
                   }`}
                 >

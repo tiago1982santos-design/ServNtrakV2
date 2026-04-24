@@ -209,7 +209,7 @@ export default function ClientDetail() {
                   href={`https://wa.me/${(client.whatsapp || client.phone || '').replace(/\D/g, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-[#25D366] text-white rounded-lg text-sm font-medium hover:bg-[#20bd5a] transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
                   data-testid="button-whatsapp"
                 >
                   <SiWhatsapp className="w-4 h-4" />
@@ -231,7 +231,7 @@ export default function ClientDetail() {
                   href={`https://m.me/${client.facebookMessenger}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-[#0084FF] text-white rounded-lg text-sm font-medium hover:bg-[#0073e6] transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
                   data-testid="button-messenger"
                 >
                   <SiFacebook className="w-4 h-4" />
@@ -262,7 +262,7 @@ export default function ClientDetail() {
             </div>
           )}
           {client.hasJacuzzi && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-sm font-medium">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted text-muted-foreground rounded-full text-sm font-medium">
               <ThermometerSun className="w-4 h-4" /> Jacuzzi
               {client.jacuzziLength && client.jacuzziWidth && client.jacuzziDepth && (
                 <span className="text-xs font-bold">
@@ -298,7 +298,7 @@ export default function ClientDetail() {
           <div className="bg-card rounded-xl p-4 border border-border/50">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-sm">Frequência de Visitas</h3>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getSeason(new Date()) === 'high' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getSeason(new Date()) === 'high' ? 'bg-muted text-muted-foreground' : 'bg-blue-100 text-blue-700'}`}>
                 {getSeasonLabel(getSeason(new Date()))}
               </span>
             </div>
@@ -308,7 +308,7 @@ export default function ClientDetail() {
                   <span className="flex items-center gap-2">
                     {schedule.type === 'Garden' && <Leaf className="w-3.5 h-3.5 text-green-600" />}
                     {schedule.type === 'Pool' && <Waves className="w-3.5 h-3.5 text-blue-600" />}
-                    {schedule.type === 'Jacuzzi' && <ThermometerSun className="w-3.5 h-3.5 text-orange-600" />}
+                    {schedule.type === 'Jacuzzi' && <ThermometerSun className="w-3.5 h-3.5 text-muted-foreground" />}
                     <span>{schedule.type === 'Garden' ? 'Jardim' : schedule.type === 'Pool' ? 'Piscina' : 'Jacuzzi'}</span>
                   </span>
                   <span className="text-muted-foreground text-xs">{schedule.description}</span>
@@ -339,8 +339,8 @@ export default function ClientDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                  <Timer className="w-4 h-4 text-amber-600" />
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Timer className="w-4 h-4 text-primary" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Duração média</p>
@@ -374,10 +374,10 @@ export default function ClientDetail() {
       <div className="px-6 mt-6">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-bold text-lg flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-orange-500" />
+            <ClipboardList className="w-5 h-5 text-destructive" />
             Tarefas Pendentes
             {pendingTasks && pendingTasks.length > 0 && (
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+              <Badge variant="secondary" className="bg-destructive/10 text-destructive">
                 {pendingTasks.length}
               </Badge>
             )}
@@ -403,7 +403,7 @@ export default function ClientDetail() {
               const priorityColors = {
                 low: 'bg-gray-100 text-gray-600',
                 normal: 'bg-blue-100 text-blue-600',
-                high: 'bg-orange-100 text-orange-600',
+                high: 'bg-destructive/10 text-destructive',
                 urgent: 'bg-red-100 text-red-600',
               };
               const priorityLabels = { low: 'Baixa', normal: 'Normal', high: 'Alta', urgent: 'Urgente' };
@@ -415,7 +415,7 @@ export default function ClientDetail() {
                       <ServiceIcon className={`w-4 h-4 ${
                         task.serviceType === 'Jardim' ? 'text-green-600' :
                         task.serviceType === 'Piscina' ? 'text-blue-600' :
-                        task.serviceType === 'Jacuzzi' ? 'text-orange-600' : 'text-gray-600'
+                        task.serviceType === 'Jacuzzi' ? 'text-muted-foreground' : 'text-gray-600'
                       }`} />
                       <span className="text-xs font-semibold">{task.serviceType}</span>
                       <Badge variant="secondary" className={`text-xs ${priorityColors[task.priority as keyof typeof priorityColors] || priorityColors.normal}`}>
@@ -552,8 +552,8 @@ export default function ClientDetail() {
                 'Limpeza': 'text-gray-600',
                 'Plantação': 'text-green-600',
                 'Poda': 'text-lime-600',
-                'Construção': 'text-amber-600',
-                'Reparação': 'text-orange-600',
+                'Construção': 'text-muted-foreground',
+                'Reparação': 'text-muted-foreground',
                 'Piscina': 'text-blue-600',
                 'Jacuzzi': 'text-cyan-600',
                 'Geral': 'text-gray-500',
@@ -724,7 +724,7 @@ export default function ClientDetail() {
                     <span className="text-xs font-medium text-muted-foreground">
                       {(log.totalAmount ?? 0) > 0 ? `${(log.totalAmount ?? 0).toFixed(2)} €` : "—"}
                       {log.billingType === "extra" && (
-                        <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0 border-amber-300 text-amber-600">
+                        <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0 border-primary/30 text-primary">
                           Extra
                         </Badge>
                       )}
@@ -1067,7 +1067,7 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
                       <div className={`flex items-center space-x-2 rounded-xl border p-3 cursor-pointer transition-colors ${field.value === 'extra' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
                         <RadioGroupItem value="extra" id="billing-extra" />
                         <Label htmlFor="billing-extra" className="flex items-center gap-2 cursor-pointer">
-                          <Euro className="w-4 h-4 text-orange-600" />
+                          <Euro className="w-4 h-4 text-primary" />
                           <span className="text-sm font-medium">Extra</span>
                         </Label>
                       </div>
@@ -1162,9 +1162,9 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
               )}
             </div>
 
-            <div className="space-y-3 p-3 rounded-xl border bg-orange-50/50">
+            <div className="space-y-3 p-3 rounded-xl border bg-muted/30">
               <div className="flex items-center justify-between">
-                <FormLabel className="flex items-center gap-2 text-orange-700">
+                <FormLabel className="flex items-center gap-2 text-muted-foreground">
                   <FolderPlus className="w-4 h-4" />
                   Materiais
                 </FormLabel>
@@ -1204,7 +1204,7 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
                       </Button>
                     </div>
                   ))}
-                  <div className="text-right text-sm font-bold text-orange-700 pt-1 border-t">
+                  <div className="text-right text-sm font-bold text-foreground pt-1 border-t">
                     Subtotal: {materialsSubtotal.toFixed(2)}€
                   </div>
                 </div>
@@ -1591,7 +1591,7 @@ function EditClientDialog({ client }: { client: Client }) {
                         />
                       </FormControl>
                       <FormLabel className="!mt-0 flex items-center gap-1 text-sm font-normal">
-                        <ThermometerSun className="w-4 h-4 text-orange-600" /> Jacuzzi
+                        <ThermometerSun className="w-4 h-4 text-muted-foreground" /> Jacuzzi
                       </FormLabel>
                     </FormItem>
                   )}
@@ -1788,8 +1788,8 @@ function EditClientDialog({ client }: { client: Client }) {
             )}
 
             {hasJacuzzi && (
-              <div className="space-y-3 p-3 rounded-xl border bg-orange-50/50">
-                <FormLabel className="flex items-center gap-2 text-orange-700">
+              <div className="space-y-3 p-3 rounded-xl border bg-muted/30">
+                <FormLabel className="flex items-center gap-2 text-muted-foreground">
                   <ThermometerSun className="w-4 h-4" />
                   Dimensões do Jacuzzi (metros)
                 </FormLabel>
@@ -1856,13 +1856,13 @@ function EditClientDialog({ client }: { client: Client }) {
                   />
                 </div>
                 {form.watch("jacuzziLength") && form.watch("jacuzziWidth") && form.watch("jacuzziDepth") && (
-                  <div className="text-sm text-orange-700 font-medium">
+                  <div className="text-sm text-muted-foreground font-medium">
                     Volume: {((form.watch("jacuzziLength") || 0) * (form.watch("jacuzziWidth") || 0) * (form.watch("jacuzziDepth") || 0)).toFixed(1)} m³
                   </div>
                 )}
                 
-                <div className="pt-3 border-t border-orange-200">
-                  <FormLabel className="flex items-center gap-2 text-orange-700 mb-2">
+                <div className="pt-3 border-t border-border">
+                  <FormLabel className="flex items-center gap-2 text-muted-foreground mb-2">
                     <CalendarDays className="w-4 h-4" />
                     Frequência de Visitas
                   </FormLabel>
@@ -1877,21 +1877,21 @@ function EditClientDialog({ client }: { client: Client }) {
                             defaultValue={field.value || "seasonal"}
                             className="grid grid-cols-1 gap-2"
                           >
-                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'seasonal' ? 'border-orange-500 bg-orange-100/50' : 'bg-background/50'}`}>
+                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'seasonal' ? 'border-primary bg-primary/10' : 'bg-background/50'}`}>
                               <RadioGroupItem value="seasonal" id="edit-jacuzzi_seasonal" className="mt-0.5" />
                               <Label htmlFor="edit-jacuzzi_seasonal" className="flex flex-col cursor-pointer">
                                 <span className="text-sm font-medium">Sazonal (padrão)</span>
                                 <span className="text-xs text-muted-foreground">Época alta: 1x/semana | Época baixa: 2x/mês</span>
                               </Label>
                             </div>
-                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'once_monthly' ? 'border-orange-500 bg-orange-100/50' : 'bg-background/50'}`}>
+                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'once_monthly' ? 'border-primary bg-primary/10' : 'bg-background/50'}`}>
                               <RadioGroupItem value="once_monthly" id="edit-jacuzzi_once_monthly" className="mt-0.5" />
                               <Label htmlFor="edit-jacuzzi_once_monthly" className="flex flex-col cursor-pointer">
                                 <span className="text-sm font-medium">Acordo Especial</span>
                                 <span className="text-xs text-muted-foreground">1 visita por mês durante todo o ano</span>
                               </Label>
                             </div>
-                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'on_demand' ? 'border-orange-500 bg-orange-100/50' : 'bg-background/50'}`}>
+                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'on_demand' ? 'border-primary bg-primary/10' : 'bg-background/50'}`}>
                               <RadioGroupItem value="on_demand" id="edit-jacuzzi_on_demand" className="mt-0.5" />
                               <Label htmlFor="edit-jacuzzi_on_demand" className="flex flex-col cursor-pointer">
                                 <span className="text-sm font-medium">Quando Necessário</span>
@@ -1962,7 +1962,7 @@ function EditClientDialog({ client }: { client: Client }) {
                         <div className={`flex items-center space-x-2 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'per_visit' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
                           <RadioGroupItem value="per_visit" id="edit-per_visit" />
                           <Label htmlFor="edit-per_visit" className="flex items-center gap-2 cursor-pointer">
-                            <CalendarDays className="w-4 h-4 text-amber-600" />
+                            <CalendarDays className="w-4 h-4 text-muted-foreground" />
                             <span className="text-sm font-medium">Por Visita</span>
                           </Label>
                         </div>
@@ -2335,13 +2335,13 @@ function CompleteVisitDialog({
                     control={form.control}
                     name="includeJacuzzi"
                     render={({ field }) => (
-                      <label className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-colors ${field.value ? 'bg-orange-50 border-orange-300' : 'bg-background'}`}>
+                      <label className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-colors ${field.value ? 'bg-muted/30 border-border' : 'bg-background'}`}>
                         <Checkbox 
                           checked={field.value} 
                           onCheckedChange={field.onChange}
                           data-testid="checkbox-include-jacuzzi"
                         />
-                        <ThermometerSun className="w-4 h-4 text-orange-600" />
+                        <ThermometerSun className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm">Jacuzzi</span>
                       </label>
                     )}
@@ -2497,7 +2497,7 @@ function ClientTimeline({
     switch (event.serviceType) {
       case "Garden": return "bg-green-500";
       case "Pool": return "bg-blue-500";
-      case "Jacuzzi": return "bg-orange-500";
+      case "Jacuzzi": return "bg-muted-foreground";
       default: return "bg-gray-500";
     }
   };
@@ -2507,7 +2507,7 @@ function ClientTimeline({
     switch (event.serviceType) {
       case "Garden": return "bg-green-100 text-green-700 border-green-200";
       case "Pool": return "bg-blue-100 text-blue-700 border-blue-200";
-      case "Jacuzzi": return "bg-orange-100 text-orange-700 border-orange-200";
+      case "Jacuzzi": return "bg-muted text-muted-foreground border-border";
       default: return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
@@ -2587,7 +2587,7 @@ function ClientTimeline({
                     )}
 
                     {event.type === "appointment" && !event.isCompleted && (
-                      <Badge variant="outline" className="mt-2 text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                      <Badge variant="outline" className="mt-2 text-[10px] bg-muted text-muted-foreground border-border">
                         Pendente
                       </Badge>
                     )}

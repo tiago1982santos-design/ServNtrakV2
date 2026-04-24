@@ -21,7 +21,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-orange-100/60 z-50 rounded-t-3xl shadow-[0_-10px_40px_rgba(200,120,50,0.08)]"
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-primary/15 z-50 rounded-t-3xl shadow-[0_-10px_40px_hsl(var(--primary)/0.08)]"
       data-testid="bottom-navigation"
     >
       <div className="flex justify-around items-center mx-auto h-16 px-2">
@@ -39,24 +39,24 @@ export function BottomNav() {
             >
               <div className={cn(
                 "flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-colors",
-                isActive ? "bg-orange-50" : "hover:bg-orange-50/40"
+                isActive ? "bg-primary/10" : "hover:bg-primary/5"
               )}>
                 <item.icon
                   className={cn(
                     "w-5 h-5 mb-0.5 transition-colors",
-                    isActive ? "text-amber-500" : "text-[#9B7B5E]"
+                    isActive ? "text-primary" : "text-muted-foreground"
                   )}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <span className={cn(
                   "text-[10px] transition-colors",
-                  isActive ? "font-bold text-amber-500" : "font-medium text-[#9B7B5E]"
+                  isActive ? "font-bold text-primary" : "font-medium text-muted-foreground"
                 )}>
                   {item.label}
                 </span>
               </div>
               {isActive && (
-                <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-amber-500" />
+                <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-primary" />
               )}
             </Link>
           );
