@@ -185,8 +185,9 @@ The Home page was redesigned from a dark-green gradient to a warm amber/orange "
 - **Frontend hook** (`client/src/hooks/use-push-notifications.ts`): Subscribe/unsubscribe/test with state management
 - **Profile section**: Toggle notifications on/off, test button, handles denied/unsupported states
 - **DB table**: `push_subscriptions` (userId, endpoint, p256dh, auth, deviceInfo)
-- **Endpoints**: `GET /api/push/vapid-public-key`, `POST /api/push/subscribe`, `POST /api/push/unsubscribe`, `POST /api/push/test`
+- **Endpoints**: `GET /api/push/vapid-public-key`, `POST /api/push/subscribe`, `POST /api/push/unsubscribe`, `POST /api/push/test`, `GET /api/push/health`
 - **Env vars**: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
+- **Health monitoring** (Abr/2026): `pushService.ts` mantém em memória contadores e último erro de envio (janela de 60 min, separando falhas VAPID 401/403 das restantes). `GET /api/push/health` (autenticado) devolve esse estado e a página Perfil → Notificações Push mostra um aviso visível em amarelo/vermelho quando o servidor tem a configuração VAPID inválida ou houve falhas recentes de autenticação, evitando ter de ler os logs.
 
 ### Automatic Appointment Generation
 - **Calendar "Gerar Mês" button**: Opens a modal to auto-generate monthly appointments based on client service contracts

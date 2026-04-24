@@ -8,7 +8,7 @@ import { api } from "@shared/routes";
 import { serviceVisits, appointments } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { saveSubscription, removeSubscription, sendPushToUser, getVapidPublicKey } from "./pushService";
+import { saveSubscription, removeSubscription, sendPushToUser, getVapidPublicKey, getPushHealthStatus } from "./pushService";
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({
@@ -1387,6 +1387,10 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
       }
       res.status(500).json({ message: "Erro ao remover notificação" });
     }
+  });
+
+  app.get("/api/push/health", requireAuth, (_req, res) => {
+    res.json(getPushHealthStatus());
   });
 
   app.post("/api/push/test", requireAuth, async (req, res) => {
