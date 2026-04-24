@@ -140,6 +140,14 @@ function formatLastUsed(value: string | null): string {
   }
 }
 
+function formatCreatedAt(value: string): string {
+  try {
+    return `Registado a ${format(new Date(value), "d MMM yyyy", { locale: pt })}`;
+  } catch {
+    return "Registado a -";
+  }
+}
+
 function BiometricSection() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -262,9 +270,14 @@ function BiometricSection() {
                       <p className="text-sm truncate font-medium" data-testid={`text-credential-name-${cred.id}`}>
                         {cred.deviceName || "Dispositivo"}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate" data-testid={`text-credential-last-used-${cred.id}`}>
-                        {formatLastUsed(cred.lastUsedAt)}
+                      <p className="text-xs text-muted-foreground truncate" data-testid={`text-credential-created-${cred.id}`}>
+                        {formatCreatedAt(cred.createdAt)}
                       </p>
+                      {cred.lastUsedAt && (
+                        <p className="text-xs text-muted-foreground truncate" data-testid={`text-credential-last-used-${cred.id}`}>
+                          {formatLastUsed(cred.lastUsedAt)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <Button
