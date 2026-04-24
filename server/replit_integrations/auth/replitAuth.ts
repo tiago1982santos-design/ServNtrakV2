@@ -508,6 +508,28 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  app.patch("/api/auth/webauthn/credentials/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const rawName = typeof req.body?.deviceName === "string" ? req.body.deviceName : "";
+      const deviceName = rawName.trim().slice(0, 80);
+      if (!deviceName) {
+        return res.status(400).json({ message: "Nome do dispositivo é obrigatório" });
+      }
+      const updated = await authStorage.updateWebAuthnCredentialName(req.params.id, req.user.id, deviceName);
+      if (!updated) {
+        return res.status(404).json({ message: "Credencial não encontrada" });
+      }
+      res.json({
+        id: updated.id,
+        deviceName: updated.deviceName,
+        createdAt: updated.createdAt,
+        lastUsedAt: updated.lastUsedAt,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao renomear credencial" });
+    }
+  });
+
   app.delete("/api/auth/webauthn/credentials/:id", isAuthenticated, async (req: any, res) => {
     try {
       await authStorage.deleteWebAuthnCredential(req.params.id, req.user.id);

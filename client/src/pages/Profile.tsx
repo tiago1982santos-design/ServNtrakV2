@@ -27,7 +27,8 @@ import {
   Trash2,
   KeyRound,
   Eye,
-  EyeOff
+  EyeOff,
+  Pencil
 } from "lucide-react";
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -156,6 +157,8 @@ function BiometricSection() {
   const [nameDialogOpen, setNameDialogOpen] = useState(false);
   const [deviceNameInput, setDeviceNameInput] = useState("");
   const [credentialToDelete, setCredentialToDelete] = useState<{ id: string; deviceName: string } | null>(null);
+  const [credentialToRename, setCredentialToRename] = useState<{ id: string; deviceName: string } | null>(null);
+  const [renameInput, setRenameInput] = useState("");
 
   useEffect(() => {
     if (window.PublicKeyCredential) {
@@ -169,6 +172,31 @@ function BiometricSection() {
       const res = await fetch("/api/auth/webauthn/credentials", { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
+    },
+  });
+
+  const renameMutation = useMutation({
+    mutationFn: async ({ id, deviceName }: { id: string; deviceName: string }) => {
+      const res = await fetch(`/api/auth/webauthn/credentials/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ deviceName }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Erro ao renomear");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/webauthn/credentials"] });
+      toast({ title: "Nome atualizado" });
+      setCredentialToRename(null);
+      setRenameInput("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
     },
   });
 
@@ -280,15 +308,32 @@ function BiometricSection() {
                       )}
                     </div>
                   </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setCredentialToDelete({ id: cred.id, deviceName: cred.deviceName || "Dispositivo" })}
-                    disabled={deleteMutation.isPending}
-                    data-testid={`button-delete-credential-${cred.id}`}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        const fallback = cred.deviceName || "Dispositivo";
+                        setCredentialToRename({ id: cred.id, deviceName: fallback });
+                        setRenameInput(cred.deviceName || fallback);
+                      }}
+                      disabled={renameMutation.isPending}
+                      data-testid={`button-rename-credential-${cred.id}`}
+                      aria-label="Renomear credencial"
+                    >
+                      <Pencil className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setCredentialToDelete({ id: cred.id, deviceName: cred.deviceName || "Dispositivo" })}
+                      disabled={deleteMutation.isPending}
+                      data-testid={`button-delete-credential-${cred.id}`}
+                      aria-label="Remover credencial"
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -351,6 +396,71 @@ function BiometricSection() {
               data-testid="button-confirm-device-name"
             >
               Continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={credentialToRename !== null}
+        onOpenChange={(open) => {
+          if (!open && !renameMutation.isPending) {
+            setCredentialToRename(null);
+            setRenameInput("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Renomear credencial</DialogTitle>
+            <DialogDescription>
+              Escolhe um novo nome para identificar este dispositivo na lista.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="rename-device-input">Nome</Label>
+            <Input
+              id="rename-device-input"
+              value={renameInput}
+              onChange={(e) => setRenameInput(e.target.value)}
+              placeholder="Ex.: iPhone do Tiago"
+              maxLength={80}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const trimmed = renameInput.trim();
+                  if (credentialToRename && trimmed) {
+                    renameMutation.mutate({ id: credentialToRename.id, deviceName: trimmed.slice(0, 80) });
+                  }
+                }
+              }}
+              data-testid="input-rename-device"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCredentialToRename(null);
+                setRenameInput("");
+              }}
+              disabled={renameMutation.isPending}
+              data-testid="button-cancel-rename"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                const trimmed = renameInput.trim();
+                if (credentialToRename && trimmed) {
+                  renameMutation.mutate({ id: credentialToRename.id, deviceName: trimmed.slice(0, 80) });
+                }
+              }}
+              disabled={renameMutation.isPending || !renameInput.trim()}
+              data-testid="button-confirm-rename"
+            >
+              {renameMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar"}
             </Button>
           </DialogFooter>
         </DialogContent>

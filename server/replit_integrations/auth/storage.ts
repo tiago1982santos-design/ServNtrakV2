@@ -15,6 +15,7 @@ export interface IAuthStorage {
   getWebAuthnCredentialById(credentialId: string): Promise<WebAuthnCredential | undefined>;
   saveWebAuthnCredential(credential: typeof webauthnCredentials.$inferInsert): Promise<WebAuthnCredential>;
   updateWebAuthnCounter(credentialId: string, counter: number): Promise<void>;
+  updateWebAuthnCredentialName(credentialId: string, userId: string, deviceName: string): Promise<WebAuthnCredential | undefined>;
   deleteWebAuthnCredential(credentialId: string, userId: string): Promise<void>;
 }
 
@@ -96,6 +97,15 @@ class AuthStorage implements IAuthStorage {
       .update(webauthnCredentials)
       .set({ counter, lastUsedAt: new Date() })
       .where(eq(webauthnCredentials.id, credentialId));
+  }
+
+  async updateWebAuthnCredentialName(credentialId: string, userId: string, deviceName: string): Promise<WebAuthnCredential | undefined> {
+    const [cred] = await db
+      .update(webauthnCredentials)
+      .set({ deviceName })
+      .where(and(eq(webauthnCredentials.id, credentialId), eq(webauthnCredentials.userId, userId)))
+      .returning();
+    return cred;
   }
 
   async deleteWebAuthnCredential(credentialId: string, userId: string): Promise<void> {
