@@ -34,11 +34,26 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/BackButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -101,12 +116,38 @@ const futureIdeas = [
   }
 ];
 
+function suggestDeviceName(userAgent: string): string {
+  const ua = userAgent || "";
+  if (/iPad/i.test(ua)) return "iPad";
+  if (/iPhone/i.test(ua)) return "iPhone";
+  if (/Android/i.test(ua)) {
+    const match = ua.match(/Android[^;)]*;\s*([^;)]+)\)/);
+    const model = match?.[1]?.trim();
+    return model && model.length < 30 ? model : "Telemóvel Android";
+  }
+  if (/Macintosh|Mac OS X/i.test(ua)) return "Mac";
+  if (/Windows/i.test(ua)) return "Windows";
+  if (/Linux/i.test(ua)) return "Linux";
+  return "Dispositivo biométrico";
+}
+
+function formatLastUsed(value: string | null): string {
+  if (!value) return "Nunca usado";
+  try {
+    return `Último uso: ${format(new Date(value), "d MMM yyyy 'às' HH:mm", { locale: pt })}`;
+  } catch {
+    return "Último uso: -";
+  }
+}
+
 function BiometricSection() {
-  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [registering, setRegistering] = useState(false);
   const [platformAvailable, setPlatformAvailable] = useState(false);
+  const [nameDialogOpen, setNameDialogOpen] = useState(false);
+  const [deviceNameInput, setDeviceNameInput] = useState("");
+  const [credentialToDelete, setCredentialToDelete] = useState<{ id: string; deviceName: string } | null>(null);
 
   useEffect(() => {
     if (window.PublicKeyCredential) {
@@ -134,10 +175,25 @@ function BiometricSection() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/webauthn/credentials"] });
       toast({ title: "Biometria removida" });
+      setCredentialToDelete(null);
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível remover a credencial", variant: "destructive" });
     },
   });
 
+  const openRegisterDialog = () => {
+    setDeviceNameInput(suggestDeviceName(navigator.userAgent));
+    setNameDialogOpen(true);
+  };
+
   const handleRegister = async () => {
+    const trimmedName = deviceNameInput.trim();
+    if (!trimmedName) {
+      toast({ title: "Erro", description: "Indica um nome para o dispositivo", variant: "destructive" });
+      return;
+    }
+    setNameDialogOpen(false);
     setRegistering(true);
     try {
       const optionsRes = await fetch("/api/auth/webauthn/register-options", {
@@ -153,14 +209,14 @@ function BiometricSection() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ credential: attResp, deviceName: "Dispositivo biométrico" }),
+        body: JSON.stringify({ credential: attResp, deviceName: trimmedName.slice(0, 80) }),
       });
       if (!verifyRes.ok) throw new Error("Verificação falhou");
       const result = await verifyRes.json();
 
       if (result.verified) {
         queryClient.invalidateQueries({ queryKey: ["/api/auth/webauthn/credentials"] });
-        toast({ title: "Biometria registada com sucesso" });
+        toast({ title: "Biometria registada com sucesso", description: trimmedName });
       }
     } catch (error: any) {
       if (error.name !== "NotAllowedError") {
@@ -195,15 +251,26 @@ function BiometricSection() {
           {credentials.length > 0 && (
             <div className="space-y-2 mb-3">
               {credentials.map((cred) => (
-                <div key={cred.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30" data-testid={`credential-${cred.id}`}>
-                  <div className="flex items-center gap-2 min-w-0">
+                <div
+                  key={cred.id}
+                  className="flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/30"
+                  data-testid={`credential-${cred.id}`}
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <Fingerprint className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm truncate">{cred.deviceName || "Dispositivo"}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm truncate font-medium" data-testid={`text-credential-name-${cred.id}`}>
+                        {cred.deviceName || "Dispositivo"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate" data-testid={`text-credential-last-used-${cred.id}`}>
+                        {formatLastUsed(cred.lastUsedAt)}
+                      </p>
+                    </div>
                   </div>
                   <Button
                     size="icon"
                     variant="ghost"
-                    onClick={() => deleteMutation.mutate(cred.id)}
+                    onClick={() => setCredentialToDelete({ id: cred.id, deviceName: cred.deviceName || "Dispositivo" })}
                     disabled={deleteMutation.isPending}
                     data-testid={`button-delete-credential-${cred.id}`}
                   >
@@ -217,7 +284,7 @@ function BiometricSection() {
           <Button
             variant="outline"
             className="w-full gap-2"
-            onClick={handleRegister}
+            onClick={openRegisterDialog}
             disabled={registering}
             data-testid="button-register-biometric"
           >
@@ -230,6 +297,84 @@ function BiometricSection() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={nameDialogOpen} onOpenChange={(open) => !registering && setNameDialogOpen(open)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nome do dispositivo</DialogTitle>
+            <DialogDescription>
+              Escolhe um nome que te ajude a identificar este telemóvel ou computador na lista de credenciais.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="device-name-input">Nome</Label>
+            <Input
+              id="device-name-input"
+              value={deviceNameInput}
+              onChange={(e) => setDeviceNameInput(e.target.value)}
+              placeholder="Ex.: iPhone do Tiago"
+              maxLength={80}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleRegister();
+                }
+              }}
+              data-testid="input-device-name"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setNameDialogOpen(false)}
+              data-testid="button-cancel-device-name"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleRegister}
+              disabled={!deviceNameInput.trim()}
+              data-testid="button-confirm-device-name"
+            >
+              Continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={credentialToDelete !== null}
+        onOpenChange={(open) => !open && setCredentialToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover esta credencial?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {credentialToDelete && (
+                <>
+                  Vais deixar de poder iniciar sessão com biometria a partir de{" "}
+                  <span className="font-semibold">{credentialToDelete.deviceName}</span>. Podes voltar a registar a qualquer momento.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-credential">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                if (credentialToDelete) deleteMutation.mutate(credentialToDelete.id);
+              }}
+              disabled={deleteMutation.isPending}
+              data-testid="button-confirm-delete-credential"
+            >
+              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
