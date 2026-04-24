@@ -59,7 +59,7 @@ Migrados via streaming `psql COPY` (pg_dump 16 incompatível com servidor Postgr
 
 As tabelas operacionais (appointments, service_logs, etc.) estavam vazias **na origem (Railway)** — não é dado em falta. O utilizador ainda não tinha começado a registar visitas no sistema antigo.
 
-- Railway deixa de ser usado. O secret `RAILWAY_DATABASE_URL` pode ser removido após confirmação.
+- Railway deixa de ser usado. O secret `RAILWAY_DATABASE_URL` continua presente nos Secrets do Replit por opção do utilizador (24/Abr/2026); pode ser removido manualmente no painel de Secrets quando se quiser fechar o ciclo.
 
 ### Hardening de segurança
 
