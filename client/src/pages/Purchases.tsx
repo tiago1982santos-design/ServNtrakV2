@@ -29,6 +29,7 @@ import { User } from "lucide-react";
 import { BackButton } from "@/components/BackButton";
 
 interface InvoiceSummary {
+  // purchaseDate accepts either Date (from DB) or ISO string
   invoiceNumber: string | null;
   purchaseDate: string;
   storeName: string;
@@ -81,7 +82,7 @@ export default function Purchases() {
       if (selectedCategory === "Todas" || items.some(p => p.category.name === selectedCategory)) {
         invoices.push({
           invoiceNumber: first.invoiceNumber || null,
-          purchaseDate: first.purchaseDate,
+          purchaseDate: typeof first.purchaseDate === "string" ? first.purchaseDate : new Date(first.purchaseDate).toISOString(),
           storeName: first.store.name,
           finalTotal: items.reduce((sum, p) => sum + p.finalTotal, 0),
         });

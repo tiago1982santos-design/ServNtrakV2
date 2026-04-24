@@ -155,7 +155,7 @@ export interface IStorage {
   // Expense Notes
   getExpenseNotes(userId: string, clientId?: number): Promise<ExpenseNoteWithDetails[]>;
   getExpenseNote(id: number, userId: string): Promise<ExpenseNoteWithDetails | undefined>;
-  createExpenseNote(note: InsertExpenseNote & { userId: string }, items: Omit<InsertExpenseNoteItem, 'expenseNoteId'>[]): Promise<ExpenseNoteWithDetails>;
+  createExpenseNote(note: Omit<InsertExpenseNote, 'noteNumber'> & { userId: string }, items: Omit<InsertExpenseNoteItem, 'expenseNoteId'>[]): Promise<ExpenseNoteWithDetails>;
   updateExpenseNote(id: number, userId: string, updates: Partial<InsertExpenseNote>): Promise<ExpenseNote | undefined>;
   updateExpenseNoteItems(noteId: number, userId: string, items: Omit<InsertExpenseNoteItem, 'expenseNoteId'>[]): Promise<ExpenseNoteItem[]>;
   deleteExpenseNote(id: number, userId: string): Promise<void>;
@@ -1383,7 +1383,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createExpenseNote(
-    note: InsertExpenseNote & { userId: string },
+    note: Omit<InsertExpenseNote, "noteNumber"> & { userId: string; noteNumber?: string },
     items: Omit<InsertExpenseNoteItem, "expenseNoteId">[]
   ): Promise<ExpenseNoteWithDetails> {
     const noteNumber = note.noteNumber ?? (await this.generateNoteNumber(note.userId));
@@ -1395,7 +1395,7 @@ export class DatabaseStorage implements IStorage {
 
     const createdItems: ExpenseNoteItem[] = [];
     for (const item of items) {
-      const total = Math.round(item.quantity * item.unitPrice * 100) / 100;
+      const total = Math.round((item.quantity ?? 0) * (item.unitPrice ?? 0) * 100) / 100;
       const [newItem] = await db
         .insert(expenseNoteItems)
         .values({ ...item, expenseNoteId: newNote.id, total })
@@ -1464,7 +1464,7 @@ export class DatabaseStorage implements IStorage {
 
     const createdItems: ExpenseNoteItem[] = [];
     for (const item of items) {
-      const total = Math.round(item.quantity * item.unitPrice * 100) / 100;
+      const total = Math.round((item.quantity ?? 0) * (item.unitPrice ?? 0) * 100) / 100;
       const [newItem] = await db
         .insert(expenseNoteItems)
         .values({ ...item, expenseNoteId: noteId, total })
@@ -1593,7 +1593,7 @@ export class DatabaseStorage implements IStorage {
 
     const createdItems: QuoteItem[] = [];
     for (const item of items) {
-      const total = Math.round(item.quantity * item.unitPrice * 100) / 100;
+      const total = Math.round((item.quantity ?? 0) * (item.unitPrice ?? 0) * 100) / 100;
       const [newItem] = await db
         .insert(quoteItems)
         .values({ ...item, quoteId: newQuote.id, total })
@@ -1649,7 +1649,7 @@ export class DatabaseStorage implements IStorage {
 
     const createdItems: QuoteItem[] = [];
     for (const item of items) {
-      const total = Math.round(item.quantity * item.unitPrice * 100) / 100;
+      const total = Math.round((item.quantity ?? 0) * (item.unitPrice ?? 0) * 100) / 100;
       const [newItem] = await db
         .insert(quoteItems)
         .values({ ...item, quoteId, total })

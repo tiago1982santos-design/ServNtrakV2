@@ -1320,7 +1320,7 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
 
   Tens acesso aos seguintes dados em tempo real:
   - Clientes: ${JSON.stringify(clients.map(c => ({ id: c.id, nome: c.name, morada: c.address })))}
-  - Agendamentos: ${JSON.stringify(appointments.map(a => ({ id: a.id, cliente: a.clientId, data: a.scheduledDate, servico: a.serviceType })))}
+  - Agendamentos: ${JSON.stringify(appointments.map(a => ({ id: a.id, cliente: a.clientId, data: a.date, servico: a.type })))}
 
   Responde sempre em português, de forma direta e prática. Ajuda o Tiago a gerir melhor o negócio.`;
 
@@ -1583,7 +1583,7 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
 
       for (const entry of log.materialEntries) {
         items.push({
-          description: entry.description,
+          description: entry.materialName,
           type: "material",
           quantity: entry.quantity,
           unitPrice: entry.unitPrice,
@@ -1594,7 +1594,7 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
 
       if (log.billingType === "extra" && log.totalAmount && items.length === 0) {
         items.push({
-          description: log.notes ?? "Serviço extra",
+          description: log.description ?? "Serviço extra",
           type: "service",
           quantity: 1,
           unitPrice: log.totalAmount,

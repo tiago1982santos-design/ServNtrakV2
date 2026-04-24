@@ -73,8 +73,8 @@ export async function generateExpenseNotePdf(
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
-    const logDate = note.serviceLog.serviceDate
-      ? new Date(note.serviceLog.serviceDate).toLocaleDateString("pt-PT")
+    const logDate = note.serviceLog.date
+      ? new Date(note.serviceLog.date).toLocaleDateString("pt-PT")
       : "";
     doc.text(
       `${s.expenseNote.serviceRef} ${logDate}`,
@@ -170,7 +170,7 @@ export async function shareExpenseNotePdf(
   note: ExpenseNoteWithDetails,
   lang?: Language | null
 ): Promise<void> {
-  const doc = generateExpenseNotePdf(note, lang);
+  const doc = await generateExpenseNotePdf(note, lang);
   const fileName = `Nota-Despesa-${note.noteNumber}.pdf`;
 
   if (navigator.canShare) {
