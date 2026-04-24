@@ -54,6 +54,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [platformAuthSupported, setPlatformAuthSupported] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -75,16 +76,16 @@ export default function Login() {
   const rememberedUser = getRememberedUser();
 
   useEffect(() => {
-    if (rememberedUser && window.PublicKeyCredential) {
-      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then((available) => {
-        if (available) {
-          fetch(`/api/auth/webauthn/has-credentials/${rememberedUser.id}`)
-            .then((r) => r.json())
-            .then((data) => setBiometricAvailable(data.hasCredentials))
-            .catch(() => setBiometricAvailable(false));
-        }
-      });
-    }
+    if (!window.PublicKeyCredential) return;
+    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then((available) => {
+      setPlatformAuthSupported(available);
+      if (available && rememberedUser) {
+        fetch(`/api/auth/webauthn/has-credentials/${rememberedUser.id}`)
+          .then((r) => r.json())
+          .then((data) => setBiometricAvailable(data.hasCredentials))
+          .catch(() => setBiometricAvailable(false));
+      }
+    });
   }, []);
 
   const { data: providers } = useQuery<AuthProviders>({
@@ -217,14 +218,13 @@ export default function Login() {
   };
 
   const handleBiometricLogin = useCallback(async () => {
-    if (!rememberedUser) return;
     setBiometricLoading(true);
     try {
       const optionsRes = await fetch("/api/auth/webauthn/login-options", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ userId: rememberedUser.id }),
+        body: JSON.stringify(rememberedUser ? { userId: rememberedUser.id } : {}),
       });
       if (!optionsRes.ok) throw new Error("Erro ao obter opções");
       const optionsJSON = await optionsRes.json();
@@ -376,6 +376,30 @@ export default function Login() {
 
             <Card>
               <CardContent className="p-4 space-y-3">
+                {platformAuthSupported && !(rememberedUser && biometricAvailable) && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start gap-3"
+                      onClick={handleBiometricLogin}
+                      disabled={biometricLoading}
+                      data-testid="button-passkey-login"
+                    >
+                      {biometricLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Fingerprint className="w-4 h-4 text-primary" />
+                      )}
+                      <span>Entrar com passkey</span>
+                    </Button>
+                    <div className="flex items-center gap-3 py-1">
+                      <Separator className="flex-1" />
+                      <span className="text-xs text-muted-foreground">ou</span>
+                      <Separator className="flex-1" />
+                    </div>
+                  </>
+                )}
+
                 <Button
                   variant="default"
                   className="w-full"

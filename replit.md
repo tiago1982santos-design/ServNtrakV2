@@ -162,8 +162,13 @@ The Home page was redesigned from a dark-green gradient to a warm amber/orange "
 - Session storage in PostgreSQL via `connect-pg-simple`
 - Protected API routes use `requireAuth` middleware checking `req.isAuthenticated()`
 - User ID accessed via `(req.user as any).id` in route handlers
-- Login page supports: social login buttons, email/password login, account registration, password reset
+- Login page supports: social login buttons, email/password login, account registration, password reset, login com passkey
 - **Password Reset**: `POST /api/auth/forgot-password` sends hashed-token email via Resend; `POST /api/auth/reset-password` validates SHA-256 hashed token and updates password. Uses `passwordResetTokens` table. Tokens expire after 1 hour. Requires `RESEND_API_KEY` env var (optional `APP_BASE_URL` for custom domain).
+- **Passkeys (WebAuthn / Face ID / impressão digital)**:
+  - **Como ativar**: Iniciar sessão normalmente uma vez (email + palavra-passe ou Google) → ir a **Perfil → Segurança → Ativar Face ID / Biometria** e seguir o pedido do dispositivo (Face ID, Touch ID, impressão digital ou PIN do telemóvel).
+  - **Como entrar**: No ecrã de login aparece o botão **"Entrar com passkey"** (e, se for o mesmo telemóvel onde já entraste, também o cartão personalizado **"Olá, X — Entrar com Face ID / Biometria"**). Clica e confirma com a biometria — sem palavra-passe.
+  - **Múltiplos dispositivos**: cada dispositivo tem de registar a sua própria passkey (botão "Adicionar outro dispositivo" no Perfil). Podes remover qualquer credencial em Perfil → Segurança.
+  - **Implementação**: `@simplewebauthn/server` no backend (`server/replit_integrations/auth/replitAuth.ts`) + `@simplewebauthn/browser` no frontend (`client/src/pages/Login.tsx`, `client/src/pages/Profile.tsx`). RP ID derivado do `Host` em runtime. Credenciais guardadas em `webauthn_credentials` (id, publicKey, counter, transports, deviceName). Fluxo discoverable (`residentKey: "preferred"`, `authenticatorAttachment: "platform"`) — a chamada de login pode ir sem `userId` quando o utilizador não tem sessão lembrada e o browser oferece a passkey disponível.
 
 ### Client Profitability
 - **Page**: `client/src/pages/ClientProfitability.tsx` at route `/profitability`

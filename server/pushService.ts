@@ -5,10 +5,27 @@ import { eq, and } from "drizzle-orm";
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY!;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY!;
-const VAPID_EMAIL = process.env.VAPID_EMAIL || "mailto:servntrak@peralta.pt";
+const VAPID_EMAIL_RAW = process.env.VAPID_EMAIL;
+const VAPID_EMAIL =
+  VAPID_EMAIL_RAW && /^(mailto:|https?:\/\/)/i.test(VAPID_EMAIL_RAW)
+    ? VAPID_EMAIL_RAW
+    : "mailto:servntrak@peralta.pt";
+
+if (VAPID_EMAIL_RAW && VAPID_EMAIL_RAW !== VAPID_EMAIL) {
+  console.warn(
+    "[pushService] VAPID_EMAIL ignorado (não é um URL mailto:/https:// válido). A usar valor por omissão.",
+  );
+}
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  try {
+    webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  } catch (err: any) {
+    console.warn(
+      "[pushService] Notificações push desativadas: configuração VAPID inválida —",
+      err?.message || err,
+    );
+  }
 }
 
 export async function saveSubscription(
