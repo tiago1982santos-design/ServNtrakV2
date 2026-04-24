@@ -170,6 +170,40 @@ export async function removeSubscription(endpoint: string, userId?: string): Pro
   }
 }
 
+const MAX_SEND_ATTEMPTS = 2;
+const RETRY_BASE_DELAY_MS = 500;
+
+function isTransientPushError(err: any): boolean {
+  const statusCode = err?.statusCode;
+  if (typeof statusCode === "number") {
+    return statusCode >= 500 && statusCode < 600;
+  }
+  const code = err?.code;
+  if (
+    code === "ETIMEDOUT" ||
+    code === "ECONNRESET" ||
+    code === "ECONNREFUSED" ||
+    code === "ENOTFOUND" ||
+    code === "EAI_AGAIN" ||
+    code === "EPIPE" ||
+    code === "UND_ERR_SOCKET" ||
+    code === "UND_ERR_CONNECT_TIMEOUT" ||
+    code === "UND_ERR_HEADERS_TIMEOUT" ||
+    code === "UND_ERR_BODY_TIMEOUT"
+  ) {
+    return true;
+  }
+  const name = err?.name;
+  if (name === "TimeoutError" || name === "AbortError") return true;
+  const message = typeof err?.message === "string" ? err.message.toLowerCase() : "";
+  if (message.includes("timeout") || message.includes("timed out")) return true;
+  return false;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function sendPushToUser(
   userId: string,
   payload: {
@@ -192,57 +226,88 @@ export async function sendPushToUser(
   let failed = 0;
 
   for (const sub of subs) {
-    try {
-      await webpush.sendNotification(
-        {
-          endpoint: sub.endpoint,
-          keys: { p256dh: sub.p256dh, auth: sub.auth },
-        },
-        JSON.stringify(payload)
-      );
+    const endpointPreview =
+      sub.endpoint.length > 80
+        ? `${sub.endpoint.slice(0, 60)}...${sub.endpoint.slice(-16)}`
+        : sub.endpoint;
+
+    let lastError: any = null;
+    let delivered = false;
+
+    for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt++) {
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: sub.endpoint,
+            keys: { p256dh: sub.p256dh, auth: sub.auth },
+          },
+          JSON.stringify(payload)
+        );
+        delivered = true;
+        if (attempt > 1) {
+          console.info(
+            `[pushService] Reenvio bem-sucedido (tentativa ${attempt}/${MAX_SEND_ATTEMPTS}) para userId=${userId} endpoint=${endpointPreview}.`,
+          );
+        }
+        break;
+      } catch (err: any) {
+        lastError = err;
+        const transient = isTransientPushError(err);
+        if (transient && attempt < MAX_SEND_ATTEMPTS) {
+          const waitMs = RETRY_BASE_DELAY_MS * attempt;
+          const statusCode = err?.statusCode;
+          console.warn(
+            `[pushService] Erro transiente ao enviar push (tentativa ${attempt}/${MAX_SEND_ATTEMPTS}) para userId=${userId} endpoint=${endpointPreview} statusCode=${statusCode ?? "n/a"}. A retentar em ${waitMs}ms.`,
+          );
+          await delay(waitMs);
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (delivered) {
       sent++;
       recordSuccess();
-    } catch (err: any) {
-      const statusCode = err?.statusCode;
-      const endpointPreview =
-        sub.endpoint.length > 80
-          ? `${sub.endpoint.slice(0, 60)}...${sub.endpoint.slice(-16)}`
-          : sub.endpoint;
-      const errorBody =
-        typeof err?.body === "string"
-          ? err.body.slice(0, 500)
-          : err?.body
-            ? JSON.stringify(err.body).slice(0, 500)
-            : err?.message || String(err);
-
-      let kind: "auth" | "gone" | "other" = "other";
-      if (statusCode === 410 || statusCode === 404) {
-        kind = "gone";
-        await removeSubscription(sub.endpoint);
-        console.info(
-          `[pushService] Subscrição removida (${statusCode}) para userId=${userId} endpoint=${endpointPreview}. Detalhe: ${errorBody}`,
-        );
-      } else if (statusCode === 401 || statusCode === 403) {
-        kind = "auth";
-        console.error(
-          `[pushService] FALHA DE AUTENTICAÇÃO VAPID (${statusCode}) ao enviar push para userId=${userId} endpoint=${endpointPreview}. ` +
-            `Verifica os Secrets VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY (e VAPID_EMAIL): provavelmente as chaves estão erradas, desemparelhadas ou foram regeradas. ` +
-            `Detalhe: ${errorBody}`,
-        );
-      } else {
-        console.warn(
-          `[pushService] Falha ao enviar push para userId=${userId} endpoint=${endpointPreview} statusCode=${statusCode ?? "n/a"}. Detalhe: ${errorBody}`,
-        );
-      }
-      failed++;
-      recordFailure({
-        at: Date.now(),
-        statusCode: typeof statusCode === "number" ? statusCode : null,
-        kind,
-        message: errorBody,
-        endpointPreview,
-      });
+      continue;
     }
+
+    const err = lastError;
+    const statusCode = err?.statusCode;
+    const errorBody =
+      typeof err?.body === "string"
+        ? err.body.slice(0, 500)
+        : err?.body
+          ? JSON.stringify(err.body).slice(0, 500)
+          : err?.message || String(err);
+
+    let kind: "auth" | "gone" | "other" = "other";
+    if (statusCode === 410 || statusCode === 404) {
+      kind = "gone";
+      await removeSubscription(sub.endpoint);
+      console.info(
+        `[pushService] Subscrição removida (${statusCode}) para userId=${userId} endpoint=${endpointPreview}. Detalhe: ${errorBody}`,
+      );
+    } else if (statusCode === 401 || statusCode === 403) {
+      kind = "auth";
+      console.error(
+        `[pushService] FALHA DE AUTENTICAÇÃO VAPID (${statusCode}) ao enviar push para userId=${userId} endpoint=${endpointPreview}. ` +
+          `Verifica os Secrets VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY (e VAPID_EMAIL): provavelmente as chaves estão erradas, desemparelhadas ou foram regeradas. ` +
+          `Detalhe: ${errorBody}`,
+      );
+    } else {
+      console.warn(
+        `[pushService] Falha ao enviar push para userId=${userId} endpoint=${endpointPreview} statusCode=${statusCode ?? "n/a"} (após ${MAX_SEND_ATTEMPTS} tentativa(s)). Detalhe: ${errorBody}`,
+      );
+    }
+    failed++;
+    recordFailure({
+      at: Date.now(),
+      statusCode: typeof statusCode === "number" ? statusCode : null,
+      kind,
+      message: errorBody,
+      endpointPreview,
+    });
   }
 
   return { sent, failed };
