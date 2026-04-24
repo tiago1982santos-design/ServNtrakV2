@@ -734,6 +734,20 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
+// Push send events history (success + failure) — used to keep diagnostics
+// across server restarts so the health panel can reflect real recent activity.
+export const pushSendEvents = pgTable("push_send_events", {
+  id: serial("id").primaryKey(),
+  at: timestamp("at").notNull().defaultNow(),
+  status: text("status").notNull(), // 'success' | 'failure'
+  kind: text("kind"), // 'auth' | 'gone' | 'other' (null for success)
+  statusCode: integer("status_code"),
+  endpointPreview: text("endpoint_preview").notNull(),
+  message: text("message"),
+});
+
+export type PushSendEvent = typeof pushSendEvents.$inferSelect;
+
 export type AppointmentPreview = {
   clientId: number;
   clientName: string;

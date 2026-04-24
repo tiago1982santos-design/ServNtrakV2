@@ -108,6 +108,33 @@ app.use((req, res, next) => {
     ADD COLUMN IF NOT EXISTS invoice_number TEXT
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS push_send_events (
+      id SERIAL PRIMARY KEY,
+      at TIMESTAMP NOT NULL DEFAULT NOW(),
+      status TEXT NOT NULL,
+      kind TEXT,
+      status_code INTEGER,
+      endpoint_preview TEXT NOT NULL,
+      message TEXT
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS push_send_events_at_idx
+    ON push_send_events (at)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS push_send_events_status_at_idx
+    ON push_send_events (status, at DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS push_send_events_status_kind_at_idx
+    ON push_send_events (status, kind, at DESC)
+  `);
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

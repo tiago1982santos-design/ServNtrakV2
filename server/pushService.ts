@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import { db } from "./db";
-import { pushSubscriptions } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { pushSubscriptions, pushSendEvents } from "@shared/schema";
+import { eq, and, desc, gte, lt, sql } from "drizzle-orm";
 
 const VAPID_PUBLIC_KEY = (process.env.VAPID_PUBLIC_KEY ?? "").trim();
 const VAPID_PRIVATE_KEY = (process.env.VAPID_PRIVATE_KEY ?? "").trim();
@@ -43,52 +43,62 @@ export function isPushEnabled(): boolean {
   return pushEnabled;
 }
 
-const RECENT_WINDOW_MS = 60 * 60 * 1000;
+const RECENT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const PRUNE_INTERVAL_MS = 60 * 60 * 1000; // hourly
 
-type RecentFailure = {
-  at: number;
-  statusCode: number | null;
-  kind: "auth" | "gone" | "other";
-  message: string;
+type FailureKind = "auth" | "gone" | "other";
+
+async function recordSendEvent(event: {
+  status: "success" | "failure";
   endpointPreview: string;
-};
-
-const recentFailures: RecentFailure[] = [];
-let lastSuccessAt: number | null = null;
-let lastFailure: RecentFailure | null = null;
-let lastAuthFailure: RecentFailure | null = null;
-let totalSent = 0;
-let totalFailed = 0;
-let totalAuthFailed = 0;
-
-function pruneOldFailures() {
-  const cutoff = Date.now() - RECENT_WINDOW_MS;
-  while (recentFailures.length > 0 && recentFailures[0].at < cutoff) {
-    recentFailures.shift();
+  statusCode: number | null;
+  kind: FailureKind | null;
+  message: string | null;
+}): Promise<void> {
+  try {
+    await db.insert(pushSendEvents).values({
+      status: event.status,
+      kind: event.kind,
+      statusCode: event.statusCode,
+      endpointPreview: event.endpointPreview,
+      message: event.message,
+    });
+  } catch (err) {
+    console.warn(
+      "[pushService] Falha ao registar evento push em DB:",
+      (err as Error)?.message || err,
+    );
   }
 }
 
-function recordFailure(failure: RecentFailure) {
-  recentFailures.push(failure);
-  if (recentFailures.length > 50) recentFailures.shift();
-  lastFailure = failure;
-  totalFailed++;
-  if (failure.kind === "auth") {
-    lastAuthFailure = failure;
-    totalAuthFailed++;
+let lastPruneAt = 0;
+
+async function pruneOldEvents(force = false): Promise<void> {
+  const now = Date.now();
+  if (!force && now - lastPruneAt < PRUNE_INTERVAL_MS) return;
+  lastPruneAt = now;
+  try {
+    const cutoff = new Date(now - RETENTION_MS);
+    await db.delete(pushSendEvents).where(lt(pushSendEvents.at, cutoff));
+  } catch (err) {
+    console.warn(
+      "[pushService] Falha ao limpar eventos push antigos:",
+      (err as Error)?.message || err,
+    );
   }
-  pruneOldFailures();
 }
 
-function recordSuccess() {
-  lastSuccessAt = Date.now();
-  totalSent++;
-}
+// Schedule background cleanup so retention is enforced even if the health
+// endpoint isn't being polled.
+setInterval(() => {
+  void pruneOldEvents(true);
+}, PRUNE_INTERVAL_MS).unref?.();
 
 export type PushFailureSummary = {
   at: number;
   statusCode: number | null;
-  kind: "auth" | "gone" | "other";
+  kind: FailureKind;
 };
 
 export type PushHealthStatus = {
@@ -104,30 +114,134 @@ export type PushHealthStatus = {
   hasActiveVapidProblem: boolean;
 };
 
-function summarize(failure: RecentFailure | null): PushFailureSummary | null {
-  if (!failure) return null;
-  return { at: failure.at, statusCode: failure.statusCode, kind: failure.kind };
-}
+export async function getPushHealthStatus(): Promise<PushHealthStatus> {
+  // Best-effort cleanup so old rows don't skew counters.
+  await pruneOldEvents();
 
-export function getPushHealthStatus(): PushHealthStatus {
-  pruneOldFailures();
-  const recentAuthFailureCount = recentFailures.filter((f) => f.kind === "auth").length;
-  const recentFailureCount = recentFailures.length;
+  const now = Date.now();
+  const recentCutoff = new Date(now - RECENT_WINDOW_MS);
+  const retentionCutoff = new Date(now - RETENTION_MS);
+
+  let totalSent = 0;
+  let totalFailed = 0;
+  let totalAuthFailed = 0;
+  let recentFailureCount = 0;
+  let recentAuthFailureCount = 0;
+  let lastSuccessAt: number | null = null;
+  let lastFailure: PushFailureSummary | null = null;
+  let lastAuthFailure: PushFailureSummary | null = null;
+
+  try {
+    // Totals within the retention window grouped by status + kind.
+    const totalsRows = await db
+      .select({
+        status: pushSendEvents.status,
+        kind: pushSendEvents.kind,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(pushSendEvents)
+      .where(gte(pushSendEvents.at, retentionCutoff))
+      .groupBy(pushSendEvents.status, pushSendEvents.kind);
+
+    for (const row of totalsRows) {
+      if (row.status === "success") {
+        totalSent += row.count;
+      } else if (row.status === "failure") {
+        totalFailed += row.count;
+        if (row.kind === "auth") totalAuthFailed += row.count;
+      }
+    }
+
+    // Recent failures (last hour) grouped by kind.
+    const recentRows = await db
+      .select({
+        kind: pushSendEvents.kind,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(pushSendEvents)
+      .where(
+        and(
+          eq(pushSendEvents.status, "failure"),
+          gte(pushSendEvents.at, recentCutoff),
+        ),
+      )
+      .groupBy(pushSendEvents.kind);
+
+    for (const row of recentRows) {
+      recentFailureCount += row.count;
+      if (row.kind === "auth") recentAuthFailureCount += row.count;
+    }
+
+    const [lastSuccessRow] = await db
+      .select({ at: pushSendEvents.at })
+      .from(pushSendEvents)
+      .where(eq(pushSendEvents.status, "success"))
+      .orderBy(desc(pushSendEvents.at))
+      .limit(1);
+    lastSuccessAt = lastSuccessRow?.at ? lastSuccessRow.at.getTime() : null;
+
+    const [lastFailureRow] = await db
+      .select({
+        at: pushSendEvents.at,
+        statusCode: pushSendEvents.statusCode,
+        kind: pushSendEvents.kind,
+      })
+      .from(pushSendEvents)
+      .where(eq(pushSendEvents.status, "failure"))
+      .orderBy(desc(pushSendEvents.at))
+      .limit(1);
+    if (lastFailureRow?.at) {
+      lastFailure = {
+        at: lastFailureRow.at.getTime(),
+        statusCode: lastFailureRow.statusCode,
+        kind: ((lastFailureRow.kind as FailureKind | null) ?? "other"),
+      };
+    }
+
+    const [lastAuthRow] = await db
+      .select({
+        at: pushSendEvents.at,
+        statusCode: pushSendEvents.statusCode,
+      })
+      .from(pushSendEvents)
+      .where(
+        and(
+          eq(pushSendEvents.status, "failure"),
+          eq(pushSendEvents.kind, "auth"),
+        ),
+      )
+      .orderBy(desc(pushSendEvents.at))
+      .limit(1);
+    if (lastAuthRow?.at) {
+      lastAuthFailure = {
+        at: lastAuthRow.at.getTime(),
+        statusCode: lastAuthRow.statusCode,
+        kind: "auth",
+      };
+    }
+  } catch (err) {
+    console.warn(
+      "[pushService] Falha ao ler histórico de eventos push:",
+      (err as Error)?.message || err,
+    );
+  }
+
   const lastAuthIsRecent =
-    !!lastAuthFailure && Date.now() - lastAuthFailure.at < RECENT_WINDOW_MS;
+    !!lastAuthFailure && now - lastAuthFailure.at < RECENT_WINDOW_MS;
   const lastSuccessAfterAuth =
     !!lastSuccessAt && !!lastAuthFailure && lastSuccessAt > lastAuthFailure.at;
   const hasActiveVapidProblem =
     !pushEnabled ||
     (lastAuthIsRecent && !lastSuccessAfterAuth) ||
     recentAuthFailureCount > 0;
+
   return {
     enabled: pushEnabled,
     configError: vapidConfigError,
     totals: { sent: totalSent, failed: totalFailed, authFailed: totalAuthFailed },
     lastSuccessAt,
-    lastFailure: summarize(lastFailure),
-    lastAuthFailure: summarize(lastAuthFailure),
+    lastFailure,
+    lastAuthFailure,
     recentWindowMinutes: Math.round(RECENT_WINDOW_MS / 60000),
     recentFailureCount,
     recentAuthFailureCount,
@@ -268,7 +382,13 @@ export async function sendPushToUser(
 
     if (delivered) {
       sent++;
-      recordSuccess();
+      await recordSendEvent({
+        status: "success",
+        endpointPreview,
+        statusCode: null,
+        kind: null,
+        message: null,
+      });
       continue;
     }
 
@@ -281,7 +401,7 @@ export async function sendPushToUser(
           ? JSON.stringify(err.body).slice(0, 500)
           : err?.message || String(err);
 
-    let kind: "auth" | "gone" | "other" = "other";
+    let kind: FailureKind = "other";
     if (statusCode === 410 || statusCode === 404) {
       kind = "gone";
       await removeSubscription(sub.endpoint);
@@ -301,12 +421,12 @@ export async function sendPushToUser(
       );
     }
     failed++;
-    recordFailure({
-      at: Date.now(),
+    await recordSendEvent({
+      status: "failure",
+      endpointPreview,
       statusCode: typeof statusCode === "number" ? statusCode : null,
       kind,
       message: errorBody,
-      endpointPreview,
     });
   }
 

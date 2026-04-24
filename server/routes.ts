@@ -1389,8 +1389,14 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     }
   });
 
-  app.get("/api/push/health", requireAuth, (_req, res) => {
-    res.json(getPushHealthStatus());
+  app.get("/api/push/health", requireAuth, async (_req, res) => {
+    try {
+      const health = await getPushHealthStatus();
+      res.json(health);
+    } catch (err) {
+      console.error("[routes] Falha ao obter estado de saúde push:", err);
+      res.status(500).json({ message: "Erro ao obter estado de notificações push" });
+    }
   });
 
   app.post("/api/push/test", requireAuth, async (req, res) => {
