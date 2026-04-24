@@ -29,6 +29,13 @@ import Finances from "@/pages/Finances";
 import Exports from "@/pages/Exports";
 import Employees from "@/pages/Employees";
 import PendingTasks from "@/pages/PendingTasks";
+import ExpenseNotes from "@/pages/ExpenseNotes";
+import ExpenseNoteNew from "@/pages/ExpenseNoteNew";
+import ExpenseNoteDetail from "@/pages/ExpenseNoteDetail";
+import Quotes from "@/pages/Quotes";
+import QuoteNew from "@/pages/QuoteNew";
+import QuoteDetail from "@/pages/QuoteDetail";
+import ProductPrices from "@/pages/ProductPrices";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -73,6 +80,13 @@ function Router() {
         <Route path="/exports" component={Exports} />
         <Route path="/employees" component={Employees} />
         <Route path="/pending-tasks" component={PendingTasks} />
+        <Route path="/expense-notes" component={ExpenseNotes} />
+        <Route path="/expense-notes/new" component={ExpenseNoteNew} />
+        <Route path="/expense-notes/:id" component={ExpenseNoteDetail} />
+        <Route path="/quotes" component={Quotes} />
+        <Route path="/quotes/new" component={QuoteNew} />
+        <Route path="/quotes/:id" component={QuoteDetail} />
+        <Route path="/product-prices" component={ProductPrices} />
         <Route component={NotFound} />
       </Switch>
       <AssistantChat />

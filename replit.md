@@ -12,6 +12,14 @@ ServNtrak é uma aplicação mobile-first para gestão de serviços de manutenç
 - **Estilo de Comunicação**: Simples e direto.
 - **Serviços Atuais**: Jardim, Piscina, Jacuzzi e Geral.
 
+## Migração 24/Abr/2026 — Sincronização com GitHub e Importação Railway
+
+- Código substituído pela versão `tiago1982santos-design/ServNtrak` (branch `main`).
+- Novas funcionalidades: scan de faturas (OCR via Anthropic), página de Compras com deteção de duplicados (`invoice_number`), histórico de preços de produtos, notas de despesa com edições auditadas, orçamentos (`quotes`/`quote_items`), passkeys WebAuthn.
+- Novas dependências: `@anthropic-ai/sdk`, `@google-cloud/storage`, `@simplewebauthn/*`, `@uppy/*`, `openai`, `leaflet`, `web-push`, `jspdf`, `passport-google-oauth20`, `cross-env`.
+- Dados migrados do Railway Postgres 18 (production) para a BD Replit Neon via `psql COPY` streaming (pg_dump 16 incompatível com servidor 18). Tabelas com dados restauradas: `users` (1), `clients` (20), `purchase_categories` (16), `stores` (8), `purchases` (23), `client_payments` (12), `expense_notes` (3), `expense_note_items` (3), `push_subscriptions` (1). Sequences reiniciadas após import.
+- Railway deixa de ser usado. O secret `RAILWAY_DATABASE_URL` pode ser removido após confirmação.
+
 ## Home Page Design — "Dia de Sol (Polido)"
 
 The Home page was redesigned from a dark-green gradient to a warm amber/orange "Sunny" aesthetic:

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,26 +17,42 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { 
-  Plus, ShoppingCart, Store as StoreIcon, Tag, Loader2, ChevronRight, 
-  Trash2, Edit2, MapPin, Phone, Mail, Building2, Package, Scan
+import {
+  Plus, ShoppingCart, Store as StoreIcon, Tag, Loader2, ChevronRight,
+  Trash2, Edit2, MapPin, Phone, Mail, Building2, Package, Scan, Camera
 } from "lucide-react";
 import { DocumentScanDialog } from "@/components/DocumentScanDialog";
+import { PurchaseDetails } from "@/components/PurchaseDetails";
+import { ItemPurchaseHistory } from "@/components/ItemPurchaseHistory";
 import type { PurchaseCategory, Store, PurchaseWithDetails, Client } from "@shared/schema";
 import { User } from "lucide-react";
 import { BackButton } from "@/components/BackButton";
 
+interface InvoiceSummary {
+  invoiceNumber: string | null;
+  purchaseDate: string;
+  storeName: string;
+  finalTotal: number;
+}
+
 export default function Purchases() {
   const [activeTab, setActiveTab] = useState("compras");
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
   const [isAddPurchaseOpen, setIsAddPurchaseOpen] = useState(false);
   const [isAddStoreOpen, setIsAddStoreOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
-  const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<string | null>(null);
+  const [showItemHistory, setShowItemHistory] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const { toast } = useToast();
 
   const { data: categories, isLoading: categoriesLoading } = useQuery<PurchaseCategory[]>({
     queryKey: ['/api/purchase-categories'],
+  });
+
+  const { data: purchaseCategories } = useQuery<string[]>({
+    queryKey: ['/api/purchases/categories'],
   });
 
   const { data: stores, isLoading: storesLoading } = useQuery<Store[]>({
@@ -47,15 +63,33 @@ export default function Purchases() {
     queryKey: ['/api/clients'],
   });
 
-  const purchasesUrl = selectedCategory 
-    ? `/api/purchases?categoryId=${selectedCategory}`
-    : '/api/purchases';
-  
-  const { data: purchases, isLoading: purchasesLoading } = useQuery<PurchaseWithDetails[]>({
-    queryKey: [purchasesUrl],
+  const { data: allPurchases, isLoading: purchasesLoading } = useQuery<PurchaseWithDetails[]>({
+    queryKey: ['/api/purchases'],
   });
 
-  const filteredPurchases = purchases || [];
+  const invoices: InvoiceSummary[] = [];
+  if (allPurchases) {
+    const grouped = new Map<string | null, PurchaseWithDetails[]>();
+    allPurchases.forEach(p => {
+      const key = p.invoiceNumber || `temp-${p.id}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(p);
+    });
+
+    grouped.forEach((items, key) => {
+      const first = items[0];
+      if (selectedCategory === "Todas" || items.some(p => p.category.name === selectedCategory)) {
+        invoices.push({
+          invoiceNumber: first.invoiceNumber || null,
+          purchaseDate: first.purchaseDate,
+          storeName: first.store.name,
+          finalTotal: items.reduce((sum, p) => sum + p.finalTotal, 0),
+        });
+      }
+    });
+  }
+
+  invoices.sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
 
   return (
     <div className="min-h-screen bg-background pb-24 page-transition">
@@ -91,45 +125,45 @@ export default function Purchases() {
           </TabsList>
 
           <TabsContent value="compras" className="space-y-4">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <Select 
-                value={selectedCategory?.toString() || "all"} 
-                onValueChange={(v) => setSelectedCategory(v === "all" ? null : Number(v))}
+            <div className="mb-4">
+              <Button
+                onClick={() => setDocumentDialogOpen(true)}
+                className="w-full"
               >
-                <SelectTrigger className="w-40" data-testid="select-category-filter">
-                  <SelectValue placeholder="Todas as categorias" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as categorias</SelectItem>
-                  {categories?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => setIsScanDialogOpen(true)}
-                  data-testid="button-scan-document"
+                <Camera className="w-4 h-4 mr-2" />
+                Digitalizar Fatura
+              </Button>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <button
+                onClick={() => setSelectedCategory("Todas")}
+                className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+                  selectedCategory === "Todas"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground"
+                }`}
+              >
+                Todas
+              </button>
+              {purchaseCategories?.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+                    selectedCategory === cat
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
                 >
-                  <Scan className="w-4 h-4 mr-1" />
-                  Digitalizar
-                </Button>
-                <AddPurchaseDialog 
-                  open={isAddPurchaseOpen} 
-                  onOpenChange={setIsAddPurchaseOpen}
-                  categories={categories || []}
-                  stores={stores || []}
-                  clients={clients || []}
-                />
-              </div>
+                  {cat}
+                </button>
+              ))}
             </div>
 
             <DocumentScanDialog
-              open={isScanDialogOpen}
-              onOpenChange={setIsScanDialogOpen}
+              open={documentDialogOpen}
+              onOpenChange={setDocumentDialogOpen}
               categories={categories || []}
               stores={stores || []}
             />
@@ -138,19 +172,105 @@ export default function Purchases() {
               <div className="flex justify-center py-12">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
               </div>
-            ) : filteredPurchases.length === 0 ? (
+            ) : invoices.length === 0 ? (
               <Card className="p-8 text-center">
                 <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="font-medium text-foreground">Sem compras registadas</p>
-                <p className="text-sm text-muted-foreground mt-1">Adicione a sua primeira compra</p>
+                <p className="font-medium text-foreground">Sem faturas registadas</p>
+                <p className="text-sm text-muted-foreground mt-1">Digitalize ou adicione uma fatura</p>
               </Card>
             ) : (
               <div className="space-y-3">
-                {filteredPurchases.map((purchase) => (
-                  <PurchaseCard key={purchase.id} purchase={purchase} />
+                {invoices.map((invoice) => (
+                  <Card
+                    key={invoice.invoiceNumber || `${invoice.purchaseDate}-${invoice.storeName}`}
+                    className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setSelectedInvoice(invoice.invoiceNumber)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">
+                          {invoice.invoiceNumber || "Sem número"}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">{invoice.storeName}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(invoice.purchaseDate), "dd/MM/yyyy", { locale: pt })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-lg text-primary">
+                          {invoice.finalTotal.toFixed(2)}€
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
                 ))}
               </div>
             )}
+
+            <div className="mt-6 space-y-2">
+              <h3 className="font-semibold">Histórico por Artigo</h3>
+              {selectedCategory !== "Todas" && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Artigo</th>
+                        <th className="text-right p-2">Última Compra</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allPurchases
+                        ?.filter(p => p.category.name === selectedCategory)
+                        .reduce((acc: Map<string, PurchaseWithDetails>, p) => {
+                          if (!acc.has(p.productName) || new Date(p.purchaseDate) > new Date(acc.get(p.productName)!.purchaseDate)) {
+                            acc.set(p.productName, p);
+                          }
+                          return acc;
+                        }, new Map())
+                        .entries()
+                        .map(([productName, purchase]) => (
+                          <tr key={productName} className="border-b hover:bg-muted/50 cursor-pointer"
+                            onClick={() => {
+                              setSelectedItem(productName);
+                              setShowItemHistory(true);
+                            }}>
+                            <td className="p-2">{productName}</td>
+                            <td className="text-right p-2 text-primary font-medium">{purchase.id}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {selectedInvoice && (
+              <PurchaseDetails
+                invoiceNumber={selectedInvoice}
+                onClose={() => setSelectedInvoice(null)}
+              />
+            )}
+
+            {showItemHistory && selectedItem && (
+              <ItemPurchaseHistory
+                productName={selectedItem}
+                onClose={() => {
+                  setShowItemHistory(false);
+                  setSelectedItem(null);
+                }}
+              />
+            )}
+
+            <div className="mt-6 space-y-2">
+              <h3 className="font-semibold">Adicionar Compra</h3>
+              <AddPurchaseDialog
+                open={isAddPurchaseOpen}
+                onOpenChange={setIsAddPurchaseOpen}
+                categories={categories || []}
+                stores={stores || []}
+                clients={clients || []}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="lojas" className="space-y-4">
@@ -204,10 +324,12 @@ export default function Purchases() {
 
 function PurchaseCard({ purchase }: { purchase: PurchaseWithDetails }) {
   const { toast } = useToast();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const deleteMutation = useMutation({
     mutationFn: () => apiRequest('DELETE', `/api/purchases/${purchase.id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ predicate: (query) => 
+      queryClient.invalidateQueries({ predicate: (query) =>
         typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/purchases')
       });
       toast({ title: "Compra eliminada" });
@@ -215,50 +337,145 @@ function PurchaseCard({ purchase }: { purchase: PurchaseWithDetails }) {
   });
 
   return (
-    <Card className="p-4" data-testid={`card-purchase-${purchase.id}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground truncate" data-testid={`text-purchase-name-${purchase.id}`}>{purchase.productName}</h3>
-          <p className="text-sm text-muted-foreground" data-testid={`text-purchase-store-${purchase.id}`}>{purchase.store.name}</p>
-          <div className="flex flex-wrap gap-2 mt-2">
-            <Badge variant="secondary">{purchase.category.name}</Badge>
-            <Badge variant="outline">Qtd: {purchase.quantity}</Badge>
-            {purchase.client && (
-              <Badge variant="default" className="bg-green-600" data-testid={`badge-client-${purchase.id}`}>
-                <User className="w-3 h-3 mr-1" />
-                {purchase.client.name}
-              </Badge>
+    <>
+      <Card
+        className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+        onClick={() => setDetailOpen(true)}
+        data-testid={`card-purchase-${purchase.id}`}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-foreground truncate" data-testid={`text-purchase-name-${purchase.id}`}>{purchase.productName}</h3>
+            <p className="text-sm text-muted-foreground" data-testid={`text-purchase-store-${purchase.id}`}>{purchase.store.name}</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Badge variant="secondary">{purchase.category.name}</Badge>
+              <Badge variant="outline">Qtd: {purchase.quantity}</Badge>
+              {purchase.client && (
+                <Badge variant="default" className="bg-green-600" data-testid={`badge-client-${purchase.id}`}>
+                  <User className="w-3 h-3 mr-1" />
+                  {purchase.client.name}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="text-right shrink-0 ml-3">
+            <p className="font-bold text-lg text-primary">{purchase.finalTotal.toFixed(2)}€</p>
+            {purchase.discountValue && purchase.discountValue > 0 && (
+              <p className="text-xs text-green-600">-{purchase.discountValue.toFixed(2)}€ desc.</p>
             )}
+            <p className="text-xs text-muted-foreground mt-1">
+              {format(new Date(purchase.purchaseDate), "dd/MM/yyyy", { locale: pt })}
+            </p>
           </div>
         </div>
-        <div className="text-right shrink-0 ml-3">
-          <p className="font-bold text-lg text-primary">{purchase.finalTotal.toFixed(2)}€</p>
-          {purchase.discountValue && purchase.discountValue > 0 && (
-            <p className="text-xs text-green-600">-{purchase.discountValue.toFixed(2)}€ desc.</p>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">
-            {format(new Date(purchase.purchaseDate), "dd/MM/yyyy", { locale: pt })}
-          </p>
+        <div className="flex justify-end mt-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive"
+            onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
+            data-testid={`button-delete-purchase-${purchase.id}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
-      </div>
-      <div className="flex justify-end mt-3">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 text-destructive"
-          onClick={() => deleteMutation.mutate()}
-          disabled={deleteMutation.isPending}
-          data-testid={`button-delete-purchase-${purchase.id}`}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-    </Card>
+      </Card>
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="rounded-2xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Eliminar compra?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            "{purchase.productName}" será eliminado permanentemente.
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                deleteMutation.mutate();
+                setDeleteOpen(false);
+              }}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="rounded-2xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{purchase.productName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <span className="text-muted-foreground">Loja</span>
+              <span className="font-medium text-right">{purchase.store.name}</span>
+              <span className="text-muted-foreground">Categoria</span>
+              <span className="font-medium text-right">{purchase.category.name}</span>
+              <span className="text-muted-foreground">Quantidade</span>
+              <span className="font-medium text-right">{purchase.quantity}</span>
+              <span className="text-muted-foreground">Data</span>
+              <span className="font-medium text-right">
+                {format(new Date(purchase.purchaseDate), "dd/MM/yyyy", { locale: pt })}
+              </span>
+              {purchase.invoiceNumber && (
+                <>
+                  <span className="text-muted-foreground">Nº Fatura</span>
+                  <span className="font-medium text-right">{purchase.invoiceNumber}</span>
+                </>
+              )}
+              {purchase.client && (
+                <>
+                  <span className="text-muted-foreground">Cliente</span>
+                  <span className="font-medium text-right">{purchase.client.name}</span>
+                </>
+              )}
+            </div>
+            <div className="border-t pt-3 space-y-1">
+              {purchase.discountValue && purchase.discountValue > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Valor sem desconto</span>
+                  <span>{purchase.totalWithoutDiscount.toFixed(2)} €</span>
+                </div>
+              )}
+              {purchase.discountValue && purchase.discountValue > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Desconto</span>
+                  <span>- {purchase.discountValue.toFixed(2)} €</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold">
+                <span>Total final</span>
+                <span className="text-primary">{purchase.finalTotal.toFixed(2)} €</span>
+              </div>
+            </div>
+            {purchase.notes && (
+              <div className="border-t pt-3">
+                <p className="text-xs text-muted-foreground">Notas</p>
+                <p className="text-sm mt-1">{purchase.notes}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="w-full" onClick={() => setDetailOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
 function StoreCard({ store }: { store: Store }) {
   const { toast } = useToast();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const deleteMutation = useMutation({
     mutationFn: () => apiRequest('DELETE', `/api/stores/${store.id}`),
     onSuccess: () => {
@@ -268,42 +485,71 @@ function StoreCard({ store }: { store: Store }) {
   });
 
   return (
-    <Card className="p-4" data-testid={`card-store-${store.id}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground truncate flex items-center gap-2" data-testid={`text-store-name-${store.id}`}>
-            <Building2 className="w-4 h-4 text-primary" />
-            {store.name}
-          </h3>
-          {store.address && (
-            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-              <MapPin className="w-3 h-3" />
-              {store.address}
-            </p>
-          )}
-          <div className="flex flex-wrap gap-2 mt-2">
-            {store.phone && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Phone className="w-3 h-3" /> {store.phone}
-              </span>
+    <>
+      <Card className="p-4" data-testid={`card-store-${store.id}`}>
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-foreground truncate flex items-center gap-2" data-testid={`text-store-name-${store.id}`}>
+              <Building2 className="w-4 h-4 text-primary" />
+              {store.name}
+            </h3>
+            {store.address && (
+              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                <MapPin className="w-3 h-3" />
+                {store.address}
+              </p>
             )}
-            {store.taxId && (
-              <Badge variant="outline" className="text-xs">NIF: {store.taxId}</Badge>
-            )}
+            <div className="flex flex-wrap gap-2 mt-2">
+              {store.phone && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Phone className="w-3 h-3" /> {store.phone}
+                </span>
+              )}
+              {store.taxId && (
+                <Badge variant="outline" className="text-xs">NIF: {store.taxId}</Badge>
+              )}
+            </div>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive shrink-0"
+            onClick={() => setDeleteOpen(true)}
+            disabled={deleteMutation.isPending}
+            data-testid={`button-delete-store-${store.id}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 text-destructive shrink-0"
-          onClick={() => deleteMutation.mutate()}
-          disabled={deleteMutation.isPending}
-          data-testid={`button-delete-store-${store.id}`}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-    </Card>
+      </Card>
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="rounded-2xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Eliminar loja?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            "{store.name}" e todas as suas compras associadas serão eliminadas permanentemente.
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                deleteMutation.mutate();
+                setDeleteOpen(false);
+              }}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -353,6 +599,7 @@ const purchaseFormSchema = z.object({
   totalWithoutDiscount: z.number().positive("Valor total é obrigatório"),
   discountValue: z.number().min(0).default(0),
   purchaseDate: z.string().min(1, "Data é obrigatória"),
+  invoiceNumber: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -387,6 +634,7 @@ function AddPurchaseDialog({
         ...data,
         purchaseDate: new Date(data.purchaseDate),
         finalTotal,
+        invoiceNumber: data.invoiceNumber?.trim() || undefined,
       });
     },
     onSuccess: () => {
@@ -591,6 +839,23 @@ function AddPurchaseDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="invoiceNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nº Fatura (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Ex: FR 2026/1234"
+                      className="rounded-xl"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <div className="bg-secondary/50 rounded-lg p-3 flex justify-between items-center">
               <span className="font-medium">Total Final:</span>

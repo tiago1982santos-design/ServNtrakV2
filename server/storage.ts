@@ -5,7 +5,8 @@ import {
   purchaseCategories, stores, purchases, clientPayments,
   serviceVisits, serviceVisitServices,
   financialConfig, monthlyDistributions, employees, pendingTasks, suggestedWorks,
-  expenseNotes, expenseNoteItems,
+  expenseNotes, expenseNoteItems, expenseNoteEdits,
+  quotes, quoteItems,
   type InsertClient, type Client,
   type InsertAppointment, type Appointment,
   type InsertServiceLog, type ServiceLog,
@@ -30,6 +31,8 @@ import {
   type AppointmentPreview,
   type InsertExpenseNote, type ExpenseNote,
   type InsertExpenseNoteItem, type ExpenseNoteItem, type ExpenseNoteWithDetails,
+  type InsertQuote, type Quote,
+  type InsertQuoteItem, type QuoteItem, type QuoteWithDetails,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -93,6 +96,10 @@ export interface IStorage {
   createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase>;
   updatePurchase(id: number, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase | undefined>;
   deletePurchase(id: number, userId: string): Promise<void>;
+  checkInvoiceExists(invoiceNumber: string, userId: string): Promise<boolean>;
+  getPurchasesByInvoice(invoiceNumber: string, userId: string): Promise<PurchaseWithDetails[]>;
+  getDistinctItemsByCategory(category: string, userId: string): Promise<Array<{ productName: string; latestPurchaseId: number }>>;
+  getPurchasesByProductName(productName: string, userId: string): Promise<PurchaseWithDetails[]>;
 
   // Client Payments
   getClientPayments(userId: string, year?: number, month?: number): Promise<ClientPaymentWithClient[]>;
@@ -153,6 +160,16 @@ export interface IStorage {
   updateExpenseNoteItems(noteId: number, userId: string, items: Omit<InsertExpenseNoteItem, 'expenseNoteId'>[]): Promise<ExpenseNoteItem[]>;
   deleteExpenseNote(id: number, userId: string): Promise<void>;
   generateNoteNumber(userId: string): Promise<string>;
+  createExpenseNoteEdit(expenseNoteId: number, userId: string, fieldChanged: string, reason: string): Promise<void>;
+
+  // Quotes
+  getQuotes(userId: string, clientId?: number): Promise<QuoteWithDetails[]>;
+  getQuote(id: number, userId: string): Promise<QuoteWithDetails | undefined>;
+  createQuote(quote: InsertQuote & { userId: string }, items: Omit<InsertQuoteItem, 'quoteId'>[]): Promise<QuoteWithDetails>;
+  updateQuote(id: number, userId: string, updates: Partial<InsertQuote>): Promise<Quote | undefined>;
+  updateQuoteItems(quoteId: number, userId: string, items: Omit<InsertQuoteItem, 'quoteId'>[]): Promise<QuoteItem[]>;
+  deleteQuote(id: number, userId: string): Promise<void>;
+  generateQuoteNumber(userId: string): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -699,6 +716,20 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  async checkInvoiceExists(invoiceNumber: string, userId: string): Promise<boolean> {
+    const [existing] = await db
+      .select({ id: purchases.id })
+      .from(purchases)
+      .where(
+        and(
+          eq(purchases.invoiceNumber, invoiceNumber),
+          eq(purchases.userId, userId)
+        )
+      )
+      .limit(1);
+    return !!existing;
+  }
+
   async createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase> {
     // Validate that clientId belongs to the same user if provided
     if (purchase.clientId) {
@@ -733,6 +764,84 @@ export class DatabaseStorage implements IStorage {
 
   async deletePurchase(id: number, userId: string): Promise<void> {
     await db.delete(purchases).where(and(eq(purchases.id, id), eq(purchases.userId, userId)));
+  }
+
+  async getPurchasesByInvoice(invoiceNumber: string, userId: string): Promise<PurchaseWithDetails[]> {
+    const result = await db
+      .select({
+        purchase: purchases,
+        store: stores,
+        category: purchaseCategories,
+        client: clients,
+      })
+      .from(purchases)
+      .innerJoin(stores, eq(purchases.storeId, stores.id))
+      .innerJoin(purchaseCategories, eq(purchases.categoryId, purchaseCategories.id))
+      .leftJoin(clients, and(eq(purchases.clientId, clients.id), eq(clients.userId, purchases.userId)))
+      .where(and(eq(purchases.invoiceNumber, invoiceNumber), eq(purchases.userId, userId)))
+      .orderBy(desc(purchases.purchaseDate));
+
+    return result.map(r => ({
+      ...r.purchase,
+      store: r.store,
+      category: r.category,
+      client: r.client,
+    }));
+  }
+
+  async getDistinctItemsByCategory(category: string, userId: string): Promise<Array<{ productName: string; latestPurchaseId: number }>> {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const result = await db
+      .select({
+        productName: purchases.productName,
+        latestPurchaseId: purchases.id,
+        purchaseDate: purchases.purchaseDate,
+      })
+      .from(purchases)
+      .innerJoin(purchaseCategories, eq(purchases.categoryId, purchaseCategories.id))
+      .where(and(
+        eq(purchases.userId, userId),
+        eq(purchaseCategories.name, category),
+        sql`${purchases.purchaseDate} > ${oneYearAgo}`
+      ))
+      .orderBy(purchases.productName, desc(purchases.purchaseDate));
+
+    const grouped = new Map<string, number>();
+    result.forEach(row => {
+      if (!grouped.has(row.productName)) {
+        grouped.set(row.productName, row.latestPurchaseId);
+      }
+    });
+
+    return Array.from(grouped.entries()).map(([productName, latestPurchaseId]) => ({
+      productName,
+      latestPurchaseId,
+    }));
+  }
+
+  async getPurchasesByProductName(productName: string, userId: string): Promise<PurchaseWithDetails[]> {
+    const result = await db
+      .select({
+        purchase: purchases,
+        store: stores,
+        category: purchaseCategories,
+        client: clients,
+      })
+      .from(purchases)
+      .innerJoin(stores, eq(purchases.storeId, stores.id))
+      .innerJoin(purchaseCategories, eq(purchases.categoryId, purchaseCategories.id))
+      .leftJoin(clients, and(eq(purchases.clientId, clients.id), eq(clients.userId, purchases.userId)))
+      .where(and(eq(purchases.productName, productName), eq(purchases.userId, userId)))
+      .orderBy(desc(purchases.purchaseDate));
+
+    return result.map(r => ({
+      ...r.purchase,
+      store: r.store,
+      category: r.category,
+      client: r.client,
+    }));
   }
 
   // Client Payments
@@ -1264,7 +1373,13 @@ export class DatabaseStorage implements IStorage {
       serviceLog = log ?? null;
     }
 
-    return { ...note, client, items, serviceLog };
+    const edits = await db
+      .select()
+      .from(expenseNoteEdits)
+      .where(eq(expenseNoteEdits.expenseNoteId, note.id))
+      .orderBy(desc(expenseNoteEdits.editedAt));
+
+    return { ...note, client, items, serviceLog, edits };
   }
 
   async createExpenseNote(
@@ -1315,8 +1430,12 @@ export class DatabaseStorage implements IStorage {
       .from(expenseNotes)
       .where(and(eq(expenseNotes.id, id), eq(expenseNotes.userId, userId)));
     if (!existing) return undefined;
-    if (existing.status === "issued") {
+    if (existing.status === "emitida") {
       throw new Error("Não é possível editar uma nota já emitida.");
+    }
+
+    if (updates.issueDate && typeof updates.issueDate === "string") {
+      updates.issueDate = new Date(updates.issueDate);
     }
 
     const [updated] = await db
@@ -1337,7 +1456,7 @@ export class DatabaseStorage implements IStorage {
       .from(expenseNotes)
       .where(and(eq(expenseNotes.id, noteId), eq(expenseNotes.userId, userId)));
     if (!note) throw new Error("Nota não encontrada.");
-    if (note.status === "issued") throw new Error("Não é possível editar itens de uma nota já emitida.");
+    if (note.status === "emitida") throw new Error("Não é possível editar itens de uma nota já emitida.");
 
     await db
       .delete(expenseNoteItems)
@@ -1356,12 +1475,201 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteExpenseNote(id: number, userId: string): Promise<void> {
+    // Verificar ownership antes de apagar
+    const note = await db
+      .select()
+      .from(expenseNotes)
+      .where(and(eq(expenseNotes.id, id), eq(expenseNotes.userId, userId)))
+      .limit(1);
+
+    if (note.length === 0) {
+      throw new Error("Nota não encontrada ou sem permissão");
+    }
+
+    // Apagar na ordem correcta para evitar foreign key constraint
+    await db
+      .delete(expenseNoteEdits)
+      .where(eq(expenseNoteEdits.expenseNoteId, id));
+
     await db
       .delete(expenseNoteItems)
       .where(eq(expenseNoteItems.expenseNoteId, id));
+
     await db
       .delete(expenseNotes)
       .where(and(eq(expenseNotes.id, id), eq(expenseNotes.userId, userId)));
+  }
+
+  async createExpenseNoteEdit(
+    expenseNoteId: number,
+    userId: string,
+    fieldChanged: string,
+    reason: string
+  ): Promise<void> {
+    await db.insert(expenseNoteEdits).values({
+      expenseNoteId,
+      userId,
+      fieldChanged,
+      reason,
+    });
+  }
+
+  // ── QUOTES ────────────────────────────────────────────────────
+
+  async generateQuoteNumber(userId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const existing = await db
+      .select()
+      .from(quotes)
+      .where(
+        and(
+          eq(quotes.userId, userId),
+          sql`EXTRACT(YEAR FROM ${quotes.createdAt}) = ${year}`
+        )
+      );
+    const seq = String(existing.length + 1).padStart(3, "0");
+    return `ORC-${year}-${seq}`;
+  }
+
+  async getQuotes(userId: string, clientId?: number): Promise<QuoteWithDetails[]> {
+    const conditions = [eq(quotes.userId, userId)];
+    if (clientId) conditions.push(eq(quotes.clientId, clientId));
+
+    const rows = await db
+      .select()
+      .from(quotes)
+      .where(and(...conditions))
+      .orderBy(desc(quotes.createdAt));
+
+    const result: QuoteWithDetails[] = [];
+    for (const quote of rows) {
+      const [client] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.id, quote.clientId));
+      if (!client) continue;
+
+      const items = await db
+        .select()
+        .from(quoteItems)
+        .where(eq(quoteItems.quoteId, quote.id));
+
+      result.push({ ...quote, client, items });
+    }
+    return result;
+  }
+
+  async getQuote(id: number, userId: string): Promise<QuoteWithDetails | undefined> {
+    const [quote] = await db
+      .select()
+      .from(quotes)
+      .where(and(eq(quotes.id, id), eq(quotes.userId, userId)));
+    if (!quote) return undefined;
+
+    const [client] = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.id, quote.clientId));
+    if (!client) return undefined;
+
+    const items = await db
+      .select()
+      .from(quoteItems)
+      .where(eq(quoteItems.quoteId, quote.id));
+
+    return { ...quote, client, items };
+  }
+
+  async createQuote(
+    quote: InsertQuote & { userId: string },
+    items: Omit<InsertQuoteItem, "quoteId">[]
+  ): Promise<QuoteWithDetails> {
+    const quoteNumber = quote.quoteNumber ?? (await this.generateQuoteNumber(quote.userId));
+
+    const [newQuote] = await db
+      .insert(quotes)
+      .values({ ...quote, quoteNumber })
+      .returning();
+
+    const createdItems: QuoteItem[] = [];
+    for (const item of items) {
+      const total = Math.round(item.quantity * item.unitPrice * 100) / 100;
+      const [newItem] = await db
+        .insert(quoteItems)
+        .values({ ...item, quoteId: newQuote.id, total })
+        .returning();
+      createdItems.push(newItem);
+    }
+
+    const [client] = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.id, newQuote.clientId));
+
+    return { ...newQuote, client: client!, items: createdItems };
+  }
+
+  async updateQuote(
+    id: number,
+    userId: string,
+    updates: Partial<InsertQuote>
+  ): Promise<Quote | undefined> {
+    const [existing] = await db
+      .select()
+      .from(quotes)
+      .where(and(eq(quotes.id, id), eq(quotes.userId, userId)));
+    if (!existing) return undefined;
+
+    if (updates.validUntil && typeof updates.validUntil === "string") {
+      updates.validUntil = new Date(updates.validUntil);
+    }
+
+    const [updated] = await db
+      .update(quotes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(quotes.id, id), eq(quotes.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async updateQuoteItems(
+    quoteId: number,
+    userId: string,
+    items: Omit<InsertQuoteItem, "quoteId">[]
+  ): Promise<QuoteItem[]> {
+    const [quote] = await db
+      .select()
+      .from(quotes)
+      .where(and(eq(quotes.id, quoteId), eq(quotes.userId, userId)));
+    if (!quote) throw new Error("Orçamento não encontrado.");
+
+    await db
+      .delete(quoteItems)
+      .where(eq(quoteItems.quoteId, quoteId));
+
+    const createdItems: QuoteItem[] = [];
+    for (const item of items) {
+      const total = Math.round(item.quantity * item.unitPrice * 100) / 100;
+      const [newItem] = await db
+        .insert(quoteItems)
+        .values({ ...item, quoteId, total })
+        .returning();
+      createdItems.push(newItem);
+    }
+    return createdItems;
+  }
+
+  async deleteQuote(id: number, userId: string): Promise<void> {
+    const row = await db
+      .select()
+      .from(quotes)
+      .where(and(eq(quotes.id, id), eq(quotes.userId, userId)))
+      .limit(1);
+
+    if (row.length === 0) throw new Error("Orçamento não encontrado ou sem permissão");
+
+    await db.delete(quoteItems).where(eq(quoteItems.quoteId, id));
+    await db.delete(quotes).where(and(eq(quotes.id, id), eq(quotes.userId, userId)));
   }
 }
 

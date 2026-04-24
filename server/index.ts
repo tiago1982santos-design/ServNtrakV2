@@ -1,8 +1,11 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { seedProductionData } from "./seed-production";
+import { startVisitChecker } from "./visitChecker";
+import { pool } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -62,6 +65,49 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS expense_note_edits (
+      id SERIAL PRIMARY KEY,
+      expense_note_id INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      edited_at TIMESTAMP DEFAULT NOW(),
+      field_changed TEXT NOT NULL,
+      reason TEXT NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS quotes (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      quote_number TEXT NOT NULL UNIQUE,
+      client_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',
+      valid_until TIMESTAMP,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS quote_items (
+      id SERIAL PRIMARY KEY,
+      quote_id INTEGER NOT NULL REFERENCES quotes(id),
+      description TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'service',
+      quantity DOUBLE PRECISION NOT NULL DEFAULT 1,
+      unit_price DOUBLE PRECISION NOT NULL DEFAULT 0,
+      total DOUBLE PRECISION NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    ALTER TABLE purchases
+    ADD COLUMN IF NOT EXISTS invoice_number TEXT
+  `);
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -91,14 +137,8 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  httpServer.listen(port, "0.0.0.0", () => {
+    log(`serving on port ${port}`);
+    startVisitChecker();
+  });
 })();

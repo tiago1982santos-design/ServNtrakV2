@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import logoUrl from "@assets/logo.png";
 
 export const PAGE_WIDTH = 210;
 export const PAGE_HEIGHT = 297;
@@ -11,41 +12,86 @@ const LOGO_Y = 10;
 
 export const CONTENT_START_Y = LOGO_Y + LOGO_SIZE + 8;
 
-const FOOTER_LINE_Y = PAGE_HEIGHT - 18;
-const FOOTER_TEXT_Y = PAGE_HEIGHT - 11;
+const BANKING_Y = PAGE_HEIGHT - 26;
+const FOOTER_LINE_Y = PAGE_HEIGHT - 20;
+const LEGAL_Y = PAGE_HEIGHT - 15;
+const FOOTER_TEXT_Y = PAGE_HEIGHT - 9;
 const FOOTER_COLOR: [number, number, number] = [83, 129, 53];
 
-const LOGO_BASE64 =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjsAAAI6CAYAAADBion+AAAACXBIWXMAAC4jAAAuIwF4pT92AAAgAElEQVR4nOydTVIbyfb2677xnzeeMWt5BcYzZoYVGK/AMHcEsAJgBUAEc+QVIK8AeeaZ5RWgnnnW6hXcN5L7HPqQyo+TWVnf5xdB2MZSqVSqVlfnk+fxPpSiKksDu3f6B49V7VVXtNHAdN1VVrexf/v7yY6n3TFEUKSp2FGXC7N7tc5FCIuYPiJfK+n2f4eLHiKN/8Hf6/eb3lx9boklRlGmgYkdRRsru3f4Os7jsWSJmCAKmKUgAkShakQXp95cfm/F9XUVRVOwoyoBhgmaGnw/4Nm2IGZ8riVtWcrAtS5y2vpcRPb+qqlrjR4WQogwYFTuKMgCYqDE/f7K/l4iT4XExXKiQxaPqqxvIcsPtMJHEBVPp62R+/oIA0tghRRkA";
+// Carrega o logo como data URL via canvas (mesmo padrão de generateServiceNote.ts)
+async function _loadLogoDataUrl(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(null); return; }
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => resolve(null);
+    img.src = logoUrl;
+  });
+}
 
-export function applyDocumentTemplate(doc: jsPDF): void {
+export async function applyDocumentTemplate(doc: jsPDF): Promise<void> {
+  const logoDataUrl = await _loadLogoDataUrl();
   const totalPages = doc.getNumberOfPages();
 
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    _drawHeader(doc);
+    _drawHeader(doc, logoDataUrl);
     _drawFooter(doc);
   }
 }
 
-export function applyTemplateToCurrentPage(doc: jsPDF): void {
-  _drawHeader(doc);
+export async function applyTemplateToCurrentPage(doc: jsPDF): Promise<void> {
+  const logoDataUrl = await _loadLogoDataUrl();
+  _drawHeader(doc, logoDataUrl);
   _drawFooter(doc);
 }
 
-function _drawHeader(doc: jsPDF): void {
+function _drawHeader(doc: jsPDF, logoDataUrl: string | null): void {
+  if (!logoDataUrl) return;
   try {
-    doc.addImage(LOGO_BASE64, "PNG", LOGO_X, LOGO_Y, LOGO_SIZE, LOGO_SIZE);
+    doc.addImage(logoDataUrl, "PNG", LOGO_X, LOGO_Y, LOGO_SIZE, LOGO_SIZE);
   } catch {
     console.warn("documentTemplate: falha ao carregar logo");
   }
 }
 
 function _drawFooter(doc: jsPDF): void {
+  // Dados bancários — linha única, letra pequena, acima da linha verde
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...FOOTER_COLOR);
+  doc.text(
+    "CGD: PT50 0035 0405 0001 2321 4004 3  ·  BIC: CGDIPTPL     |     Montepio: PT50 0036 0275 9910 0034 6181 1  ·  BIC: MPIOPTPL     |     MBWay: +351 918 297 502",
+    MARGIN,
+    BANKING_Y,
+    { maxWidth: CONTENT_WIDTH }
+  );
+
+  // Linha verde
   doc.setDrawColor(...FOOTER_COLOR);
   doc.setLineWidth(0.8);
   doc.line(MARGIN, FOOTER_LINE_Y, PAGE_WIDTH - MARGIN, FOOTER_LINE_Y);
 
+  // Nota legal — entre a linha e o contacto
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(6);
+  doc.setTextColor(...FOOTER_COLOR);
+  doc.text(
+    "Este documento não constitui fatura fiscal nem tem validade legal para efeitos tributários.",
+    PAGE_WIDTH / 2,
+    LEGAL_Y,
+    { align: "center", maxWidth: CONTENT_WIDTH }
+  );
+
+  // Contacto
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...FOOTER_COLOR);
@@ -56,6 +102,7 @@ function _drawFooter(doc: jsPDF): void {
     { align: "center" }
   );
 
+  // Reset
   doc.setDrawColor(0);
   doc.setTextColor(0);
 }

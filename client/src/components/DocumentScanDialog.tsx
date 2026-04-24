@@ -9,7 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Camera, Check, X, Upload, Trash2, ArrowLeft, FileText } from "lucide-react";
+import { Loader2, Camera, Check, X, Upload, Trash2, ArrowLeft, FileText, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { PurchaseCategory, Store } from "@shared/schema";
 
 interface ExtractedItem {
@@ -17,6 +18,8 @@ interface ExtractedItem {
   quantity: number;
   unitPrice?: number;
   totalPrice: number;
+  discountValue?: number;
+  finalPrice?: number;
 }
 
 interface ExtractedData {
@@ -24,6 +27,7 @@ interface ExtractedData {
   storeNif?: string;
   storeAddress?: string;
   purchaseDate?: string;
+  invoiceNumber?: string;
   items: ExtractedItem[];
   totalWithoutTax?: number;
   taxAmount?: number;
@@ -44,8 +48,14 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
   const [imageData, setImageData] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [itemCategories, setItemCategories] = useState<Record<number, number>>({});
   const [selectedItemIndex, setSelectedItemIndex] = useState(0);
+  const [showCreateStore, setShowCreateStore] = useState(false);
+  const [newStoreName, setNewStoreName] = useState("");
+  const [newStoreNif, setNewStoreNif] = useState("");
+  const [newStoreAddress, setNewStoreAddress] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [isDuplicateInvoice, setIsDuplicateInvoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -54,7 +64,7 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
     setImageData(null);
     setExtractedData(null);
     setSelectedStoreId(null);
-    setSelectedCategoryId(null);
+    setItemCategories({});
     setSelectedItemIndex(0);
   }, []);
 
@@ -91,9 +101,19 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
           if (matchedStore) {
             setSelectedStoreId(matchedStore.id);
           }
+          // Se OCR encontrou nome mas não há loja correspondente,
+          // abrir automaticamente o formulário de criar loja
+          if (!matchedStore && result.data.storeName) {
+            setShowCreateStore(true);
+          }
         }
         
         setStep("review");
+        // Pré-preencher campos para criar loja se não encontrou correspondência
+        setNewStoreName(result.data.storeName || "");
+        setNewStoreNif(result.data.storeNif || "");
+        setNewStoreAddress(result.data.storeAddress || "");
+        setInvoiceNumber(result.data.invoiceNumber || "");
       } else {
         toast({
           title: "Erro na extração",
@@ -113,22 +133,55 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
     },
   });
 
-  const savePurchaseMutation = useMutation({
+  const savePurchasesMutation = useMutation({
     mutationFn: async (data: {
       storeId: number;
-      categoryId: number;
-      productName: string;
-      quantity: number;
-      totalWithoutDiscount: number;
-      discountValue: number;
-      finalTotal: number;
       purchaseDate: Date;
+      invoiceNumber?: string;
+      items: Array<{
+        categoryId: number;
+        productName: string;
+        quantity: number;
+        totalWithoutDiscount: number;
+        discountValue: number;
+        finalTotal: number;
+      }>;
     }) => {
-      return apiRequest("POST", "/api/purchases", data);
+      return apiRequest("POST", "/api/purchases/bulk", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ predicate: (query) => 
+      queryClient.invalidateQueries({ predicate: (query) =>
         typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/purchases')
+      });
+    },
+  });
+
+  const createStoreMutation = useMutation({
+    mutationFn: async (data: {
+      name: string;
+      taxId?: string;
+      address?: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/stores", data);
+      return response.json();
+    },
+    onSuccess: (newStore) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stores'] });
+      setSelectedStoreId(newStore.id);
+      setShowCreateStore(false);
+      setNewStoreName("");
+      setNewStoreNif("");
+      setNewStoreAddress("");
+      toast({
+        title: "Loja criada",
+        description: `${newStore.name} adicionada com sucesso`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao criar loja",
+        description: "Não foi possível criar a loja",
+        variant: "destructive",
       });
     },
   });
@@ -188,32 +241,44 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
   };
 
   const handleSaveAll = async () => {
-    if (!selectedStoreId || !selectedCategoryId || !extractedData) {
+    if (!selectedStoreId || !extractedData) {
       toast({
         title: "Dados incompletos",
-        description: "Selecione uma loja e categoria antes de guardar",
+        description: "Selecione uma loja antes de guardar",
         variant: "destructive",
       });
       return;
     }
 
-    const purchaseDate = extractedData.purchaseDate 
-      ? new Date(extractedData.purchaseDate) 
+    for (let i = 0; i < extractedData.items.length; i++) {
+      if (!itemCategories[i]) {
+        toast({
+          title: "Categoria em falta",
+          description: `Selecciona uma categoria para "${extractedData.items[i].productName}"`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const purchaseDate = extractedData.purchaseDate
+      ? new Date(extractedData.purchaseDate)
       : new Date();
 
     try {
-      for (const item of extractedData.items) {
-        await savePurchaseMutation.mutateAsync({
-          storeId: selectedStoreId,
-          categoryId: selectedCategoryId,
+      await savePurchasesMutation.mutateAsync({
+        storeId: selectedStoreId,
+        purchaseDate,
+        invoiceNumber: invoiceNumber.trim() || undefined,
+        items: extractedData.items.map((item, i) => ({
+          categoryId: itemCategories[i],
           productName: item.productName,
           quantity: item.quantity,
           totalWithoutDiscount: item.totalPrice,
-          discountValue: 0,
-          finalTotal: item.totalPrice,
-          purchaseDate,
-        });
-      }
+          discountValue: item.discountValue || 0,
+          finalTotal: item.totalPrice - (item.discountValue || 0),
+        })),
+      });
 
       toast({
         title: "Compras guardadas",
@@ -221,11 +286,27 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
       });
 
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Save error:", error);
+
+      if (error?.status === 409 ||
+          error?.message?.includes("DUPLICATE_INVOICE") ||
+          error?.message?.includes("já foi registada")) {
+        setIsDuplicateInvoice(true);
+        toast({
+          title: "Fatura duplicada",
+          description: error.message || "Esta fatura já foi registada. Verifica o número.",
+          variant: "destructive",
+          duration: 6000,
+        });
+        return;
+      }
+
       toast({
         title: "Erro ao guardar",
-        description: "Ocorreu um erro ao guardar as compras",
+        description: error?.message || "Ocorreu um erro ao guardar as compras",
         variant: "destructive",
+        duration: 8000,
       });
     }
   };
@@ -385,41 +466,113 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
             </div>
 
             <div className="space-y-2">
-              <Label>Loja</Label>
-              <Select
-                value={selectedStoreId?.toString() || ""}
-                onValueChange={(v) => setSelectedStoreId(Number(v))}
-              >
-                <SelectTrigger data-testid="select-scan-store">
-                  <SelectValue placeholder="Selecione uma loja" />
-                </SelectTrigger>
-                <SelectContent>
-                  {stores.map((store) => (
-                    <SelectItem key={store.id} value={store.id.toString()}>
-                      {store.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Nº Fatura / Recibo</Label>
+              <div className="relative">
+                <Input
+                  value={invoiceNumber}
+                  onChange={(e) => {
+                    setInvoiceNumber(e.target.value);
+                    setIsDuplicateInvoice(false);
+                  }}
+                  placeholder="Ex: FR 2026/1234 (opcional)"
+                  className={cn(
+                    "h-9 text-sm",
+                    isDuplicateInvoice && "border-orange-400 bg-orange-50"
+                  )}
+                />
+                {isDuplicateInvoice && (
+                  <div className="flex items-center gap-1.5 mt-1 text-orange-600">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <p className="text-xs font-medium">
+                      Esta fatura já foi registada anteriormente.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select
-                value={selectedCategoryId?.toString() || ""}
-                onValueChange={(v) => setSelectedCategoryId(Number(v))}
-              >
-                <SelectTrigger data-testid="select-scan-category">
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id.toString()}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Loja</Label>
+              {!showCreateStore ? (
+                <div className="space-y-2">
+                  <Select
+                    value={selectedStoreId?.toString() || ""}
+                    onValueChange={(v) => setSelectedStoreId(Number(v))}
+                  >
+                    <SelectTrigger data-testid="select-scan-store">
+                      <SelectValue placeholder="Selecione uma loja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stores.map((store) => (
+                        <SelectItem key={store.id} value={store.id.toString()}>
+                          {store.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => setShowCreateStore(true)}
+                  >
+                    {newStoreName
+                      ? `+ Loja não encontrada — Criar "${newStoreName}"`
+                      : "+ Criar nova loja"
+                    }
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2 p-3 border rounded-xl bg-muted/30">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Nova loja
+                  </p>
+                  <Input
+                    placeholder="Nome da loja *"
+                    value={newStoreName}
+                    onChange={(e) => setNewStoreName(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    placeholder="NIF (opcional)"
+                    value={newStoreNif}
+                    onChange={(e) => setNewStoreNif(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    placeholder="Morada (opcional)"
+                    value={newStoreAddress}
+                    onChange={(e) => setNewStoreAddress(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs"
+                      onClick={() => setShowCreateStore(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 text-xs"
+                      disabled={!newStoreName.trim() || createStoreMutation.isPending}
+                      onClick={() => createStoreMutation.mutateAsync({
+                        name: newStoreName.trim(),
+                        taxId: newStoreNif.trim() || undefined,
+                        address: newStoreAddress.trim() || undefined,
+                      })}
+                    >
+                      {createStoreMutation.isPending ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        "Criar loja"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -458,6 +611,35 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
                           />
                           <span className="text-sm text-muted-foreground self-center">€</span>
                         </div>
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={item.discountValue || 0}
+                            onChange={(e) => updateItem(index, "discountValue", Number(e.target.value))}
+                            className="h-8 text-sm w-24"
+                            placeholder="Desconto"
+                          />
+                          <span className="text-xs text-muted-foreground">desc. €</span>
+                          <p className="text-xs text-green-600 font-medium">
+                            Final: {((item.totalPrice || 0) - (item.discountValue || 0)).toFixed(2)} €
+                          </p>
+                        </div>
+                        <Select
+                          value={itemCategories[index]?.toString() || ""}
+                          onValueChange={(v) => setItemCategories(prev => ({ ...prev, [index]: Number(v) }))}
+                        >
+                          <SelectTrigger className="h-8 text-xs mt-1">
+                            <SelectValue placeholder="Categoria" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id.toString()}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <Button
                         variant="ghost"
@@ -486,10 +668,10 @@ export function DocumentScanDialog({ open, onOpenChange, categories, stores }: D
               <Button
                 className="flex-1"
                 onClick={handleSaveAll}
-                disabled={!selectedStoreId || !selectedCategoryId || extractedData.items.length === 0 || savePurchaseMutation.isPending}
+                disabled={!selectedStoreId || extractedData.items.length === 0 || savePurchasesMutation.isPending}
                 data-testid="button-save-purchases"
               >
-                {savePurchaseMutation.isPending ? (
+                {savePurchasesMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 ) : (
                   <Check className="w-4 h-4 mr-2" />

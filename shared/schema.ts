@@ -59,6 +59,7 @@ export const appointments = pgTable("appointments", {
   type: text("type").notNull(), // 'Garden', 'Pool', 'Jacuzzi', 'General'
   notes: text("notes"),
   isCompleted: boolean("is_completed").default(false),
+  pushNotifiedAt: timestamp("push_notified_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -203,6 +204,7 @@ export const purchases = pgTable("purchases", {
   discountValue: doublePrecision("discount_value").default(0), // Valor do desconto
   finalTotal: doublePrecision("final_total").notNull(), // Valor final pago
   purchaseDate: timestamp("purchase_date").notNull(),
+  invoiceNumber: text("invoice_number"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -280,6 +282,39 @@ export const expenseNoteItems = pgTable("expense_note_items", {
   total: doublePrecision("total").notNull(),
   sourceType: text("source_type").notNull().default("manual"),
   editReason: text("edit_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const expenseNoteEdits = pgTable("expense_note_edits", {
+  id: serial("id").primaryKey(),
+  expenseNoteId: integer("expense_note_id").notNull(),
+  userId: text("user_id").notNull(),
+  editedAt: timestamp("edited_at").defaultNow(),
+  fieldChanged: text("field_changed").notNull(),
+  reason: text("reason").notNull(),
+});
+
+// Quotes (Orçamentos)
+export const quotes = pgTable("quotes", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  quoteNumber: text("quote_number").notNull().unique(),
+  clientId: integer("client_id").notNull(),
+  status: text("status").notNull().default("draft"), // "draft" | "enviado" | "aceite" | "recusado"
+  validUntil: timestamp("valid_until"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const quoteItems = pgTable("quote_items", {
+  id: serial("id").primaryKey(),
+  quoteId: integer("quote_id").notNull(),
+  description: text("description").notNull(),
+  type: text("type").notNull().default("service"), // "service" | "material" | "labor"
+  quantity: doublePrecision("quantity").notNull().default(1),
+  unitPrice: doublePrecision("unit_price").notNull().default(0),
+  total: doublePrecision("total").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -477,12 +512,41 @@ export const expenseNotesRelations = relations(expenseNotes, ({ one, many }) => 
     references: [serviceLogs.id],
   }),
   items: many(expenseNoteItems),
+  edits: many(expenseNoteEdits),
 }));
 
 export const expenseNoteItemsRelations = relations(expenseNoteItems, ({ one }) => ({
   expenseNote: one(expenseNotes, {
     fields: [expenseNoteItems.expenseNoteId],
     references: [expenseNotes.id],
+  }),
+}));
+
+export const expenseNoteEditsRelations = relations(
+  expenseNoteEdits, ({ one }) => ({
+    expenseNote: one(expenseNotes, {
+      fields: [expenseNoteEdits.expenseNoteId],
+      references: [expenseNotes.id],
+    }),
+  })
+);
+
+export const quotesRelations = relations(quotes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [quotes.userId],
+    references: [users.id],
+  }),
+  client: one(clients, {
+    fields: [quotes.clientId],
+    references: [clients.id],
+  }),
+  items: many(quoteItems),
+}));
+
+export const quoteItemsRelations = relations(quoteItems, ({ one }) => ({
+  quote: one(quotes, {
+    fields: [quoteItems.quoteId],
+    references: [quotes.id],
   }),
 }));
 
@@ -497,7 +561,9 @@ export const insertServiceLogLaborEntrySchema = createInsertSchema(serviceLogLab
 export const insertServiceLogMaterialEntrySchema = createInsertSchema(serviceLogMaterialEntries).omit({ id: true, createdAt: true });
 export const insertPurchaseCategorySchema = createInsertSchema(purchaseCategories).omit({ id: true, userId: true, createdAt: true });
 export const insertStoreSchema = createInsertSchema(stores).omit({ id: true, userId: true, createdAt: true });
-export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, userId: true, createdAt: true });
+export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, userId: true, createdAt: true }).extend({
+  purchaseDate: z.union([z.date(), z.string().transform((s) => new Date(s))]),
+});
 export const insertClientPaymentSchema = createInsertSchema(clientPayments).omit({ id: true, userId: true, createdAt: true });
 export const insertServiceVisitSchema = createInsertSchema(serviceVisits).omit({ id: true, userId: true, createdAt: true, completedAt: true });
 export const insertServiceVisitServiceSchema = createInsertSchema(serviceVisitServices).omit({ id: true, createdAt: true });
@@ -516,6 +582,18 @@ export const insertExpenseNoteSchema = createInsertSchema(expenseNotes).omit({
 });
 
 export const insertExpenseNoteItemSchema = createInsertSchema(expenseNoteItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertQuoteSchema = createInsertSchema(quotes).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuoteItemSchema = createInsertSchema(quoteItems).omit({
   id: true,
   createdAt: true,
 });
@@ -683,8 +761,22 @@ export type InsertExpenseNote = z.infer<typeof insertExpenseNoteSchema>;
 export type ExpenseNoteItem = typeof expenseNoteItems.$inferSelect;
 export type InsertExpenseNoteItem = z.infer<typeof insertExpenseNoteItemSchema>;
 
+export type ExpenseNoteEdit = typeof expenseNoteEdits.$inferSelect;
+
 export type ExpenseNoteWithDetails = ExpenseNote & {
   client: Client;
   items: ExpenseNoteItem[];
   serviceLog?: ServiceLog | null;
+  edits?: ExpenseNoteEdit[];
+};
+
+export type Quote = typeof quotes.$inferSelect;
+export type InsertQuote = z.infer<typeof insertQuoteSchema>;
+
+export type QuoteItem = typeof quoteItems.$inferSelect;
+export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
+
+export type QuoteWithDetails = Quote & {
+  client: Client;
+  items: QuoteItem[];
 };

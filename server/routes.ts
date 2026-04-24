@@ -9,11 +9,10 @@ import { serviceVisits, appointments } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { saveSubscription, removeSubscription, sendPushToUser, getVapidPublicKey } from "./pushService";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 export async function registerRoutes(
@@ -171,6 +170,28 @@ export async function registerRoutes(
     const userId = req.user!.id;
     await storage.deleteAppointment(Number(req.params.id), userId);
     res.status(204).end();
+  });
+
+  app.post("/api/appointments/:id/visit-response", requireAuth, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { confirmed } = z.object({ confirmed: z.boolean() }).parse(req.body);
+      const userId = req.user!.id;
+
+      if (confirmed) {
+        await db
+          .update(appointments)
+          .set({ isCompleted: true })
+          .where(and(eq(appointments.id, id), eq(appointments.userId, userId)));
+      }
+
+      res.json({ ok: true });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
   });
 
   app.post("/api/appointments/generate-preview", requireAuth, async (req, res) => {
@@ -493,6 +514,77 @@ export async function registerRoutes(
 
   // --- Purchases ---
 
+  // Derived from insertPurchaseSchema so item fields stay in sync with the canonical schema
+  const bulkPurchaseItemSchema = api.purchases.create.input.pick({
+    categoryId: true,
+    productName: true,
+    quantity: true,
+    totalWithoutDiscount: true,
+    discountValue: true,
+    finalTotal: true,
+  });
+
+  const bulkPurchaseSchema = z.object({
+    storeId: z.number().int().positive(),
+    purchaseDate: z.union([z.date(), z.string().transform((s) => new Date(s))]),
+    invoiceNumber: z.string().optional().nullable(),
+    items: z.array(bulkPurchaseItemSchema).min(1, "Pelo menos um produto é obrigatório"),
+  });
+
+  type BulkPurchaseInput = z.infer<typeof bulkPurchaseSchema>;
+
+  app.post("/api/purchases/bulk", requireAuth, async (req, res) => {
+    try {
+      const input: BulkPurchaseInput = bulkPurchaseSchema.parse(req.body);
+      const userId = req.user!.id;
+
+      const store = await storage.getStore(input.storeId, userId);
+      if (!store) {
+        return res.status(400).json({ message: "Loja inválida" });
+      }
+
+      const invoiceNumber = input.invoiceNumber?.trim() || undefined;
+      if (invoiceNumber) {
+        const exists = await storage.checkInvoiceExists(invoiceNumber, userId);
+        if (exists) {
+          return res.status(409).json({
+            message: `A fatura ${invoiceNumber} já foi registada anteriormente.`,
+            code: "DUPLICATE_INVOICE",
+          });
+        }
+      }
+
+      const createdPurchases = await Promise.all(
+        input.items.map((item) =>
+          storage.createPurchase({
+            storeId: input.storeId,
+            purchaseDate: input.purchaseDate,
+            invoiceNumber: invoiceNumber ?? null,
+            categoryId: item.categoryId,
+            productName: item.productName,
+            quantity: item.quantity,
+            totalWithoutDiscount: item.totalWithoutDiscount,
+            discountValue: item.discountValue,
+            finalTotal: item.finalTotal,
+            userId,
+          })
+        )
+      );
+
+      res.status(201).json(createdPurchases);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+          details: err.errors,
+        });
+      }
+      console.error("BULK PURCHASE CREATE ERROR:", err);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   app.get(api.purchases.list.path, requireAuth, async (req, res) => {
     const userId = req.user!.id;
     const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
@@ -512,19 +604,38 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Loja inválida" });
       }
 
+      if (input.invoiceNumber) {
+        const exists = await storage.checkInvoiceExists(input.invoiceNumber, userId);
+        if (exists) {
+          return res.status(409).json({
+            message: `A fatura ${input.invoiceNumber} já foi registada anteriormente.`,
+            code: "DUPLICATE_INVOICE"
+          });
+        }
+      }
+
       const purchase = await storage.createPurchase({ ...input, userId });
       res.status(201).json(purchase);
     } catch (err) {
+      console.error("PURCHASE CREATE ERROR:", {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        body: req.body,
+      });
       if (err instanceof z.ZodError) {
         return res.status(400).json({
           message: err.errors[0].message,
           field: err.errors[0].path.join('.'),
+          details: err.errors,
         });
       }
       if (err instanceof Error && err.message.includes("não autorizado")) {
         return res.status(403).json({ message: err.message });
       }
-      throw err;
+      res.status(500).json({
+        message: "Erro interno do servidor",
+        detail: err instanceof Error ? err.message : String(err)
+      });
     }
   });
 
@@ -553,6 +664,34 @@ export async function registerRoutes(
     const userId = req.user!.id;
     await storage.deletePurchase(Number(req.params.id), userId);
     res.status(204).end();
+  });
+
+  app.get("/api/purchases/categories", requireAuth, async (req, res) => {
+    const userId = req.user!.id;
+    const categories = await storage.getPurchaseCategories(userId);
+    const categoryNames = Array.from(new Set(categories.map(c => c.name))).sort();
+    res.json(categoryNames);
+  });
+
+  app.get("/api/purchases/details/:invoiceNumber", requireAuth, async (req, res) => {
+    const userId = req.user!.id;
+    const invoiceNumber = req.params.invoiceNumber;
+    const purchases = await storage.getPurchasesByInvoice(invoiceNumber, userId);
+    res.json(purchases);
+  });
+
+  app.get("/api/purchases/items/:category", requireAuth, async (req, res) => {
+    const userId = req.user!.id;
+    const category = req.params.category;
+    const items = await storage.getDistinctItemsByCategory(category, userId);
+    res.json(items);
+  });
+
+  app.get("/api/purchases/item/:productName", requireAuth, async (req, res) => {
+    const userId = req.user!.id;
+    const productName = req.params.productName;
+    const purchases = await storage.getPurchasesByProductName(productName, userId);
+    res.json(purchases);
   });
 
   // --- Client Payments ---
@@ -619,11 +758,14 @@ export async function registerRoutes(
     storeNif: z.string().optional(),
     storeAddress: z.string().optional(),
     purchaseDate: z.string().optional(),
+    invoiceNumber: z.string().optional().nullable(),
     items: z.array(z.object({
       productName: z.string(),
       quantity: z.number().default(1),
       unitPrice: z.number().optional(),
       totalPrice: z.number(),
+      discountValue: z.number().optional(),
+      finalPrice: z.number().optional(),
     })).default([]),
     totalWithoutTax: z.number().optional(),
     taxAmount: z.number().optional(),
@@ -638,49 +780,63 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Imagem é obrigatória" });
       }
 
-      // Call OpenAI Vision to extract text and structured data
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      // Extract base64 data and media type from data URL if present
+      let mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp" = "image/jpeg";
+      let base64Data = imageBase64;
+      if (imageBase64.startsWith("data:")) {
+        const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          mediaType = match[1] as typeof mediaType;
+          base64Data = match[2];
+        }
+      }
+
+      // Call Anthropic Claude to extract text and structured data
+      const response = await anthropic.messages.create({
+        model: "claude-opus-4-5",
+        max_tokens: 2000,
         messages: [
           {
-            role: "system",
-            content: `Você é um assistente especializado em extrair informações de documentos de compra portugueses (faturas, recibos, talões).
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: base64Data,
+                },
+              },
+              {
+                type: "text",
+                text: `Você é um assistente especializado em extrair informações de documentos de compra portugueses (faturas, recibos, talões).
 Analise a imagem e extraia as seguintes informações em formato JSON:
 - storeName: nome da loja/fornecedor
 - storeNif: NIF/Contribuinte da loja (9 dígitos)
 - storeAddress: morada da loja
 - purchaseDate: data da compra (formato YYYY-MM-DD)
-- items: lista de produtos com productName, quantity, unitPrice, totalPrice
+- invoiceNumber: número da fatura ou recibo (ex: FR 2026/1234, Recibo nº 456, FT 001/00123)
+- items: lista de produtos com:
+  - productName: nome do produto
+  - quantity: quantidade
+  - unitPrice: preço unitário
+  - totalPrice: valor total sem desconto
+  - discountValue: valor do desconto aplicado (0 se não houver)
+  - finalPrice: valor final após desconto (= totalPrice - discountValue)
 - totalWithoutTax: total sem IVA
 - taxAmount: valor do IVA
 - grandTotal: total final com IVA
 
 Responda APENAS com o JSON válido, sem markdown ou explicações.
 Se não conseguir identificar um campo, omita-o ou use null.
-Valores monetários devem ser números (ex: 12.50, não "12,50€").`
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageBase64.startsWith("data:") 
-                    ? imageBase64 
-                    : `data:image/jpeg;base64,${imageBase64}`,
-                },
-              },
-              {
-                type: "text",
-                text: "Por favor, extrai as informações deste documento de compra.",
+Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
               },
             ],
           },
         ],
-        max_tokens: 2000,
       });
 
-      const content = response.choices[0]?.message?.content || "{}";
+      const content = (response.content[0] as { type: string; text: string })?.text || "{}";
       
       // Try to parse the JSON response
       let extractedData;
@@ -1168,11 +1324,6 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
 
   Responde sempre em português, de forma direta e prática. Ajuda o Tiago a gerir melhor o negócio.`;
 
-      const Anthropic = (await import("@anthropic-ai/sdk")).default;
-      const anthropic = new Anthropic({
-        apiKey: process.env.ANTHROPIC_API_KEY,
-      });
-
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 1024,
@@ -1320,10 +1471,16 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
       if (!updated) return res.status(404).json({ error: "Nota não encontrada" });
       res.json(updated);
     } catch (error: any) {
+      console.error("PATCH expense-note error:", {
+        message: error?.message,
+        stack: error?.stack,
+        noteId: req.params.id,
+        userId: req.user!.id,
+        body: req.body,
+      });
       if (error?.message?.includes("emitida")) {
         return res.status(403).json({ error: error.message });
       }
-      console.error("Erro ao actualizar nota de despesa:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
@@ -1354,6 +1511,29 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
         return res.status(403).json({ error: error.message });
       }
       console.error("Erro ao actualizar itens:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/expense-notes/:id/edits", async (req, res) => {
+    if (!req.isAuthenticated())
+      return res.status(401).json({ error: "Não autenticado" });
+    try {
+      const { fieldChanged, reason } = req.body;
+      if (!fieldChanged || !reason?.trim()) {
+        return res.status(400).json({
+          error: "fieldChanged e reason são obrigatórios",
+        });
+      }
+      await storage.createExpenseNoteEdit(
+        parseInt(req.params.id),
+        req.user!.id,
+        fieldChanged,
+        reason
+      );
+      res.status(201).json({ success: true });
+    } catch (error) {
+      console.error("Erro ao criar edit:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
@@ -1436,6 +1616,90 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`
       res.status(201).json(note);
     } catch (error) {
       console.error("Erro ao criar nota a partir de serviceLog:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // ── QUOTES (ORÇAMENTOS) ─────────────────────────────────────
+
+  app.get("/api/quotes", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+    try {
+      const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
+      const result = await storage.getQuotes(req.user!.id, clientId);
+      res.json(result);
+    } catch (error) {
+      console.error("Erro ao obter orçamentos:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/quotes/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+    try {
+      const quote = await storage.getQuote(parseInt(req.params.id), req.user!.id);
+      if (!quote) return res.status(404).json({ error: "Orçamento não encontrado" });
+      res.json(quote);
+    } catch (error) {
+      console.error("Erro ao obter orçamento:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/quotes", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+    try {
+      const { items = [], ...quoteData } = req.body;
+      const quote = await storage.createQuote(
+        { ...quoteData, userId: req.user!.id },
+        items
+      );
+      res.status(201).json(quote);
+    } catch (error) {
+      console.error("Erro ao criar orçamento:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.patch("/api/quotes/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+    try {
+      const updated = await storage.updateQuote(
+        parseInt(req.params.id),
+        req.user!.id,
+        req.body
+      );
+      if (!updated) return res.status(404).json({ error: "Orçamento não encontrado" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Erro ao actualizar orçamento:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.put("/api/quotes/:id/items", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+    try {
+      const { items = [] } = req.body;
+      const updatedItems = await storage.updateQuoteItems(
+        parseInt(req.params.id),
+        req.user!.id,
+        items
+      );
+      res.json(updatedItems);
+    } catch (error) {
+      console.error("Erro ao actualizar itens do orçamento:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.delete("/api/quotes/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+    try {
+      await storage.deleteQuote(parseInt(req.params.id), req.user!.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Erro ao apagar orçamento:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
