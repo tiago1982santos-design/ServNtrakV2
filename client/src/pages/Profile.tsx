@@ -735,11 +735,11 @@ function PushHealthWarning() {
   const last = health.lastAuthFailure!;
   return (
     <div
-      className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 flex gap-3"
+      className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 flex gap-3"
       data-testid="alert-push-vapid-failure"
     >
-      <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-      <div className="flex-1 text-xs text-amber-900 dark:text-amber-200">
+      <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+      <div className="flex-1 text-xs text-destructive">
         <p className="font-semibold" data-testid="text-push-vapid-failure-title">
           Falhas de autenticação VAPID detetadas
         </p>
