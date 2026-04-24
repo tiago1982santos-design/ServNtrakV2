@@ -107,8 +107,33 @@ export async function sendPushToUser(
       );
       sent++;
     } catch (err: any) {
-      if (err.statusCode === 410 || err.statusCode === 404) {
+      const statusCode = err?.statusCode;
+      const endpointPreview =
+        sub.endpoint.length > 80
+          ? `${sub.endpoint.slice(0, 60)}...${sub.endpoint.slice(-16)}`
+          : sub.endpoint;
+      const errorBody =
+        typeof err?.body === "string"
+          ? err.body.slice(0, 500)
+          : err?.body
+            ? JSON.stringify(err.body).slice(0, 500)
+            : err?.message || String(err);
+
+      if (statusCode === 410 || statusCode === 404) {
         await removeSubscription(sub.endpoint);
+        console.info(
+          `[pushService] Subscrição removida (${statusCode}) para userId=${userId} endpoint=${endpointPreview}. Detalhe: ${errorBody}`,
+        );
+      } else if (statusCode === 401 || statusCode === 403) {
+        console.error(
+          `[pushService] FALHA DE AUTENTICAÇÃO VAPID (${statusCode}) ao enviar push para userId=${userId} endpoint=${endpointPreview}. ` +
+            `Verifica os Secrets VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY (e VAPID_EMAIL): provavelmente as chaves estão erradas, desemparelhadas ou foram regeradas. ` +
+            `Detalhe: ${errorBody}`,
+        );
+      } else {
+        console.warn(
+          `[pushService] Falha ao enviar push para userId=${userId} endpoint=${endpointPreview} statusCode=${statusCode ?? "n/a"}. Detalhe: ${errorBody}`,
+        );
       }
       failed++;
     }
