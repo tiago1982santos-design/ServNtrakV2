@@ -1,6 +1,9 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { applyTheme, loadSavedTheme } from "./lib/themes";
+
+applyTheme(loadSavedTheme());
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

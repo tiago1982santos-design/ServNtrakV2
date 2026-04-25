@@ -4,6 +4,9 @@ import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { themes, applyTheme, loadSavedTheme, type ThemeName } from "@/lib/themes";
 import { 
   LogOut, 
   User, 
@@ -28,7 +31,8 @@ import {
   KeyRound,
   Eye,
   EyeOff,
-  Pencil
+  Pencil,
+  Palette
 } from "lucide-react";
 import { Link } from "wouter";
 import { PushHealthBanner } from "@/components/PushHealthBanner";
@@ -770,6 +774,7 @@ function PushNotificationSection() {
 
 export default function Profile() {
   const { user, logout } = useAuth();
+  const [selectedTheme, setSelectedTheme] = useState<ThemeName>(loadSavedTheme());
 
   if (!user) return null;
 
@@ -835,6 +840,47 @@ export default function Profile() {
         <BiometricSection />
 
         <PushNotificationSection />
+
+        <Card data-testid="card-appearance">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="w-5 h-5" aria-hidden="true" />
+              Aparência
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Label>Paleta de Cores</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {(Object.keys(themes) as ThemeName[]).map((themeName) => (
+                  <button
+                    key={themeName}
+                    onClick={() => {
+                      setSelectedTheme(themeName);
+                      applyTheme(themeName);
+                    }}
+                    className={cn(
+                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
+                      selectedTheme === themeName
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                    aria-pressed={selectedTheme === themeName}
+                    aria-label={`Tema ${themeName}`}
+                    data-testid={`button-theme-${themeName}`}
+                  >
+                    <div
+                      className="w-12 h-12 rounded-full"
+                      style={{ background: `hsl(${themes[themeName].primary})` }}
+                      aria-hidden="true"
+                    />
+                    <span className="text-sm font-medium capitalize">{themeName}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="space-y-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Aplicação</h3>
