@@ -701,7 +701,7 @@ export default function Home() {
               <Link key={i} href={action.href} className="snap-start shrink-0" data-testid={`link-quick-${action.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-")}`}>
                 <div className="flex flex-col items-center gap-2.5 w-[76px] group">
                   <div className={cn("w-14 h-14 rounded-2xl border flex items-center justify-center transition-all group-active:scale-95 shadow-sm", action.bg, action.border)}>
-                    <action.Icon className={cn("w-6 h-6", action.text)} strokeWidth={2} />
+                    <action.Icon className={cn("w-6 h-6", action.text)} strokeWidth={2} aria-hidden="true" />
                   </div>
                   <span className="text-[11px] font-bold text-slate-600 text-center leading-tight">{action.label}</span>
                 </div>

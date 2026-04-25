@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CreateClientDialog } from "@/components/CreateClientDialog";
+import { CreateClientWizard } from "@/components/CreateClientWizard";
 import { BackButton } from "@/components/BackButton";
 import {
   DropdownMenu,
@@ -141,7 +141,7 @@ export default function Clients() {
             <BackButton />
             <h1 className="text-2xl font-display font-bold text-foreground">Clientes</h1>
           </div>
-          <CreateClientDialog />
+          <CreateClientWizard />
         </div>
         
         <div className="relative mb-4">
@@ -158,28 +158,28 @@ export default function Clients() {
         <div className="grid grid-cols-4 gap-2 mb-4">
           <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <CardContent className="p-3 text-center">
-              <Users className="w-4 h-4 mx-auto mb-1 text-primary" />
+              <Users className="w-4 h-4 mx-auto mb-1 text-primary" aria-hidden="true" />
               <p className="text-lg font-bold text-primary" data-testid="text-total-clients">{stats.total}</p>
               <p className="text-[10px] text-muted-foreground">Total</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
             <CardContent className="p-3 text-center">
-              <Leaf className="w-4 h-4 mx-auto mb-1 text-green-600 dark:text-green-400" />
+              <Leaf className="w-4 h-4 mx-auto mb-1 text-green-600 dark:text-green-400" aria-hidden="true" />
               <p className="text-lg font-bold text-green-600 dark:text-green-400">{stats.garden}</p>
               <p className="text-[10px] text-muted-foreground">Jardim</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
             <CardContent className="p-3 text-center">
-              <Waves className="w-4 h-4 mx-auto mb-1 text-blue-600 dark:text-blue-400" />
+              <Waves className="w-4 h-4 mx-auto mb-1 text-blue-600 dark:text-blue-400" aria-hidden="true" />
               <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats.pool}</p>
               <p className="text-[10px] text-muted-foreground">Piscina</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <CardContent className="p-3 text-center">
-              <Euro className="w-4 h-4 mx-auto mb-1 text-primary" />
+              <Euro className="w-4 h-4 mx-auto mb-1 text-primary" aria-hidden="true" />
               <p className="text-lg font-bold text-primary">{stats.monthlyRevenue}€</p>
               <p className="text-[10px] text-muted-foreground">Mensal</p>
             </CardContent>
@@ -197,7 +197,7 @@ export default function Clients() {
                 className={`flex-shrink-0 h-8 text-xs ${serviceFilter !== key ? color : ''}`}
                 data-testid={`button-filter-${key}`}
               >
-                <Icon className="w-3 h-3 mr-1" />
+                <Icon className="w-3 h-3 mr-1" aria-hidden="true" />
                 {label}
               </Button>
             ))}
@@ -298,25 +298,25 @@ export default function Clients() {
                         <div className="flex gap-1.5 flex-1">
                           {client.hasGarden && (
                             <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">
-                              <Leaf className="w-2.5 h-2.5 mr-1" />
+                              <Leaf className="w-2.5 h-2.5 mr-1" aria-hidden="true" />
                               Jardim
                             </Badge>
                           )}
                           {client.hasPool && (
                             <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">
-                              <Waves className="w-2.5 h-2.5 mr-1" />
+                              <Waves className="w-2.5 h-2.5 mr-1" aria-hidden="true" />
                               Piscina
                             </Badge>
                           )}
                           {client.hasJacuzzi && (
                             <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground border-0">
-                              <ThermometerSun className="w-2.5 h-2.5 mr-1" />
+                              <ThermometerSun className="w-2.5 h-2.5 mr-1" aria-hidden="true" />
                               Jacuzzi
                             </Badge>
                           )}
                           {(client.gardenVisitFrequency === "on_demand" || client.poolVisitFrequency === "on_demand" || client.jacuzziVisitFrequency === "on_demand") && (
                             <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-purple-300 text-purple-600 dark:border-purple-600 dark:text-purple-400">
-                              <PhoneCall className="w-2.5 h-2.5 mr-1" />
+                              <PhoneCall className="w-2.5 h-2.5 mr-1" aria-hidden="true" />
                               A pedido
                             </Badge>
                           )}

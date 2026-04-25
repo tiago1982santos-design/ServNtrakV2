@@ -47,6 +47,8 @@ export function BottomNav() {
                     isActive ? "text-primary" : "text-muted-foreground"
                   )}
                   strokeWidth={isActive ? 2.5 : 2}
+                  aria-label={item.label}
+                  role="img"
                 />
                 <span className={cn(
                   "text-[10px] transition-colors",
