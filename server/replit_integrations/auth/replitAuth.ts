@@ -39,6 +39,16 @@ function getOriginFromRequest(req: any): string {
 const resendVerificationCooldowns = new Map<string, number>();
 const RESEND_VERIFICATION_COOLDOWN_MS = 5 * 60 * 1000;
 
+function getCanonicalBaseUrl(): string {
+  if (process.env.APP_BASE_URL) {
+    return process.env.APP_BASE_URL.replace(/\/$/, "");
+  }
+  if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+    return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+  }
+  return "http://localhost:5000";
+}
+
 export function getSession() {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
@@ -108,14 +118,14 @@ export async function setupAuth(app: Express) {
         try {
           const user = await authStorage.getUserByEmailOrUsername(identifier);
           if (!user) {
-            return done(null, false, { message: "Utilizador não encontrado" });
+            return done(null, false, { message: "Credenciais inválidas" });
           }
           if (!user.passwordHash) {
-            return done(null, false, { message: "Esta conta foi criada com login social. Defina uma palavra-passe no perfil ou use o botão de login social." });
+            return done(null, false, { message: "Credenciais inválidas" });
           }
           const isValid = await bcrypt.compare(password, user.passwordHash);
           if (!isValid) {
-            return done(null, false, { message: "Palavra-passe incorreta" });
+            return done(null, false, { message: "Credenciais inválidas" });
           }
           return done(null, { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, profileImageUrl: user.profileImageUrl });
         } catch (err) {
@@ -133,6 +143,7 @@ export async function setupAuth(app: Express) {
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
           callbackURL: "/api/auth/google/callback",
           scope: ["profile", "email"],
+          state: true,
         },
         async (_accessToken, _refreshToken, profile, done) => {
           try {
@@ -177,13 +188,13 @@ export async function setupAuth(app: Express) {
 
       const existingByEmail = await authStorage.getUserByEmail(input.email);
       if (existingByEmail) {
-        return res.status(400).json({ message: "Este email já está registado" });
+        return res.status(400).json({ message: "Não foi possível criar conta com estes dados" });
       }
 
       if (input.username) {
         const existingByUsername = await authStorage.getUserByUsername(input.username);
         if (existingByUsername) {
-          return res.status(400).json({ message: "Este nome de utilizador já está em uso" });
+          return res.status(400).json({ message: "Não foi possível criar conta com estes dados" });
         }
       }
 
@@ -209,8 +220,7 @@ export async function setupAuth(app: Express) {
         expiresAt,
       });
 
-      const baseUrl = process.env.APP_BASE_URL
-        || `${req.protocol}://${req.get("host")}`;
+      const baseUrl = getCanonicalBaseUrl();
 
       sendEmailVerificationEmail(user.email!, rawToken, baseUrl).catch((emailErr) => {
         console.error("Failed to send verification email:", emailErr);
@@ -262,8 +272,7 @@ export async function setupAuth(app: Express) {
         .set({ usedAt: new Date() })
         .where(eq(emailVerificationTokens.id, record.id));
 
-      const baseUrl = process.env.APP_BASE_URL
-        || `${req.protocol}://${req.get("host")}`;
+      const baseUrl = getCanonicalBaseUrl();
       return res.redirect(`${baseUrl}/?emailVerified=true`);
     } catch (err) {
       console.error("Email verification error:", err);
@@ -306,8 +315,7 @@ export async function setupAuth(app: Express) {
         expiresAt,
       });
 
-      const baseUrl = process.env.APP_BASE_URL
-        || `${req.protocol}://${req.get("host")}`;
+      const baseUrl = getCanonicalBaseUrl();
 
       sendEmailVerificationEmail(user.email!, rawToken, baseUrl).catch((emailErr) => {
         console.error("Failed to resend verification email:", emailErr);
@@ -411,10 +419,10 @@ export async function setupAuth(app: Express) {
   });
 
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+    app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"], state: true }));
     app.get(
       "/api/auth/google/callback",
-      passport.authenticate("google", { failureRedirect: "/?auth_error=google_failed" }),
+      passport.authenticate("google", { failureRedirect: "/?auth_error=google_failed", state: true }),
       (_req, res) => {
         res.redirect("/");
       }
@@ -688,8 +696,7 @@ export async function setupAuth(app: Express) {
         expiresAt,
       });
 
-      const baseUrl = process.env.APP_BASE_URL
-        || `${req.protocol}://${req.get("host")}`;
+      const baseUrl = getCanonicalBaseUrl();
 
       sendPasswordResetEmail(email, rawToken, baseUrl).catch((emailErr) => {
         console.error("Failed to send password reset email:", emailErr);
