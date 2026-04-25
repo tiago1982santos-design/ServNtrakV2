@@ -53,6 +53,48 @@ function parsePositiveInt(raw: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+function parsePositiveIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const trimmed = raw.trim();
+  if (trimmed === "") return fallback;
+  if (!/^\d+$/.test(trimmed)) {
+    console.warn(
+      `[pushService] Valor inválido em ${name}="${raw}". A usar default ${fallback}.`,
+    );
+    return fallback;
+  }
+  const n = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(n) || n <= 0) {
+    console.warn(
+      `[pushService] Valor inválido em ${name}="${raw}". A usar default ${fallback}.`,
+    );
+    return fallback;
+  }
+  return n;
+}
+
+function parseNonNegativeIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const trimmed = raw.trim();
+  if (trimmed === "") return fallback;
+  if (!/^\d+$/.test(trimmed)) {
+    console.warn(
+      `[pushService] Valor inválido em ${name}="${raw}". A usar default ${fallback}.`,
+    );
+    return fallback;
+  }
+  const n = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(n) || n < 0) {
+    console.warn(
+      `[pushService] Valor inválido em ${name}="${raw}". A usar default ${fallback}.`,
+    );
+    return fallback;
+  }
+  return n;
+}
+
 function parseRate(raw: string | undefined, fallback: number): number {
   if (!raw) return fallback;
   const n = Number.parseFloat(raw);
@@ -337,8 +379,11 @@ export async function removeSubscription(endpoint: string, userId?: string): Pro
   }
 }
 
-const MAX_SEND_ATTEMPTS = 2;
-const RETRY_BASE_DELAY_MS = 500;
+const MAX_SEND_ATTEMPTS = parsePositiveIntEnv("PUSH_MAX_SEND_ATTEMPTS", 2);
+const RETRY_BASE_DELAY_MS = parseNonNegativeIntEnv(
+  "PUSH_RETRY_BASE_DELAY_MS",
+  500,
+);
 
 function isTransientPushError(err: any): boolean {
   const statusCode = err?.statusCode;
