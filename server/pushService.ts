@@ -74,6 +74,16 @@ const DEFAULT_ALLOWED_HOST_SUFFIXES: readonly string[] = [
   ".notify.windows.com",
 ];
 
+// PUSH_ENDPOINT_EXTRA_ALLOWED_HOSTS: optional, comma-separated list of
+// additional hosts to accept as push endpoints, on top of the built-in
+// browser push services. Use sparingly — every entry widens the SSRF
+// blast radius. Each entry is one of:
+//   - exact host       e.g. "push.staging.example.com"
+//   - suffix wildcard  e.g. "*.push.staging.example.com" (matches any
+//                      subdomain but NOT the bare suffix itself)
+// Example: PUSH_ENDPOINT_EXTRA_ALLOWED_HOSTS="push.staging.example.com,*.dev-push.example.org"
+// On startup the resolved extras are logged so operators can audit
+// what was actually accepted.
 function parseExtraHosts(): { exact: Set<string>; suffixes: string[] } {
   const raw = process.env.PUSH_ENDPOINT_EXTRA_ALLOWED_HOSTS?.trim();
   const exact = new Set<string>();
