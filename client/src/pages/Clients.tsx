@@ -204,8 +204,8 @@ export default function Clients() {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-8" data-testid="button-sort">
-                <ArrowUpDown className="w-3 h-3" />
+              <Button size="sm" variant="ghost" className="h-8" data-testid="button-sort" aria-label="Ordenar lista">
+                <ArrowUpDown className="w-3 h-3" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

@@ -454,8 +454,9 @@ function ItemCard({
           onClick={onEdit}
           className="text-muted-foreground hover:text-primary transition-colors"
           data-testid={`edit-item-${item.description}`}
+          aria-label="Editar artigo"
         >
-          <Pencil className="w-4 h-4" />
+          <Pencil className="w-4 h-4" aria-hidden="true" />
         </button>
         <button
           onClick={onDelete}

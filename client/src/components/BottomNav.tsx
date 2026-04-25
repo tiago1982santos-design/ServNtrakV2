@@ -23,6 +23,7 @@ export function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 bg-white border-t border-border z-50 rounded-t-3xl shadow-[0_-10px_40px_hsl(var(--primary)/0.08)]"
       data-testid="bottom-navigation"
+      aria-label="Navegação principal"
     >
       <div className="flex justify-around items-center mx-auto h-16 px-2">
         {navItems.map((item) => {
@@ -36,6 +37,7 @@ export function BottomNav() {
               href={item.href}
               className="relative flex flex-col items-center justify-center flex-1 h-full outline-none touch-manipulation"
               data-testid={`nav-${item.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`}
+              aria-current={isActive ? "page" : undefined}
             >
               <div className={cn(
                 "flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-colors",
