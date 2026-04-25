@@ -67,6 +67,14 @@ As tabelas operacionais (appointments, service_logs, etc.) estavam vazias **na o
 - Após a migração, os três secrets ficaram com valores trocados/inválidos e as notificações push estavam desativadas. Foram regerados (par VAPID novo via `web-push generate-vapid-keys`) e regravados nos Secrets. A subscrição push antiga (1 registo) deixou de ser válida; o servidor remove-a automaticamente quando o endpoint devolve 404/410 e o utilizador volta a subscrever em Perfil → Notificações Push.
 - `server/pushService.ts` faz `.trim()` aos três secrets ao lê-los, para tolerar espaços/quebras de linha acidentais ao colar valores no painel de Secrets.
 
+#### Allowlist de endpoints push (proteção SSRF)
+
+`server/pushService.ts` mantém uma **allowlist** de hosts aceites como endpoint de push subscription para impedir que utilizadores autenticados usem o servidor como pivot de SSRF (Task #31). Hosts permitidos por omissão: `fcm.googleapis.com`, `android.googleapis.com`, `updates.push.services.mozilla.com` (+ subdomínios `*.push.services.mozilla.com`), `web.push.apple.com`, `api.push.apple.com` (+ `*.push.apple.com`), `*.notify.windows.com`. Validação aplicada em três pontos: route `/api/push/subscribe`, `saveSubscription()` (defense-in-depth) e `sendPushToUser()` (filtra/remove subscrições já guardadas que não passem). Regras: HTTPS apenas, sem userinfo, sem porta diferente de 443, sem fragmento, ≤ 2048 chars.
+
+**Manutenção:** se um provedor de browser adicionar/mudar domínios, atualizar as constantes `DEFAULT_ALLOWED_HOSTS` / `DEFAULT_ALLOWED_HOST_SUFFIXES` em `server/pushService.ts`. Para precisar de adicionar hosts sem editar código (testes, staging) usar a env var `PUSH_ENDPOINT_EXTRA_ALLOWED_HOSTS` (CSV; suporta `*.suffix`).
+
+**Testar:** `npx tsx server/pushService.endpointAllowlist.test.ts` — script auto-contido com 30 casos (hosts legítimos, protocolos errados, IPs internos, port/userinfo/fragment/suffix-spoofing). Correr antes de mexer na allowlist.
+
 ## Home Page Design — "Dia de Sol (Polido)"
 
 The Home page was redesigned from a dark-green gradient to a warm amber/orange "Sunny" aesthetic:
