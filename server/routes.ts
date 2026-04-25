@@ -3,6 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { authStorage } from "./replit_integrations/auth/storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { api } from "@shared/routes";
 import { serviceVisits, appointments } from "@shared/schema";
@@ -10,6 +11,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { saveSubscription, removeSubscription, sendPushToUser, getVapidPublicKey, getPushHealthStatus } from "./pushService";
 import Anthropic from "@anthropic-ai/sdk";
+import { checkScanDocumentRateLimit, checkAssistantRateLimit } from "./aiRateLimiter";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -774,6 +776,19 @@ export async function registerRoutes(
 
   app.post("/api/scan-document", requireAuth, async (req, res) => {
     try {
+      const userId = req.user!.id;
+
+      const dbUser = await authStorage.getUser(userId);
+      if (!dbUser?.isEmailVerified) {
+        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
+      }
+
+      const rateCheck = checkScanDocumentRateLimit(userId);
+      if (!rateCheck.allowed) {
+        res.setHeader("Retry-After", String(rateCheck.retryAfterSeconds));
+        return res.status(429).json({ message: `Limite de digitalizações atingido. Tente novamente em ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minuto(s).` });
+      }
+
       const { imageBase64 } = req.body;
       
       if (!imageBase64) {
@@ -1306,10 +1321,33 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
   app.post("/api/assistant", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
+
+      const dbUser = await authStorage.getUser(userId);
+      if (!dbUser?.isEmailVerified) {
+        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
+      }
+
+      const rateCheck = checkAssistantRateLimit(userId);
+      if (!rateCheck.allowed) {
+        res.setHeader("Retry-After", String(rateCheck.retryAfterSeconds));
+        return res.status(429).json({ message: `Limite de mensagens atingido. Tente novamente em ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minuto(s).` });
+      }
+
       const { message, history = [] } = req.body;
 
       if (!message) {
         return res.status(400).json({ message: "Mensagem em falta" });
+      }
+
+      const MAX_MESSAGE_LENGTH = 4000;
+      const MAX_HISTORY_TURNS = 20;
+
+      if (typeof message !== "string" || message.length > MAX_MESSAGE_LENGTH) {
+        return res.status(400).json({ message: `A mensagem não pode exceder ${MAX_MESSAGE_LENGTH} caracteres` });
+      }
+
+      if (!Array.isArray(history) || history.length > MAX_HISTORY_TURNS) {
+        return res.status(400).json({ message: `O histórico não pode exceder ${MAX_HISTORY_TURNS} mensagens` });
       }
 
       // Buscar contexto do utilizador (clientes e agendamentos)

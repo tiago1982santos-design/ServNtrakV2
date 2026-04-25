@@ -18,7 +18,7 @@ declare module "http" {
 
 app.use(
   express.json({
-    limit: '20mb',
+    limit: '5mb',
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
@@ -65,6 +65,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_verification_tokens (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMP NOT NULL,
+      used_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS expense_note_edits (
       id SERIAL PRIMARY KEY,

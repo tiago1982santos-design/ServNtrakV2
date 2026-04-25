@@ -702,6 +702,18 @@ export type SuggestedWorkWithClient = SuggestedWork & {
   client: Client;
 };
 
+// Email Verification Tokens
+export const emailVerificationTokens = pgTable("email_verification_tokens", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
+
 // Password Reset Tokens
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),

@@ -11,6 +11,7 @@ export interface IAuthStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   createUser(user: UpsertUser): Promise<User>;
   updateUserPassword(userId: string, passwordHash: string): Promise<void>;
+  updateUserEmailVerified(userId: string): Promise<void>;
   getWebAuthnCredentials(userId: string): Promise<WebAuthnCredential[]>;
   getWebAuthnCredentialById(credentialId: string): Promise<WebAuthnCredential | undefined>;
   saveWebAuthnCredential(credential: typeof webauthnCredentials.$inferInsert): Promise<WebAuthnCredential>;
@@ -75,6 +76,13 @@ class AuthStorage implements IAuthStorage {
     await db
       .update(users)
       .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserEmailVerified(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ isEmailVerified: true, updatedAt: new Date() })
       .where(eq(users.id, userId));
   }
 

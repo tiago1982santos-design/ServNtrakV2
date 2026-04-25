@@ -9,9 +9,9 @@ import crypto from "crypto";
 import { authStorage } from "./storage";
 import { z } from "zod";
 import { db } from "../../db";
-import { passwordResetTokens } from "@shared/schema";
+import { passwordResetTokens, emailVerificationTokens } from "@shared/schema";
 import { eq, and, gt } from "drizzle-orm";
-import { sendPasswordResetEmail } from "../../email";
+import { sendPasswordResetEmail, sendEmailVerificationEmail } from "../../email";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -35,6 +35,9 @@ function getOriginFromRequest(req: any): string {
   const host = req.get("host") || req.hostname || "localhost:5000";
   return `${proto}://${host}`;
 }
+
+const resendVerificationCooldowns = new Map<string, number>();
+const RESEND_VERIFICATION_COOLDOWN_MS = 5 * 60 * 1000;
 
 export function getSession() {
   const pgStore = connectPg(session);
@@ -196,17 +199,123 @@ export async function setupAuth(app: Express) {
         isEmailVerified: false,
       });
 
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await db.insert(emailVerificationTokens).values({
+        userId: user.id,
+        token: tokenHash,
+        expiresAt,
+      });
+
+      const baseUrl = process.env.APP_BASE_URL
+        || `${req.protocol}://${req.get("host")}`;
+
+      sendEmailVerificationEmail(user.email!, rawToken, baseUrl).catch((emailErr) => {
+        console.error("Failed to send verification email:", emailErr);
+      });
+
       req.login({ id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, profileImageUrl: user.profileImageUrl }, (err) => {
         if (err) {
           return res.status(500).json({ message: "Erro ao iniciar sessão" });
         }
-        return res.status(201).json({ id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName });
+        return res.status(201).json({ id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, emailVerificationSent: true });
       });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
       console.error("Registration error:", err);
+      return res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // --- Email Verification ---
+  app.get("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { token } = req.query;
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ message: "Token inválido" });
+      }
+
+      const tokenHash = hashToken(token);
+
+      const [record] = await db
+        .select()
+        .from(emailVerificationTokens)
+        .where(
+          and(
+            eq(emailVerificationTokens.token, tokenHash),
+            gt(emailVerificationTokens.expiresAt, new Date()),
+          )
+        )
+        .limit(1);
+
+      if (!record || record.usedAt) {
+        return res.status(400).json({ message: "Link inválido ou expirado" });
+      }
+
+      await authStorage.updateUserEmailVerified(record.userId);
+
+      await db.update(emailVerificationTokens)
+        .set({ usedAt: new Date() })
+        .where(eq(emailVerificationTokens.id, record.id));
+
+      const baseUrl = process.env.APP_BASE_URL
+        || `${req.protocol}://${req.get("host")}`;
+      return res.redirect(`${baseUrl}/?emailVerified=true`);
+    } catch (err) {
+      console.error("Email verification error:", err);
+      return res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+
+      const normalizedEmail = String(email).toLowerCase().trim();
+      const lastSentAt = resendVerificationCooldowns.get(normalizedEmail);
+      if (lastSentAt && Date.now() - lastSentAt < RESEND_VERIFICATION_COOLDOWN_MS) {
+        const waitSeconds = Math.ceil((RESEND_VERIFICATION_COOLDOWN_MS - (Date.now() - lastSentAt)) / 1000);
+        res.setHeader("Retry-After", String(waitSeconds));
+        return res.status(429).json({ message: `Aguarda ${Math.ceil(waitSeconds / 60)} minuto(s) antes de pedir outro email de verificação.` });
+      }
+
+      const user = await authStorage.getUserByEmail(normalizedEmail);
+      if (!user || user.isEmailVerified) {
+        return res.json({ message: "Se a conta existir e precisar de verificação, receberás um email em breve." });
+      }
+
+      resendVerificationCooldowns.set(normalizedEmail, Date.now());
+
+      await db.delete(emailVerificationTokens)
+        .where(eq(emailVerificationTokens.userId, user.id));
+
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await db.insert(emailVerificationTokens).values({
+        userId: user.id,
+        token: tokenHash,
+        expiresAt,
+      });
+
+      const baseUrl = process.env.APP_BASE_URL
+        || `${req.protocol}://${req.get("host")}`;
+
+      sendEmailVerificationEmail(user.email!, rawToken, baseUrl).catch((emailErr) => {
+        console.error("Failed to resend verification email:", emailErr);
+      });
+
+      return res.json({ message: "Se a conta existir e precisar de verificação, receberás um email em breve." });
+    } catch (err) {
+      console.error("Resend verification error:", err);
       return res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
