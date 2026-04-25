@@ -25,8 +25,9 @@ export function BackButton({ fallbackPath = "/" }: BackButtonProps) {
       onClick={handleBack}
       className="shrink-0"
       data-testid="button-back"
+      aria-label="Voltar"
     >
-      <ArrowLeft className="w-5 h-5" />
+      <ArrowLeft className="w-5 h-5" aria-hidden="true" />
     </Button>
   );
 }

@@ -134,8 +134,9 @@ export default function Finances() {
                 variant="outline"
                 onClick={() => setSalaryPercentage(currentSalaryPercentage.toString())}
                 data-testid="button-open-config"
+                aria-label="Configurar percentagem de salário"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4" aria-hidden="true" />
               </Button>
             </DialogTrigger>
             <DialogContent>

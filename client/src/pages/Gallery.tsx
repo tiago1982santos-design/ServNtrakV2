@@ -316,8 +316,9 @@ export default function Gallery() {
                   className="absolute left-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
                   onClick={() => navigateLightbox("prev")}
                   data-testid="button-lightbox-prev"
+                  aria-label="Fotografia anterior"
                 >
-                  <ChevronLeft className="w-8 h-8" />
+                  <ChevronLeft className="w-8 h-8" aria-hidden="true" />
                 </Button>
 
                 <img
@@ -332,8 +333,9 @@ export default function Gallery() {
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
                   onClick={() => navigateLightbox("next")}
                   data-testid="button-lightbox-next"
+                  aria-label="Próxima fotografia"
                 >
-                  <ChevronRight className="w-8 h-8" />
+                  <ChevronRight className="w-8 h-8" aria-hidden="true" />
                 </Button>
               </div>
 

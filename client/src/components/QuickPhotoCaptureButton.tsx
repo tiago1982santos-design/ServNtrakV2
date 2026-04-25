@@ -148,8 +148,9 @@ export function QuickPhotoCaptureButton() {
         className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
         onClick={handleCapture}
         data-testid="button-quick-photo"
+        aria-label="Capturar fotografia"
       >
-        <Camera className="h-6 w-6" />
+        <Camera className="h-6 w-6" aria-hidden="true" />
       </Button>
 
       <Drawer open={showPreview} onOpenChange={(open) => !open && resetState()}>

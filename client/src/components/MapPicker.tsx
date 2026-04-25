@@ -275,8 +275,9 @@ export function MapPicker({ latitude, longitude, onChange }: MapPickerProps) {
             className="absolute top-3 right-3 z-[1000] shadow-md"
             onClick={handleLocate}
             data-testid="button-locate-me"
+            aria-label="Localizar a minha posição"
           >
-            <LocateFixed className="w-4 h-4" />
+            <LocateFixed className="w-4 h-4" aria-hidden="true" />
           </Button>
           
           <Button

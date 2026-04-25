@@ -1464,8 +1464,8 @@ function EditClientDialog({ client }: { client: Client }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="icon" variant="ghost" className="text-primary-foreground/80 hover:text-white hover:bg-white/10" data-testid="button-edit-client">
-          <Pencil className="w-4 h-4" />
+        <Button size="icon" variant="ghost" className="text-primary-foreground/80 hover:text-white hover:bg-white/10" data-testid="button-edit-client" aria-label="Editar cliente">
+          <Pencil className="w-4 h-4" aria-hidden="true" />
         </Button>
       </DialogTrigger>
       <DialogContent className="rounded-2xl sm:max-w-md max-h-[90vh] overflow-y-auto">
@@ -2210,8 +2210,8 @@ function CompleteVisitDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="icon" variant="ghost" className="shrink-0" data-testid={`button-complete-visit-${appointmentId}`}>
-          <Check className="w-5 h-5 text-green-600" />
+        <Button size="icon" variant="ghost" className="shrink-0" data-testid={`button-complete-visit-${appointmentId}`} aria-label="Concluir visita">
+          <Check className="w-5 h-5 text-green-600" aria-hidden="true" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md rounded-2xl">

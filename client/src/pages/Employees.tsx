@@ -106,8 +106,8 @@ export default function EmployeesPage() {
           
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button size="icon" className="rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm" data-testid="button-add-employee">
-                <Plus className="w-5 h-5 text-white" />
+              <Button size="icon" className="rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm" data-testid="button-add-employee" aria-label="Adicionar funcionário">
+                <Plus className="w-5 h-5 text-white" aria-hidden="true" />
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">

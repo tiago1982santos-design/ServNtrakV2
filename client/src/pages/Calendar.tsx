@@ -226,8 +226,9 @@ export default function CalendarPage() {
               className="rounded-full h-10 w-10 shadow-lg"
               onClick={handleOpenDialog}
               data-testid="button-add-appointment"
+              aria-label="Adicionar marcação"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-5 h-5" aria-hidden="true" />
             </Button>
           )}
         </div>
