@@ -19,7 +19,8 @@ import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import {
   Plus, ShoppingCart, Store as StoreIcon, Tag, Loader2, ChevronRight,
-  Trash2, Edit2, MapPin, Phone, Mail, Building2, Package, Scan, Camera
+  Trash2, Edit2, MapPin, Phone, Mail, Building2, Package, Scan, Camera,
+  Search, X
 } from "lucide-react";
 import { DocumentScanDialog } from "@/components/DocumentScanDialog";
 import { PurchaseDetails } from "@/components/PurchaseDetails";
@@ -39,6 +40,7 @@ interface InvoiceSummary {
 export default function Purchases() {
   const [activeTab, setActiveTab] = useState("compras");
   const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
+  const [search, setSearch] = useState("");
   const [isAddPurchaseOpen, setIsAddPurchaseOpen] = useState(false);
   const [isAddStoreOpen, setIsAddStoreOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
@@ -77,9 +79,18 @@ export default function Purchases() {
       grouped.get(key)!.push(p);
     });
 
+    const searchLower = search.trim().toLowerCase();
     grouped.forEach((items, key) => {
       const first = items[0];
-      if (selectedCategory === "Todas" || items.some(p => p.category.name === selectedCategory)) {
+      const matchesCategory =
+        selectedCategory === "Todas" ||
+        items.some(p => p.category.name === selectedCategory);
+      const matchesSearch =
+        !searchLower ||
+        first.store.name.toLowerCase().includes(searchLower) ||
+        (first.invoiceNumber || "").toLowerCase().includes(searchLower) ||
+        items.some(p => p.productName.toLowerCase().includes(searchLower));
+      if (matchesCategory && matchesSearch) {
         invoices.push({
           invoiceNumber: first.invoiceNumber || null,
           purchaseDate: typeof first.purchaseDate === "string" ? first.purchaseDate : new Date(first.purchaseDate).toISOString(),
@@ -134,6 +145,34 @@ export default function Purchases() {
                 <Camera className="w-4 h-4 mr-2" />
                 Digitalizar Fatura
               </Button>
+            </div>
+
+            <div className="relative mb-3">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                type="search"
+                inputMode="search"
+                placeholder="Procurar por loja, fatura ou artigo…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 pr-10"
+                aria-label="Pesquisar nas compras"
+                data-testid="input-search-purchases"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted transition-colors"
+                  aria-label="Limpar pesquisa"
+                  data-testid="button-clear-search-purchases"
+                >
+                  <X className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                </button>
+              )}
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-2">
@@ -222,6 +261,15 @@ export default function Purchases() {
                     <tbody>
                       {allPurchases
                         ?.filter(p => p.category.name === selectedCategory)
+                        .filter(p => {
+                          const s = search.trim().toLowerCase();
+                          if (!s) return true;
+                          return (
+                            p.productName.toLowerCase().includes(s) ||
+                            p.store.name.toLowerCase().includes(s) ||
+                            (p.invoiceNumber || "").toLowerCase().includes(s)
+                          );
+                        })
                         .reduce((acc: Map<string, PurchaseWithDetails>, p) => {
                           if (!acc.has(p.productName) || new Date(p.purchaseDate) > new Date(acc.get(p.productName)!.purchaseDate)) {
                             acc.set(p.productName, p);
