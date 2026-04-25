@@ -43,6 +43,101 @@ export function isPushEnabled(): boolean {
   return pushEnabled;
 }
 
+// ─── SSRF protection ───────────────────────────────────────────────
+// Only well-known browser push services are accepted as subscription
+// endpoints. Without this, an authenticated user could register an
+// arbitrary HTTPS URL and weaponise the server's outbound HTTP client
+// (web-push) into a blind SSRF probe against internal hosts or
+// third-party endpoints. We enforce this at registration time AND
+// again when sending, so previously stored bad endpoints are also
+// neutralised.
+
+const DEFAULT_ALLOWED_HOSTS: readonly string[] = [
+  // Google FCM (Chrome, Edge Chromium, most Android browsers)
+  "fcm.googleapis.com",
+  "android.googleapis.com",
+  // Mozilla Autopush (Firefox)
+  "updates.push.services.mozilla.com",
+  "updates-autopush.stage.mozaws.net",
+  "updates-autopush.dev.mozaws.net",
+  // Apple Web Push (Safari)
+  "web.push.apple.com",
+  "api.push.apple.com",
+];
+
+const DEFAULT_ALLOWED_HOST_SUFFIXES: readonly string[] = [
+  // Mozilla Autopush nodes are *.push.services.mozilla.com
+  ".push.services.mozilla.com",
+  // Apple APNs nodes are *.push.apple.com
+  ".push.apple.com",
+  // Microsoft WNS (Edge legacy / Windows): *.notify.windows.com
+  ".notify.windows.com",
+];
+
+function parseExtraHosts(): { exact: Set<string>; suffixes: string[] } {
+  const raw = process.env.PUSH_ENDPOINT_EXTRA_ALLOWED_HOSTS?.trim();
+  const exact = new Set<string>();
+  const suffixes: string[] = [];
+  if (!raw) return { exact, suffixes };
+  for (const part of raw.split(",")) {
+    const host = part.trim().toLowerCase();
+    if (!host) continue;
+    if (host.startsWith("*.") && host.length > 2) {
+      suffixes.push(host.slice(1));
+    } else if (host.startsWith(".") && host.length > 1) {
+      suffixes.push(host);
+    } else {
+      exact.add(host);
+    }
+  }
+  return { exact, suffixes };
+}
+
+const EXTRA = parseExtraHosts();
+const ALLOWED_HOSTS = new Set<string>(
+  DEFAULT_ALLOWED_HOSTS.map((h) => h.toLowerCase()),
+);
+EXTRA.exact.forEach((h) => ALLOWED_HOSTS.add(h));
+const ALLOWED_HOST_SUFFIXES: readonly string[] = [
+  ...DEFAULT_ALLOWED_HOST_SUFFIXES.map((s) => s.toLowerCase()),
+  ...EXTRA.suffixes,
+];
+
+if (EXTRA.exact.size || EXTRA.suffixes.length) {
+  const extras: string[] = [];
+  EXTRA.exact.forEach((h) => extras.push(h));
+  for (const s of EXTRA.suffixes) extras.push(s);
+  console.info(
+    `[pushService] PUSH_ENDPOINT_EXTRA_ALLOWED_HOSTS aplicado: ${extras.join(", ")}`,
+  );
+}
+
+export function isAllowedPushEndpoint(endpoint: unknown): boolean {
+  if (typeof endpoint !== "string" || endpoint.length === 0 || endpoint.length > 2048) {
+    return false;
+  }
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  // Block URLs that smuggle credentials, fragments, or non-default ports.
+  if (url.username || url.password) return false;
+  if (url.port && url.port !== "443") return false;
+  if (url.hash) return false;
+  const host = url.hostname.toLowerCase();
+  if (!host) return false;
+  if (ALLOWED_HOSTS.has(host)) return true;
+  for (const suffix of ALLOWED_HOST_SUFFIXES) {
+    if (host.endsWith(suffix) && host.length > suffix.length) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const RECENT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const PRUNE_INTERVAL_MS = 60 * 60 * 1000; // hourly
@@ -344,11 +439,23 @@ export async function getPushHealthStatus(): Promise<PushHealthStatus> {
   };
 }
 
+export class InvalidPushEndpointError extends Error {
+  constructor(message = "Endpoint de push não pertence a um serviço suportado") {
+    super(message);
+    this.name = "InvalidPushEndpointError";
+  }
+}
+
 export async function saveSubscription(
   userId: string,
   subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
   deviceInfo?: string
 ): Promise<void> {
+  // Defense-in-depth: routes already validate, but enforce here too so any
+  // future caller can't accidentally bypass the SSRF allowlist.
+  if (!isAllowedPushEndpoint(subscription.endpoint)) {
+    throw new InvalidPushEndpointError();
+  }
   await db
     .insert(pushSubscriptions)
     .values({
@@ -442,6 +549,30 @@ export async function sendPushToUser(
       sub.endpoint.length > 80
         ? `${sub.endpoint.slice(0, 60)}...${sub.endpoint.slice(-16)}`
         : sub.endpoint;
+
+    // SSRF guard: skip and purge any stored subscription whose endpoint
+    // is no longer (or never was) on the allowlist of trusted push services.
+    if (!isAllowedPushEndpoint(sub.endpoint)) {
+      console.warn(
+        `[pushService] A descartar subscrição com endpoint não permitido para userId=${userId} endpoint=${endpointPreview}.`,
+      );
+      try {
+        await removeSubscription(sub.endpoint);
+      } catch (err) {
+        console.warn(
+          `[pushService] Falha a remover subscrição não permitida: ${(err as Error)?.message || err}`,
+        );
+      }
+      failed++;
+      await recordSendEvent({
+        status: "failure",
+        endpointPreview,
+        statusCode: null,
+        kind: "other",
+        message: "endpoint not in allowlist",
+      });
+      continue;
+    }
 
     let lastError: any = null;
     let delivered = false;

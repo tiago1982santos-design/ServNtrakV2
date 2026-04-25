@@ -9,7 +9,7 @@ import { api } from "@shared/routes";
 import { serviceVisits, appointments } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { saveSubscription, removeSubscription, sendPushToUser, getVapidPublicKey, getPushHealthStatus } from "./pushService";
+import { saveSubscription, removeSubscription, sendPushToUser, getVapidPublicKey, getPushHealthStatus, isAllowedPushEndpoint, InvalidPushEndpointError } from "./pushService";
 import Anthropic from "@anthropic-ai/sdk";
 import { checkScanDocumentRateLimit, checkAssistantRateLimit } from "./aiRateLimiter";
 
@@ -1391,13 +1391,20 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     try {
       const { subscription, deviceInfo } = z.object({
         subscription: z.object({
-          endpoint: z.string().url(),
+          endpoint: z
+            .string()
+            .url()
+            .max(2048)
+            .refine(isAllowedPushEndpoint, {
+              message:
+                "Endpoint de push não pertence a um serviço suportado (FCM, Mozilla Autopush, APNs)",
+            }),
           keys: z.object({
-            p256dh: z.string(),
-            auth: z.string(),
+            p256dh: z.string().min(1).max(512),
+            auth: z.string().min(1).max(512),
           }),
         }),
-        deviceInfo: z.string().optional(),
+        deviceInfo: z.string().max(512).optional(),
       }).parse(req.body);
 
       await saveSubscription(req.user!.id, subscription, deviceInfo);
@@ -1405,6 +1412,9 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
+      }
+      if (err instanceof InvalidPushEndpointError) {
+        return res.status(400).json({ message: err.message });
       }
       console.error("Push subscribe error:", err);
       res.status(500).json({ message: "Erro ao registar notificação" });
