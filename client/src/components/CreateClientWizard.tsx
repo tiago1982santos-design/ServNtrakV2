@@ -22,8 +22,24 @@ import { DurationInput } from "@/components/DurationInput";
 import { cn } from "@/lib/utils";
 
 const formSchema = insertClientSchema.extend({
+  name: z
+    .string({ required_error: "O nome é obrigatório" })
+    .trim()
+    .min(2, "O nome tem de ter pelo menos 2 caracteres"),
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   phone: z.string().min(3, "O telefone é demasiado curto").optional().or(z.literal("")),
+  monthlyRate: z
+    .number({ invalid_type_error: "Indique um valor numérico" })
+    .positive("O valor tem de ser superior a 0")
+    .optional(),
+  hourlyRate: z
+    .number({ invalid_type_error: "Indique um valor numérico" })
+    .positive("O valor tem de ser superior a 0")
+    .optional(),
+  perVisitRate: z
+    .number({ invalid_type_error: "Indique um valor numérico" })
+    .positive("O valor tem de ser superior a 0")
+    .optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
