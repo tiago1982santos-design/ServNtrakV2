@@ -75,6 +75,16 @@ As tabelas operacionais (appointments, service_logs, etc.) estavam vazias **na o
 
 **Testar:** `npx tsx server/pushService.endpointAllowlist.test.ts` — script auto-contido com 30 casos (hosts legítimos, protocolos errados, IPs internos, port/userinfo/fragment/suffix-spoofing). Correr antes de mexer na allowlist.
 
+#### Object Storage — controlo de acesso e endurecimento de downloads (Task #30)
+
+`server/replit_integrations/object_storage/routes.ts` aplica três camadas:
+
+1. **Upload autenticado + allowlist de tipos.** `POST /api/uploads/request-url` exige sessão válida e valida o body com zod: `name` (1–255 chars), `size` (≤ 50 MB) e `contentType` numa allowlist (imagens JPEG/PNG/GIF/WEBP/HEIC/HEIF, PDF, texto/CSV, doc/docx, xls/xlsx). Tipos executáveis (text/html, SVG, XHTML, JS, WASM, etc.) são **rejeitados aqui**, eliminando o vetor de XSS de mesmo origin pela via normal.
+2. **Download autorizado por ACL.** `GET /objects/:objectPath(*)` consulta a ACL do ficheiro: se `visibility: "public"` serve a anónimos; caso contrário exige autenticação e, quando há ACL, chama `canAccessObjectEntity({userId, READ})` (403 se falhar). Sem ACL definida, basta autenticação (compatibilidade com objetos legados).
+3. **Defesa em profundidade no streaming.** `downloadObject()` em `objectStorage.ts` sanitiza o `Content-Type` servido (`sanitizeServedContentType`): tipos *scriptable* viram `application/octet-stream` com `Content-Disposition: attachment`; tipos seguros (imagens, PDF, texto, CSV) seguem inline. Sempre adiciona `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox; frame-ancestors 'none'`, `X-Frame-Options: DENY` e `Referrer-Policy: no-referrer`. `buildSafeFilename()` remove path traversal, aspas, backslashes e chars de controlo do header `filename`.
+
+**Testar:** `npx tsx server/replit_integrations/object_storage/objectStorage.sanitize.test.ts` — 29 casos cobrindo a coerção de tipos perigosos e o saneamento de filenames.
+
 ## Home Page Design — "Dia de Sol (Polido)"
 
 The Home page was redesigned from a dark-green gradient to a warm amber/orange "Sunny" aesthetic:

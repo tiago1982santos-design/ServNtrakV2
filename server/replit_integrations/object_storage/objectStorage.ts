@@ -114,13 +114,32 @@ export class ObjectStorageService {
       // Get the ACL policy for the object.
       const aclPolicy = await getObjectAclPolicy(file);
       const isPublic = aclPolicy?.visibility === "public";
+
+      // Sanitise the served Content-Type so the response can never run as
+      // first-party active content. text/html, SVG, XML, JS, etc. are
+      // coerced to application/octet-stream and forced as a download.
+      const rawType = (metadata.contentType || "application/octet-stream")
+        .toLowerCase()
+        .split(";")[0]
+        .trim();
+      const { contentType, disposition } = sanitizeServedContentType(rawType);
+      const safeFilename = buildSafeFilename(file.name);
+
       // Set appropriate headers
       res.set({
-        "Content-Type": metadata.contentType || "application/octet-stream",
+        "Content-Type": contentType,
         "Content-Length": metadata.size,
         "Cache-Control": `${
           isPublic ? "public" : "private"
         }, max-age=${cacheTtlSec}`,
+        "Content-Disposition": `${disposition}; filename="${safeFilename}"`,
+        // Defence-in-depth: even if a malicious payload slipped through the
+        // upload allowlist, these headers stop a browser from executing it
+        // as same-origin script.
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox; frame-ancestors 'none'",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "no-referrer",
       });
 
       // Stream the file to the response
@@ -251,6 +270,74 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
+}
+
+// Content types that are safe to serve inline because browsers cannot run
+// scripts from them. Everything else is forced to be a download.
+const INLINE_SAFE_CONTENT_TYPES = new Set<string>([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+  "image/bmp",
+  "image/heic",
+  "image/heif",
+  "application/pdf",
+  "text/plain",
+  "text/csv",
+]);
+
+// Map of common (incorrect) aliases to their canonical Content-Type so
+// thumbnails / <img> / <a> previews keep working even when the upload metadata
+// records the alias.
+const CONTENT_TYPE_ALIASES: Record<string, string> = {
+  "image/jpg": "image/jpeg",
+  "image/x-png": "image/png",
+};
+
+// Content types that can execute as same-origin code in a browser. They are
+// always rewritten to application/octet-stream and served as an attachment.
+const SCRIPTABLE_CONTENT_TYPES = new Set<string>([
+  "text/html",
+  "text/xml",
+  "application/xml",
+  "application/xhtml+xml",
+  "image/svg+xml",
+  "application/javascript",
+  "application/ecmascript",
+  "text/javascript",
+  "text/ecmascript",
+  "application/wasm",
+  "application/x-msdownload",
+  "application/x-shockwave-flash",
+]);
+
+export function sanitizeServedContentType(rawType: string): {
+  contentType: string;
+  disposition: "inline" | "attachment";
+} {
+  const initial = (rawType || "").toLowerCase().split(";")[0].trim();
+  const normalized = CONTENT_TYPE_ALIASES[initial] ?? initial;
+
+  if (SCRIPTABLE_CONTENT_TYPES.has(normalized)) {
+    return { contentType: "application/octet-stream", disposition: "attachment" };
+  }
+  if (INLINE_SAFE_CONTENT_TYPES.has(normalized)) {
+    return { contentType: normalized, disposition: "inline" };
+  }
+  // Unknown / unexpected types: serve as a generic download. We do not echo
+  // the original Content-Type back so the browser cannot be tricked into
+  // rendering it as something executable.
+  return { contentType: "application/octet-stream", disposition: "attachment" };
+}
+
+export function buildSafeFilename(rawName: string): string {
+  // Strip directory components, drop control chars and quotes that would
+  // break the Content-Disposition header.
+  const base = (rawName || "file").split("/").pop() || "file";
+  const cleaned = base.replace(/[\x00-\x1f\x7f"\\]/g, "_").trim();
+  return cleaned.length > 0 ? cleaned.slice(0, 200) : "file";
 }
 
 function parseObjectPath(path: string): {
