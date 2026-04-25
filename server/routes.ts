@@ -619,10 +619,13 @@ export async function registerRoutes(
       const purchase = await storage.createPurchase({ ...input, userId });
       res.status(201).json(purchase);
     } catch (err) {
+      // Do not log req.body here — it contains store names, invoice
+      // numbers, line items and prices that should never be copied into
+      // application logs (Task #29).
       console.error("PURCHASE CREATE ERROR:", {
         message: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
-        body: req.body,
+        userId: req.user?.id,
       });
       if (err instanceof z.ZodError) {
         return res.status(400).json({
@@ -863,10 +866,16 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
           .trim();
         extractedData = extractedPurchaseSchema.parse(JSON.parse(cleanContent));
       } catch (parseError) {
-        console.error("Failed to parse OCR response:", content);
-        return res.status(422).json({ 
+        // Do NOT log the raw model output: it contains extracted invoice
+        // data (store names, addresses, NIFs, line items, totals) that we
+        // never want copied into application logs (Task #29). Log only
+        // diagnostic metadata.
+        console.error("Failed to parse OCR response:", {
+          message: parseError instanceof Error ? parseError.message : String(parseError),
+          contentLength: content.length,
+        });
+        return res.status(422).json({
           message: "Não foi possível extrair informações do documento",
-          rawText: content,
         });
       }
 
@@ -1529,12 +1538,14 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
       if (!updated) return res.status(404).json({ error: "Nota não encontrada" });
       res.json(updated);
     } catch (error: any) {
+      // Do not log req.body here — it contains expense-note edits with
+      // store, item and price details that should never be copied into
+      // application logs (Task #29).
       console.error("PATCH expense-note error:", {
         message: error?.message,
         stack: error?.stack,
         noteId: req.params.id,
         userId: req.user!.id,
-        body: req.body,
       });
       if (error?.message?.includes("emitida")) {
         return res.status(403).json({ error: error.message });

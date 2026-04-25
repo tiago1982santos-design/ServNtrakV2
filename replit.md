@@ -85,6 +85,20 @@ As tabelas operacionais (appointments, service_logs, etc.) estavam vazias **na o
 
 **Testar:** `npx tsx server/replit_integrations/object_storage/objectStorage.sanitize.test.ts` — 29 casos cobrindo a coerção de tipos perigosos e o saneamento de filenames.
 
+#### Logging — política de "metadados apenas" (Task #29)
+
+O middleware de logging em `server/index.ts` regista **apenas metadados** de cada pedido `/api`: método, path, status code e duração. **Nunca** captura nem serializa o body da resposta. Isto evita que registos de produção contenham:
+
+- Dados de clientes, marcações, visitas de serviço, despesas, orçamentos.
+- Resultado de OCR de documentos (faturas, recibos, NIFs, moradas, linhas).
+- URLs presigned de upload (que são bearer tokens temporários).
+
+Para erros do OCR (`POST /api/scan-document`), `routes.ts` regista apenas `parseError.message` + `contentLength` — o conteúdo cru do modelo nunca chega aos logs e também já não é devolvido ao cliente.
+
+Os handlers de erro em `POST /api/purchases` e `PATCH /api/expense-notes/:id` foram limpos para não logarem `req.body` (que contém detalhes de compra/despesa). Apenas `message`, `stack`, e identificadores não sensíveis (`userId`, `noteId`).
+
+**Regra de ouro ao adicionar novos `console.error` ou novos middlewares de logging:** nunca incluir `req.body`, `req.query`, response payloads, headers de Authorization ou Cookie, nem URLs de signed-storage. Em caso de dúvida, logar apenas `message`, `stack`, identificadores opacos (IDs numéricos, userId) e contagens.
+
 ## Home Page Design — "Dia de Sol (Polido)"
 
 The Home page was redesigned from a dark-green gradient to a warm amber/orange "Sunny" aesthetic:
