@@ -183,6 +183,11 @@ export class DatabaseStorage implements IStorage {
     return client;
   }
 
+  async getClientForUser(id: number, userId: string): Promise<Client | undefined> {
+    const [client] = await db.select().from(clients).where(and(eq(clients.id, id), eq(clients.userId, userId)));
+    return client;
+  }
+
   async createClient(client: InsertClient & { userId: string }): Promise<Client> {
     const [newClient] = await db.insert(clients).values(client).returning();
     return newClient;
@@ -702,8 +707,8 @@ export class DatabaseStorage implements IStorage {
         client: clients,
       })
       .from(purchases)
-      .innerJoin(stores, eq(purchases.storeId, stores.id))
-      .innerJoin(purchaseCategories, eq(purchases.categoryId, purchaseCategories.id))
+      .innerJoin(stores, and(eq(purchases.storeId, stores.id), eq(stores.userId, userId)))
+      .innerJoin(purchaseCategories, and(eq(purchases.categoryId, purchaseCategories.id), eq(purchaseCategories.userId, userId)))
       .leftJoin(clients, and(eq(purchases.clientId, clients.id), eq(clients.userId, purchases.userId)))
       .where(and(...conditions))
       .orderBy(desc(purchases.purchaseDate));
@@ -754,6 +759,24 @@ export class DatabaseStorage implements IStorage {
         throw new Error("Cliente não encontrado ou não autorizado");
       }
     }
+    // Validate that storeId belongs to the same user if provided
+    if (updates.storeId) {
+      const [store] = await db.select().from(stores).where(
+        and(eq(stores.id, updates.storeId), eq(stores.userId, userId))
+      );
+      if (!store) {
+        throw new Error("Fornecedor não encontrado ou não autorizado");
+      }
+    }
+    // Validate that categoryId belongs to the same user if provided
+    if (updates.categoryId) {
+      const [category] = await db.select().from(purchaseCategories).where(
+        and(eq(purchaseCategories.id, updates.categoryId), eq(purchaseCategories.userId, userId))
+      );
+      if (!category) {
+        throw new Error("Categoria não encontrada ou não autorizada");
+      }
+    }
     const [updated] = await db
       .update(purchases)
       .set(updates)
@@ -775,8 +798,8 @@ export class DatabaseStorage implements IStorage {
         client: clients,
       })
       .from(purchases)
-      .innerJoin(stores, eq(purchases.storeId, stores.id))
-      .innerJoin(purchaseCategories, eq(purchases.categoryId, purchaseCategories.id))
+      .innerJoin(stores, and(eq(purchases.storeId, stores.id), eq(stores.userId, userId)))
+      .innerJoin(purchaseCategories, and(eq(purchases.categoryId, purchaseCategories.id), eq(purchaseCategories.userId, userId)))
       .leftJoin(clients, and(eq(purchases.clientId, clients.id), eq(clients.userId, purchases.userId)))
       .where(and(eq(purchases.invoiceNumber, invoiceNumber), eq(purchases.userId, userId)))
       .orderBy(desc(purchases.purchaseDate));
@@ -856,7 +879,7 @@ export class DatabaseStorage implements IStorage {
         client: clients,
       })
       .from(clientPayments)
-      .innerJoin(clients, eq(clientPayments.clientId, clients.id))
+      .innerJoin(clients, and(eq(clientPayments.clientId, clients.id), eq(clients.userId, clientPayments.userId)))
       .where(and(...conditions))
       .orderBy(desc(clientPayments.year), desc(clientPayments.month), clientPayments.clientId);
 
@@ -1191,10 +1214,10 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(pendingTasks.createdAt));
 
-    // Fetch client details for each task
+    // Fetch client details for each task (scoped to the owning user)
     const tasksWithClient: PendingTaskWithClient[] = [];
     for (const task of tasks) {
-      const [client] = await db.select().from(clients).where(eq(clients.id, task.clientId));
+      const [client] = await db.select().from(clients).where(and(eq(clients.id, task.clientId), eq(clients.userId, userId)));
       if (client) {
         tasksWithClient.push({ ...task, client });
       }
@@ -1260,7 +1283,7 @@ export class DatabaseStorage implements IStorage {
 
     const worksWithClients: SuggestedWorkWithClient[] = [];
     for (const work of works) {
-      const [client] = await db.select().from(clients).where(eq(clients.id, work.clientId));
+      const [client] = await db.select().from(clients).where(and(eq(clients.id, work.clientId), eq(clients.userId, userId)));
       if (client) {
         worksWithClients.push({ ...work, client });
       }
@@ -1324,7 +1347,7 @@ export class DatabaseStorage implements IStorage {
       const [client] = await db
         .select()
         .from(clients)
-        .where(eq(clients.id, note.clientId));
+        .where(and(eq(clients.id, note.clientId), eq(clients.userId, userId)));
       if (!client) continue;
 
       const items = await db
@@ -1337,7 +1360,7 @@ export class DatabaseStorage implements IStorage {
         const [log] = await db
           .select()
           .from(serviceLogs)
-          .where(eq(serviceLogs.id, note.serviceLogId));
+          .where(and(eq(serviceLogs.id, note.serviceLogId), eq(serviceLogs.userId, userId)));
         serviceLog = log ?? null;
       }
 
@@ -1356,7 +1379,7 @@ export class DatabaseStorage implements IStorage {
     const [client] = await db
       .select()
       .from(clients)
-      .where(eq(clients.id, note.clientId));
+      .where(and(eq(clients.id, note.clientId), eq(clients.userId, userId)));
     if (!client) return undefined;
 
     const items = await db
@@ -1369,7 +1392,7 @@ export class DatabaseStorage implements IStorage {
       const [log] = await db
         .select()
         .from(serviceLogs)
-        .where(eq(serviceLogs.id, note.serviceLogId));
+        .where(and(eq(serviceLogs.id, note.serviceLogId), eq(serviceLogs.userId, userId)));
       serviceLog = log ?? null;
     }
 
@@ -1406,14 +1429,14 @@ export class DatabaseStorage implements IStorage {
     const [client] = await db
       .select()
       .from(clients)
-      .where(eq(clients.id, newNote.clientId));
+      .where(and(eq(clients.id, newNote.clientId), eq(clients.userId, note.userId)));
 
     let serviceLog = null;
     if (newNote.serviceLogId) {
       const [log] = await db
         .select()
         .from(serviceLogs)
-        .where(eq(serviceLogs.id, newNote.serviceLogId));
+        .where(and(eq(serviceLogs.id, newNote.serviceLogId), eq(serviceLogs.userId, note.userId)));
       serviceLog = log ?? null;
     }
 
@@ -1546,7 +1569,7 @@ export class DatabaseStorage implements IStorage {
       const [client] = await db
         .select()
         .from(clients)
-        .where(eq(clients.id, quote.clientId));
+        .where(and(eq(clients.id, quote.clientId), eq(clients.userId, userId)));
       if (!client) continue;
 
       const items = await db
@@ -1569,7 +1592,7 @@ export class DatabaseStorage implements IStorage {
     const [client] = await db
       .select()
       .from(clients)
-      .where(eq(clients.id, quote.clientId));
+      .where(and(eq(clients.id, quote.clientId), eq(clients.userId, userId)));
     if (!client) return undefined;
 
     const items = await db
@@ -1604,7 +1627,7 @@ export class DatabaseStorage implements IStorage {
     const [client] = await db
       .select()
       .from(clients)
-      .where(eq(clients.id, newQuote.clientId));
+      .where(and(eq(clients.id, newQuote.clientId), eq(clients.userId, quote.userId)));
 
     return { ...newQuote, client: client!, items: createdItems };
   }

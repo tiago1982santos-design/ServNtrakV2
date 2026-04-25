@@ -6,7 +6,7 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { api } from "@shared/routes";
-import { serviceVisits, appointments } from "@shared/schema";
+import { serviceVisits, appointments, serviceLogs } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { saveSubscription, removeSubscription, sendPushToUser, getVapidPublicKey, getPushHealthStatus, isAllowedPushEndpoint, InvalidPushEndpointError } from "./pushService";
@@ -118,7 +118,7 @@ export async function registerRoutes(
     // However, the route definition says: z.custom<typeof appointments.$inferSelect & { client: typeof clients.$inferSelect }>()
     
     const enrichedAppointments = await Promise.all(appointments.map(async (appt) => {
-      const client = await storage.getClient(appt.clientId);
+      const client = await storage.getClientForUser(appt.clientId, userId);
       return { ...appt, client: client! };
     }));
 
@@ -153,6 +153,14 @@ export async function registerRoutes(
     try {
       const input = api.appointments.update.input.parse(req.body);
       const userId = req.user!.id;
+
+      if (input.clientId !== undefined) {
+        const client = await storage.getClient(input.clientId);
+        if (!client || client.userId !== userId) {
+          return res.status(400).json({ message: "Invalid client" });
+        }
+      }
+
       const updated = await storage.updateAppointment(Number(req.params.id), userId, input);
       
       if (!updated) return res.status(404).json({ message: "Appointment not found" });
@@ -308,7 +316,7 @@ export async function registerRoutes(
     const remindersList = await storage.getReminders(userId, clientId);
     
     const enrichedReminders = await Promise.all(remindersList.map(async (reminder) => {
-      const client = await storage.getClient(reminder.clientId);
+      const client = await storage.getClientForUser(reminder.clientId, userId);
       return { ...reminder, client: client! };
     }));
 
@@ -342,6 +350,14 @@ export async function registerRoutes(
     try {
       const input = api.reminders.update.input.parse(req.body);
       const userId = req.user!.id;
+
+      if (input.clientId !== undefined) {
+        const client = await storage.getClient(input.clientId);
+        if (!client || client.userId !== userId) {
+          return res.status(400).json({ message: "Invalid client" });
+        }
+      }
+
       const updated = await storage.updateReminder(Number(req.params.id), userId, input);
       
       if (!updated) return res.status(404).json({ message: "Reminder not found" });
@@ -713,6 +729,12 @@ export async function registerRoutes(
     try {
       const input = api.clientPayments.create.input.parse(req.body);
       const userId = req.user!.id;
+
+      const client = await storage.getClient(input.clientId);
+      if (!client || client.userId !== userId) {
+        return res.status(400).json({ message: "Invalid client" });
+      }
+
       const payment = await storage.createClientPayment({ ...input, userId });
       res.status(201).json(payment);
     } catch (err) {
@@ -1084,6 +1106,12 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     try {
       const input = api.pendingTasks.create.input.parse(req.body);
       const userId = req.user!.id;
+
+      const client = await storage.getClient(input.clientId);
+      if (!client || client.userId !== userId) {
+        return res.status(400).json({ message: "Invalid client" });
+      }
+
       const task = await storage.createPendingTask({ ...input, userId });
       res.status(201).json(task);
     } catch (err) {
@@ -1101,6 +1129,14 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     try {
       const input = api.pendingTasks.update.input.parse(req.body);
       const userId = req.user!.id;
+
+      if (input.clientId !== undefined) {
+        const client = await storage.getClient(input.clientId);
+        if (!client || client.userId !== userId) {
+          return res.status(400).json({ message: "Invalid client" });
+        }
+      }
+
       const updated = await storage.updatePendingTask(Number(req.params.id), userId, input);
       if (!updated) return res.status(404).json({ message: "Tarefa não encontrada" });
       res.json(updated);
@@ -1149,6 +1185,12 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     try {
       const input = api.suggestedWorks.create.input.parse(req.body);
       const userId = req.user!.id;
+
+      const client = await storage.getClient(input.clientId);
+      if (!client || client.userId !== userId) {
+        return res.status(400).json({ message: "Invalid client" });
+      }
+
       const work = await storage.createSuggestedWork({ ...input, userId });
       res.status(201).json(work);
     } catch (e) {
@@ -1163,6 +1205,14 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     try {
       const input = api.suggestedWorks.update.input.parse(req.body);
       const userId = req.user!.id;
+
+      if (input.clientId !== undefined) {
+        const client = await storage.getClient(input.clientId);
+        if (!client || client.userId !== userId) {
+          return res.status(400).json({ message: "Invalid client" });
+        }
+      }
+
       const updated = await storage.updateSuggestedWork(Number(req.params.id), userId, input);
       if (!updated) return res.status(404).json({ message: 'Trabalho sugerido não encontrado' });
       res.json(updated);
@@ -1506,6 +1556,8 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     try {
       const { items = [], ...noteData } = req.body;
 
+      const userId = req.user!.id;
+
       const editedWithoutReason = items.filter(
         (i: any) => i.sourceType === "edited" && !i.editReason?.trim()
       );
@@ -1516,8 +1568,24 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
         });
       }
 
+      if (noteData.clientId) {
+        const client = await storage.getClient(noteData.clientId);
+        if (!client || client.userId !== userId) {
+          return res.status(400).json({ error: "Cliente inválido" });
+        }
+      }
+
+      if (noteData.serviceLogId) {
+        const [serviceLog] = await db.select().from(serviceLogs).where(
+          and(eq(serviceLogs.id, noteData.serviceLogId), eq(serviceLogs.userId, userId))
+        );
+        if (!serviceLog) {
+          return res.status(400).json({ error: "Registo de serviço inválido" });
+        }
+      }
+
       const note = await storage.createExpenseNote(
-        { ...noteData, userId: req.user!.id },
+        { ...noteData, userId },
         items
       );
       res.status(201).json(note);
@@ -1530,9 +1598,27 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
   app.patch("/api/expense-notes/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
     try {
+      const userId = req.user!.id;
+
+      if (req.body.clientId) {
+        const client = await storage.getClient(req.body.clientId);
+        if (!client || client.userId !== userId) {
+          return res.status(400).json({ error: "Cliente inválido" });
+        }
+      }
+
+      if (req.body.serviceLogId) {
+        const [serviceLog] = await db.select().from(serviceLogs).where(
+          and(eq(serviceLogs.id, req.body.serviceLogId), eq(serviceLogs.userId, userId))
+        );
+        if (!serviceLog) {
+          return res.status(400).json({ error: "Registo de serviço inválido" });
+        }
+      }
+
       const updated = await storage.updateExpenseNote(
         parseInt(req.params.id),
-        req.user!.id,
+        userId,
         req.body
       );
       if (!updated) return res.status(404).json({ error: "Nota não encontrada" });
@@ -1594,8 +1680,16 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
           error: "fieldChanged e reason são obrigatórios",
         });
       }
+
+      const expenseNoteId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      const existingNote = await storage.getExpenseNote(expenseNoteId, userId);
+      if (!existingNote) {
+        return res.status(404).json({ error: "Nota não encontrada" });
+      }
+
       await storage.createExpenseNoteEdit(
-        parseInt(req.params.id),
+        expenseNoteId,
         req.user!.id,
         fieldChanged,
         reason
@@ -1719,8 +1813,17 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
     try {
       const { items = [], ...quoteData } = req.body;
+      const userId = req.user!.id;
+
+      if (quoteData.clientId) {
+        const client = await storage.getClient(quoteData.clientId);
+        if (!client || client.userId !== userId) {
+          return res.status(400).json({ error: "Cliente inválido" });
+        }
+      }
+
       const quote = await storage.createQuote(
-        { ...quoteData, userId: req.user!.id },
+        { ...quoteData, userId },
         items
       );
       res.status(201).json(quote);
@@ -1733,9 +1836,18 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
   app.patch("/api/quotes/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
     try {
+      const userId = req.user!.id;
+
+      if (req.body.clientId) {
+        const client = await storage.getClient(req.body.clientId);
+        if (!client || client.userId !== userId) {
+          return res.status(400).json({ error: "Cliente inválido" });
+        }
+      }
+
       const updated = await storage.updateQuote(
         parseInt(req.params.id),
-        req.user!.id,
+        userId,
         req.body
       );
       if (!updated) return res.status(404).json({ error: "Orçamento não encontrado" });
