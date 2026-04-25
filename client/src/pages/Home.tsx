@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { DocumentScanDialog } from "@/components/DocumentScanDialog";
+import { PushHealthBanner } from "@/components/PushHealthBanner";
 import { cn } from "@/lib/utils";
 import type { PurchaseCategory, Store } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -381,6 +382,11 @@ export default function Home() {
       </header>
 
       <main className="flex-1 px-4 py-5">
+
+        {/* ── PUSH HEALTH BANNER ─────────────────── */}
+        <div className="mb-4">
+          <PushHealthBanner variant="prominent" />
+        </div>
 
         {/* ── GPS ERROR ──────────────────────────── */}
         {geo.erro && (

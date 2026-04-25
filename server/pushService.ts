@@ -47,6 +47,33 @@ const RECENT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const PRUNE_INTERVAL_MS = 60 * 60 * 1000; // hourly
 
+function parsePositiveInt(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function parseRate(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number.parseFloat(raw);
+  if (!Number.isFinite(n)) return fallback;
+  if (n < 0) return 0;
+  if (n > 1) return 1;
+  return n;
+}
+
+// Thresholds for the "high failure rate" banner. Both must be exceeded for
+// the alert to trigger so a couple of one-off failures (or a single retry
+// burst) don't raise a false alarm.
+const FAILURE_ALERT_MIN_COUNT = parsePositiveInt(
+  process.env.PUSH_FAILURE_ALERT_MIN_COUNT,
+  5,
+);
+const FAILURE_ALERT_RATE = parseRate(
+  process.env.PUSH_FAILURE_ALERT_RATE,
+  0.5,
+);
+
 type FailureKind = "auth" | "gone" | "other";
 
 async function recordSendEvent(event: {
@@ -109,9 +136,15 @@ export type PushHealthStatus = {
   lastFailure: PushFailureSummary | null;
   lastAuthFailure: PushFailureSummary | null;
   recentWindowMinutes: number;
+  recentSuccessCount: number;
   recentFailureCount: number;
   recentAuthFailureCount: number;
+  recentTotalCount: number;
+  recentFailureRate: number; // 0..1, 0 when no recent attempts
+  failureAlertMinCount: number;
+  failureAlertRate: number;
   hasActiveVapidProblem: boolean;
+  hasHighFailureRate: boolean;
 };
 
 export async function getPushHealthStatus(): Promise<PushHealthStatus> {
@@ -125,6 +158,7 @@ export async function getPushHealthStatus(): Promise<PushHealthStatus> {
   let totalSent = 0;
   let totalFailed = 0;
   let totalAuthFailed = 0;
+  let recentSuccessCount = 0;
   let recentFailureCount = 0;
   let recentAuthFailureCount = 0;
   let lastSuccessAt: number | null = null;
@@ -152,24 +186,25 @@ export async function getPushHealthStatus(): Promise<PushHealthStatus> {
       }
     }
 
-    // Recent failures (last hour) grouped by kind.
+    // Recent attempts (last hour) grouped by status + kind, so we can
+    // compute both the failure count and the failure ratio.
     const recentRows = await db
       .select({
+        status: pushSendEvents.status,
         kind: pushSendEvents.kind,
         count: sql<number>`count(*)::int`,
       })
       .from(pushSendEvents)
-      .where(
-        and(
-          eq(pushSendEvents.status, "failure"),
-          gte(pushSendEvents.at, recentCutoff),
-        ),
-      )
-      .groupBy(pushSendEvents.kind);
+      .where(gte(pushSendEvents.at, recentCutoff))
+      .groupBy(pushSendEvents.status, pushSendEvents.kind);
 
     for (const row of recentRows) {
-      recentFailureCount += row.count;
-      if (row.kind === "auth") recentAuthFailureCount += row.count;
+      if (row.status === "success") {
+        recentSuccessCount += row.count;
+      } else if (row.status === "failure") {
+        recentFailureCount += row.count;
+        if (row.kind === "auth") recentAuthFailureCount += row.count;
+      }
     }
 
     const [lastSuccessRow] = await db
@@ -235,6 +270,18 @@ export async function getPushHealthStatus(): Promise<PushHealthStatus> {
     (lastAuthIsRecent && !lastSuccessAfterAuth) ||
     recentAuthFailureCount > 0;
 
+  const recentTotalCount = recentSuccessCount + recentFailureCount;
+  const recentFailureRate =
+    recentTotalCount > 0 ? recentFailureCount / recentTotalCount : 0;
+
+  // The high-failure-rate alert auto-clears as soon as recent successes pull
+  // the ratio (and/or count) below the configured thresholds, so no manual
+  // dismissal is needed.
+  const hasHighFailureRate =
+    pushEnabled &&
+    recentFailureCount >= FAILURE_ALERT_MIN_COUNT &&
+    recentFailureRate >= FAILURE_ALERT_RATE;
+
   return {
     enabled: pushEnabled,
     configError: vapidConfigError,
@@ -243,9 +290,15 @@ export async function getPushHealthStatus(): Promise<PushHealthStatus> {
     lastFailure,
     lastAuthFailure,
     recentWindowMinutes: Math.round(RECENT_WINDOW_MS / 60000),
+    recentSuccessCount,
     recentFailureCount,
     recentAuthFailureCount,
+    recentTotalCount,
+    recentFailureRate,
+    failureAlertMinCount: FAILURE_ALERT_MIN_COUNT,
+    failureAlertRate: FAILURE_ALERT_RATE,
     hasActiveVapidProblem,
+    hasHighFailureRate,
   };
 }
 

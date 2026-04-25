@@ -28,10 +28,10 @@ import {
   KeyRound,
   Eye,
   EyeOff,
-  Pencil,
-  AlertTriangle
+  Pencil
 } from "lucide-react";
 import { Link } from "wouter";
+import { PushHealthBanner } from "@/components/PushHealthBanner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -663,108 +663,6 @@ function PasswordSection() {
   );
 }
 
-type PushFailureSummary = {
-  at: number;
-  statusCode: number | null;
-  kind: "auth" | "gone" | "other";
-};
-
-type PushHealth = {
-  enabled: boolean;
-  configError: string | null;
-  totals: { sent: number; failed: number; authFailed: number };
-  lastSuccessAt: number | null;
-  lastFailure: PushFailureSummary | null;
-  lastAuthFailure: PushFailureSummary | null;
-  recentWindowMinutes: number;
-  recentFailureCount: number;
-  recentAuthFailureCount: number;
-  hasActiveVapidProblem: boolean;
-};
-
-function formatRelativeTime(ts: number): string {
-  const diffMs = Date.now() - ts;
-  const minutes = Math.round(diffMs / 60000);
-  if (minutes < 1) return "agora mesmo";
-  if (minutes < 60) return `há ${minutes} min`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `há ${hours} h`;
-  const days = Math.round(hours / 24);
-  return `há ${days} d`;
-}
-
-function PushHealthWarning() {
-  const { data: health } = useQuery<PushHealth>({
-    queryKey: ["/api/push/health"],
-    refetchInterval: 60_000,
-  });
-
-  if (!health) return null;
-
-  const showConfig = !health.enabled;
-  const showAuth =
-    health.enabled &&
-    (health.recentAuthFailureCount > 0 ||
-      (health.lastAuthFailure &&
-        (!health.lastSuccessAt || health.lastSuccessAt < health.lastAuthFailure.at)));
-
-  if (!showConfig && !showAuth) return null;
-
-  if (showConfig) {
-    return (
-      <div
-        className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 flex gap-3"
-        data-testid="alert-push-config-error"
-      >
-        <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-        <div className="flex-1 text-xs text-destructive">
-          <p className="font-semibold">Notificações push desativadas no servidor</p>
-          <p className="mt-1 text-destructive/80">
-            {health.configError || "Configuração VAPID em falta ou inválida."}
-          </p>
-          <p className="mt-1 text-destructive/80">
-            Verifica os Secrets <code className="font-mono">VAPID_PUBLIC_KEY</code>,{" "}
-            <code className="font-mono">VAPID_PRIVATE_KEY</code> e{" "}
-            <code className="font-mono">VAPID_EMAIL</code>.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const last = health.lastAuthFailure!;
-  return (
-    <div
-      className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 flex gap-3"
-      data-testid="alert-push-vapid-failure"
-    >
-      <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-      <div className="flex-1 text-xs text-destructive">
-        <p className="font-semibold" data-testid="text-push-vapid-failure-title">
-          Falhas de autenticação VAPID detetadas
-        </p>
-        <p className="mt-1">
-          {health.recentAuthFailureCount > 0 ? (
-            <>
-              <span data-testid="text-push-vapid-failure-count">{health.recentAuthFailureCount}</span>
-              {" "}falha(s) nos últimos {health.recentWindowMinutes} min.
-            </>
-          ) : (
-            <>Última falha {formatRelativeTime(last.at)}.</>
-          )}
-          {" "}Último erro: HTTP {last.statusCode ?? "?"} ({formatRelativeTime(last.at)}).
-        </p>
-        <p className="mt-1">
-          As notificações podem não estar a chegar. Verifica se as chaves{" "}
-          <code className="font-mono">VAPID_PUBLIC_KEY</code> /{" "}
-          <code className="font-mono">VAPID_PRIVATE_KEY</code> nos Secrets estão emparelhadas e atualizadas,
-          e volta a subscrever este dispositivo se necessário.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function PushNotificationSection() {
   const { state, subscribe, unsubscribe, sendTest } = usePushNotifications();
   const { toast } = useToast();
@@ -773,7 +671,7 @@ function PushNotificationSection() {
   if (state === "unsupported") {
     return (
       <div className="glass-card p-4 space-y-3">
-        <PushHealthWarning />
+        <PushHealthBanner />
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center">
             <Bell className="w-5 h-5 text-muted-foreground" />
@@ -789,7 +687,7 @@ function PushNotificationSection() {
 
   return (
     <div className="glass-card p-4 space-y-3">
-      <PushHealthWarning />
+      <PushHealthBanner />
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
           state === "granted" ? "bg-green-500/10" : "bg-destructive/10"
