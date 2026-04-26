@@ -180,8 +180,9 @@ export default function CalendarPage() {
         <div className="glass-card p-4 mb-6">
           <DayPicker
             mode="single"
+            required
             selected={date}
-            onSelect={(d) => { if (d) setDate(d); }}
+            onSelect={setDate}
             onDayClick={handleDayClick}
             locale={pt}
             modifiers={{ hasAppointment: daysWithAppointments }}
