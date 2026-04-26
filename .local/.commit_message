@@ -1,0 +1,80 @@
+Task #35: Permitir definir o horário de trabalho usado nas sugestões da agenda
+
+Problem
+-------
+As sugestões de horas livres no diálogo "Novo Agendamento" (Calendar.tsx)
+assumiam um intervalo fixo 8h-18h. O utilizador não tinha forma de o
+ajustar nem de excluir uma pausa de almoço.
+
+Solution (server-side, per-user)
+--------------------------------
+Backend
+- `shared/schema.ts`: nova tabela `user_preferences` com PK `userId`
+  (text, casa com a varchar id em `users`), colunas
+  `workingHoursStart/End` (int, default 8/18), `lunchEnabled` (bool,
+  default false), `lunchStart/End` (int, default 12/14) e `updatedAt`.
+  `updateWorkingHoursSchema` (zod) com refines a garantir
+  `end >= start` e (se pausa ativa) `lunchEnd > lunchStart`. Tipos
+  `UserPreferences` e `UpdateWorkingHours` exportados.
+- `server/storage.ts`: `getUserPreferences(userId)` e
+  `upsertUserPreferences(userId, prefs)` na interface `IStorage` +
+  implementação em `DatabaseStorage` usando `onConflictDoUpdate`
+  pelo `userId`.
+- `server/routes.ts`: novos endpoints
+  `GET /api/user/preferences/working-hours` e
+  `PUT /api/user/preferences/working-hours`, ambos protegidos por
+  `requireAuth`. `userId` vem sempre de `req.user!.id`. PUT valida
+  com `updateWorkingHoursSchema` e devolve 400 com mensagem PT-PT em
+  caso de ZodError. GET devolve defaults (8-18, sem pausa) quando
+  ainda não há linha persistida.
+- `npm run db:push --force` correu limpo ("Changes applied").
+
+Frontend
+- `client/src/lib/working-hours.ts`: `WorkingHoursSettings`,
+  `normalizeSettings()` (clamp/coerção), conversores `fromDTO`/`toDTO`
+  entre forma servidor (workingHoursStart/...) e forma cliente
+  (start/...), `computeWorkingHours()` que devolve as horas finais
+  excluindo a pausa quando ativa, e helpers de cache local
+  (`readCachedSettings`/`writeCachedSettings`) que agora **gravam o
+  userId junto** (`{ userId, settings }`) — assim o cache só é usado
+  para o utilizador autenticado a quem pertence; troca de utilizador
+  no mesmo browser não herda o horário do anterior.
+- `client/src/hooks/use-working-hours.ts`: usa `useQuery` contra o
+  endpoint (chave `['/api/user/preferences/working-hours']`) como
+  source of truth, com `useAuth()` a fornecer o userId. `setSettings`
+  é uma `useMutation` com optimistic update via
+  `onMutate`/`onError`/`onSettled`. Em `onError` o cache local é
+  restaurado para o valor anterior, evitando que valores não
+  guardados persistam. A query só corre quando há userId
+  (`enabled: !!userId`).
+- `client/src/components/WorkingHoursSection.tsx`: Card com Selects
+  para início/fim, Switch + Selects condicionais para a pausa, e uma
+  pré-visualização das horas que serão sugeridas. Cada controlo
+  guarda imediatamente (sem botão "Guardar"), mesmo padrão dos temas.
+- `client/src/pages/Profile.tsx`: renderiza `<WorkingHoursSection />`
+  antes do Card "Aparência".
+- `client/src/pages/Calendar.tsx`: chama `useWorkingHours()` no topo
+  e a constante `WORKING_HOURS = [8..18]` dentro do FormField "date"
+  passa a ser `workingHourSlots = computeWorkingHours(...)`. A lógica
+  de aviso de sobreposição e de chips de horas sugeridas (das tasks
+  #33 e #34) mantém-se exatamente igual.
+
+Iteração
+--------
+A primeira tentativa usou apenas localStorage (mesmo padrão dos
+temas). A revisão de código rejeitou por não cumprir o requisito
+"guardada por utilizador e persistida" (perfeitamente justo —
+diferentes utilizadores no mesmo browser herdariam o mesmo horário).
+A versão atual move a fonte de verdade para o servidor, mantém o
+localStorage apenas como cache de paint inicial e isola-a por
+userId. Segunda revisão: PASS.
+
+Verification
+------------
+- `tsc --noEmit` sem erros novos (apenas os pré-existentes em
+  `server/replit_integrations/auth/replitAuth.ts`).
+- `npm run db:push --force` aplicou a tabela sem warnings.
+- Workflow "Start application" reiniciado com sucesso; rotas
+  existentes a responder normalmente nos logs.
+- e2e skipped: o fluxo de registo desta app já mostrou em #33/#34
+  que excede o budget de 600s do agente de testes.

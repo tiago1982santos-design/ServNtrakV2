@@ -1,0 +1,948 @@
+
+> mockup-sandbox@0.0.0 dev
+> vite --config vite.config.ts --host 0.0.0.0
+
+[1G[0K
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J
+  [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m2171[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m23636[22m/__mockup/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.31.85.194:[1m23636[22m/__mockup/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m10:16:15 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:15 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:16 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x2)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:16 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x3)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:16 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x4)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:16 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x5)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:16 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x6)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:16 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x7)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:16 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x8)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:17 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x9)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:17 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x10)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:17 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x11)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m10:16:17 AM[22m [31m[1m[vite][22m[39m [31mInternal server error: Can't resolve 'tailwindcss' in '/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src'[39m
+  Plugin: [35m@tailwindcss/vite:generate:serve[39m
+  File: [36m/home/runner/workspace/.claude/worktrees/elated-grothendieck/artifacts/mockup-sandbox/src/index.css[39m
+      at finishWithoutResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:565:18)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:657:14
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:27:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:89:43
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:15:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:42:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:53:42
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:718:5
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:16:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:83:16
+      at SyncAsyncFileSystemDecorator.stat (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:66:34)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:57:11
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ModulesInHierarchicalDirectoriesPlugin.js:49:6
+      at _next0 (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:8:1)
+      at eval (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:30:1)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/SelfReferencePlugin.js:48:31
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:22:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/ConditionalPlugin.js:42:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:37:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/NextPlugin.js:30:14
+      at Hook.eval [as callAsync] (eval at create (/home/runner/workspace/node_modules/tapable/lib/HookCodeFactory.js:31:10), <anonymous>:7:1)
+      at Resolver.doResolve (/home/runner/workspace/node_modules/enhanced-resolve/lib/Resolver.js:715:16)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js:80:17
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:161:24
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at onJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:96:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:123:7
+      at SyncAsyncFileSystemDecorator.readJson (/home/runner/workspace/node_modules/enhanced-resolve/lib/SyncAsyncFileSystemDecorator.js:204:6)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:104:26
+      at next (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:35:3)
+      at forEachBail (/home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:49:9)
+      at findDescriptionFile (/home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:70:3)
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:167:12
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/forEachBail.js:39:13
+      at /home/runner/workspace/node_modules/enhanced-resolve/lib/DescriptionFileUtils.js:113:16 [33m(x12)[39m
