@@ -547,14 +547,28 @@ export default function CalendarPage() {
                 name="date"
                 render={({ field }) => {
                   const selectedDate = field.value ? new Date(field.value) : null;
+                  const sameDayAppointments = selectedDate && !isNaN(selectedDate.getTime())
+                    ? (appointments?.filter(apt => isSameDay(new Date(apt.date), selectedDate)) ?? [])
+                    : [];
                   const overlappingAppointments = selectedDate && !isNaN(selectedDate.getTime())
-                    ? (appointments?.filter(apt => {
-                        const aptDate = new Date(apt.date);
-                        return (
-                          isSameDay(aptDate, selectedDate) &&
-                          aptDate.getHours() === selectedDate.getHours()
-                        );
-                      }) ?? [])
+                    ? sameDayAppointments.filter(apt =>
+                        new Date(apt.date).getHours() === selectedDate.getHours()
+                      )
+                    : [];
+
+                  const WORKING_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+                  const occupiedHours = new Set(
+                    sameDayAppointments.map(apt => new Date(apt.date).getHours())
+                  );
+                  const pivotHour = selectedDate ? selectedDate.getHours() : 9;
+                  const suggestedFreeHours = overlappingAppointments.length > 0 && selectedDate
+                    ? WORKING_HOURS
+                        .filter(h => !occupiedHours.has(h))
+                        .sort((a, b) =>
+                          Math.abs(a - pivotHour) - Math.abs(b - pivotHour) || a - b
+                        )
+                        .slice(0, 3)
+                        .sort((a, b) => a - b)
                     : [];
 
                   return (
@@ -598,6 +612,35 @@ export default function CalendarPage() {
                                   </li>
                                 )}
                               </ul>
+
+                              {suggestedFreeHours.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-yellow-200 dark:border-yellow-800">
+                                  <p className="text-xs text-yellow-800 dark:text-yellow-300 mb-1.5">
+                                    Horas livres neste dia:
+                                  </p>
+                                  <div
+                                    className="flex flex-wrap gap-1.5"
+                                    data-testid="suggested-free-hours"
+                                  >
+                                    {suggestedFreeHours.map(h => (
+                                      <button
+                                        key={h}
+                                        type="button"
+                                        onClick={() => {
+                                          if (!selectedDate) return;
+                                          const newDate = new Date(selectedDate);
+                                          newDate.setHours(h, 0, 0, 0);
+                                          field.onChange(newDate);
+                                        }}
+                                        className="px-2.5 py-1 rounded-md text-xs font-medium bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800 transition-colors"
+                                        data-testid={`button-suggest-hour-${h}`}
+                                      >
+                                        {`${String(h).padStart(2, "0")}:00`}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
