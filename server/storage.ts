@@ -407,7 +407,6 @@ export class DatabaseStorage implements IStorage {
     let created = 0;
     for (const appt of appts) {
       const date = new Date(appt.date);
-      date.setHours(0, 0, 0, 0);
       await db.insert(appointments).values({
         userId,
         clientId: appt.clientId,

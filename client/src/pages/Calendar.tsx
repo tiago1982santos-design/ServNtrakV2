@@ -62,7 +62,37 @@ export default function CalendarPage() {
       return res.json() as Promise<AppointmentPreview[]>;
     },
     onSuccess: (data) => {
-      setPreviewList(data);
+      if (workingHourSlots.length === 0) {
+        setPreviewList([]);
+        setRemovedIndexes(new Set());
+        toast({
+          title: "Horário de trabalho inválido",
+          description:
+            "O teu horário não permite nenhuma hora. Ajusta-o no Perfil para gerar agendamentos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const occupied = new Map<string, Set<number>>();
+      appointments?.forEach((a) => {
+        const d = new Date(a.date);
+        const key = format(d, "yyyy-MM-dd");
+        if (!occupied.has(key)) occupied.set(key, new Set());
+        occupied.get(key)!.add(d.getHours());
+      });
+
+      const enriched = data.map((p) => {
+        const used = occupied.get(p.date) ?? new Set<number>();
+        const free = workingHourSlots.find((h) => !used.has(h));
+        const chosenHour = free ?? workingHourSlots[0];
+        used.add(chosenHour);
+        occupied.set(p.date, used);
+        const isoDate = `${p.date}T${String(chosenHour).padStart(2, "0")}:00:00`;
+        return { ...p, date: isoDate };
+      });
+
+      setPreviewList(enriched);
       setRemovedIndexes(new Set());
     },
     onError: () => toast({ title: "Erro", description: "Não foi possível gerar o preview.", variant: "destructive" }),
@@ -418,7 +448,7 @@ export default function CalendarPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{appt.clientName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {format(parseISO(appt.date), "d 'de' MMMM", { locale: pt })} — {
+                          {format(parseISO(appt.date), "d 'de' MMMM 'às' HH:mm", { locale: pt })} — {
                             appt.type === 'Garden' ? 'Jardim' :
                             appt.type === 'Pool' ? 'Piscina' : 'Jacuzzi'
                           }
