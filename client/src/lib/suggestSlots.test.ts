@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { addDays, format, startOfDay } from "date-fns";
 import {
   WORKING_HOURS,
+  getFreeHoursForDay,
   suggestNextDaySlots,
   suggestSameDayHours,
 } from "./suggestSlots";
@@ -137,6 +138,42 @@ check("keys are unique and date-stamped", () => {
   assert.equal(slots[0].key, `${expectedDate}-8`);
   assert.equal(slots[1].key, `${expectedDate}-9`);
   assert.notEqual(slots[0].key, slots[1].key);
+});
+
+console.log("getFreeHoursForDay");
+
+check("returns all working hours when nothing is occupied", () => {
+  const day = nextWeekday(new Date());
+  const result = getFreeHoursForDay(day, []);
+  assert.deepEqual(result, [...WORKING_HOURS].sort((a, b) => a - b));
+});
+
+check("excludes occupied hours on the same day, ignoring other days", () => {
+  const day = nextWeekday(new Date());
+  const otherDay = addDays(day, 1);
+  const occupied = [
+    ...fillDay(day, [9, 12, 15]),
+    ...fillDay(otherDay, [10, 11]),
+  ];
+  const result = getFreeHoursForDay(day, occupied);
+  assert.deepEqual(
+    result,
+    WORKING_HOURS.filter((h) => ![9, 12, 15].includes(h)),
+  );
+});
+
+check("respects custom working hours", () => {
+  const day = nextWeekday(new Date());
+  const occupied = fillDay(day, [10]);
+  const result = getFreeHoursForDay(day, occupied, [9, 10, 11]);
+  assert.deepEqual(result, [9, 11]);
+});
+
+check("returns empty when every working hour is occupied", () => {
+  const day = nextWeekday(new Date());
+  const occupied = fillDay(day, WORKING_HOURS);
+  const result = getFreeHoursForDay(day, occupied);
+  assert.deepEqual(result, []);
 });
 
 if (errors.length > 0) {

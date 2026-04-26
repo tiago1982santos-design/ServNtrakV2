@@ -7,8 +7,9 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { format, isSameDay, isAfter, startOfDay, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
-import { suggestNextDaySlots, suggestSameDayHours } from "@/lib/suggestSlots";
-import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus, AlertTriangle, ClipboardList, Wand2, Trash2, CheckCheck } from "lucide-react";
+import { getFreeHoursForDay, suggestNextDaySlots, suggestSameDayHours } from "@/lib/suggestSlots";
+import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus, AlertTriangle, ClipboardList, Wand2, Trash2, CheckCheck, ChevronDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/BackButton";
@@ -720,19 +721,72 @@ export default function CalendarPage() {
                                     className="flex flex-wrap gap-1.5"
                                     data-testid="suggested-next-day-slots"
                                   >
-                                    {suggestedNextDaySlots.map(slot => (
-                                      <button
-                                        key={slot.key}
-                                        type="button"
-                                        onClick={() => {
-                                          field.onChange(new Date(slot.date));
-                                        }}
-                                        className="px-2.5 py-1 rounded-md text-xs font-medium bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800 transition-colors capitalize"
-                                        data-testid={`button-suggest-next-day-${slot.key}`}
-                                      >
-                                        {slot.label}
-                                      </button>
-                                    ))}
+                                    {suggestedNextDaySlots.map(slot => {
+                                      const dayKey = format(slot.date, "yyyy-MM-dd");
+                                      const dayFreeHours = getFreeHoursForDay(
+                                        slot.date,
+                                        (appointments ?? []).map(apt => new Date(apt.date)),
+                                        workingHourSlots,
+                                      );
+                                      const otherFreeHours = dayFreeHours.filter(
+                                        h => h !== slot.date.getHours(),
+                                      );
+                                      return (
+                                        <div key={slot.key} className="inline-flex rounded-md overflow-hidden">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              field.onChange(new Date(slot.date));
+                                            }}
+                                            className="px-2.5 py-1 text-xs font-medium bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800 transition-colors capitalize"
+                                            data-testid={`button-suggest-next-day-${slot.key}`}
+                                          >
+                                            {slot.label}
+                                          </button>
+                                          {otherFreeHours.length > 0 && (
+                                            <Popover>
+                                              <PopoverTrigger asChild>
+                                                <button
+                                                  type="button"
+                                                  aria-label={`Ver mais horas livres em ${slot.label}`}
+                                                  className="px-2 py-1 text-xs font-medium bg-yellow-300 text-yellow-900 hover:bg-yellow-400 dark:bg-yellow-800 dark:text-yellow-100 dark:hover:bg-yellow-700 transition-colors border-l border-yellow-400 dark:border-yellow-700 inline-flex items-center gap-0.5"
+                                                  data-testid={`button-more-hours-${dayKey}`}
+                                                >
+                                                  <span>ver mais (+{otherFreeHours.length})</span>
+                                                  <ChevronDown className="w-3 h-3" />
+                                                </button>
+                                              </PopoverTrigger>
+                                              <PopoverContent
+                                                align="start"
+                                                className="w-auto p-2"
+                                                data-testid={`popover-more-hours-${dayKey}`}
+                                              >
+                                                <p className="text-xs text-muted-foreground mb-1.5 capitalize">
+                                                  {format(slot.date, "EEEE, d 'de' MMMM", { locale: pt })}
+                                                </p>
+                                                <div className="flex flex-wrap gap-1 max-w-[16rem]">
+                                                  {otherFreeHours.map(h => (
+                                                    <button
+                                                      key={h}
+                                                      type="button"
+                                                      onClick={() => {
+                                                        const newDate = new Date(slot.date);
+                                                        newDate.setHours(h, 0, 0, 0);
+                                                        field.onChange(newDate);
+                                                      }}
+                                                      className="px-2 py-1 rounded text-xs font-medium bg-muted hover:bg-accent hover-elevate active-elevate-2 transition-colors"
+                                                      data-testid={`button-more-hour-${dayKey}-${h}`}
+                                                    >
+                                                      {`${String(h).padStart(2, "0")}:00`}
+                                                    </button>
+                                                  ))}
+                                                </div>
+                                              </PopoverContent>
+                                            </Popover>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}

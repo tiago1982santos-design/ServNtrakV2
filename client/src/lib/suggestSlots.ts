@@ -25,6 +25,21 @@ export interface NextDaySlot {
   key: string;
 }
 
+export function getFreeHoursForDay(
+  day: Date,
+  occupiedDates: Date[],
+  workingHours: number[] = WORKING_HOURS,
+): number[] {
+  const occupiedSameDay = new Set(
+    occupiedDates
+      .filter((d) => isSameDay(d, day))
+      .map((d) => d.getHours()),
+  );
+  return workingHours
+    .filter((h) => !occupiedSameDay.has(h))
+    .sort((a, b) => a - b);
+}
+
 export function suggestNextDaySlots(
   selectedDate: Date,
   occupiedDates: Date[],
