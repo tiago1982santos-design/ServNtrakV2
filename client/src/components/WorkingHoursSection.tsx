@@ -121,7 +121,12 @@ export function WorkingHoursSection() {
                 </SelectTrigger>
                 <SelectContent>
                   {HOURS_0_TO_23.map((h) => (
-                    <SelectItem key={h} value={String(h)} data-testid={`option-lunch-start-${h}`}>
+                    <SelectItem
+                      key={h}
+                      value={String(h)}
+                      disabled={h < settings.start || h > settings.end}
+                      data-testid={`option-lunch-start-${h}`}
+                    >
                       {formatHourLabel(h)}
                     </SelectItem>
                   ))}
@@ -147,7 +152,7 @@ export function WorkingHoursSection() {
                     <SelectItem
                       key={h}
                       value={String(h)}
-                      disabled={h <= settings.lunchStart}
+                      disabled={h <= settings.lunchStart || h > settings.end + 1}
                       data-testid={`option-lunch-end-${h}`}
                     >
                       {formatHourLabel(h)}
