@@ -545,20 +545,66 @@ export default function CalendarPage() {
               <FormField
                 control={form.control}
                 name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data e Hora</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="datetime-local" 
-                        className="rounded-xl"
-                        value={field.value ? format(new Date(field.value), "yyyy-MM-dd'T'HH:mm") : ""}
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
-                        data-testid="input-appointment-datetime"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedDate = field.value ? new Date(field.value) : null;
+                  const overlappingAppointments = selectedDate && !isNaN(selectedDate.getTime())
+                    ? (appointments?.filter(apt => {
+                        const aptDate = new Date(apt.date);
+                        return (
+                          isSameDay(aptDate, selectedDate) &&
+                          aptDate.getHours() === selectedDate.getHours()
+                        );
+                      }) ?? [])
+                    : [];
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Data e Hora</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="datetime-local"
+                          className="rounded-xl"
+                          value={field.value ? format(new Date(field.value), "yyyy-MM-dd'T'HH:mm") : ""}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                          data-testid="input-appointment-datetime"
+                        />
+                      </FormControl>
+
+                      {overlappingAppointments.length > 0 && (
+                        <div
+                          className="mt-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800"
+                          data-testid="alert-overlapping-appointment"
+                        >
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-4 h-4 text-yellow-700 dark:text-yellow-400 mt-0.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                                {overlappingAppointments.length === 1
+                                  ? "Já existe um agendamento nesta hora"
+                                  : `Já existem ${overlappingAppointments.length} agendamentos nesta hora`}
+                              </p>
+                              <ul className="mt-1 space-y-0.5">
+                                {overlappingAppointments.slice(0, 3).map(apt => (
+                                  <li
+                                    key={apt.id}
+                                    className="text-xs text-yellow-700 dark:text-yellow-400 truncate"
+                                  >
+                                    {format(new Date(apt.date), "HH:mm")} — {apt.client.name}
+                                  </li>
+                                ))}
+                                {overlappingAppointments.length > 3 && (
+                                  <li className="text-xs text-yellow-700 dark:text-yellow-400">
+                                    +{overlappingAppointments.length - 3} mais...
+                                  </li>
+                                )}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
