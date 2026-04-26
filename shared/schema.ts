@@ -34,6 +34,14 @@ export const updateWorkingHoursSchema = z
   .refine((d) => !d.lunchEnabled || d.lunchEnd > d.lunchStart, {
     message: "O fim da pausa tem de ser depois do início",
     path: ["lunchEnd"],
+  })
+  .refine((d) => !d.lunchEnabled || d.lunchStart >= d.workingHoursStart, {
+    message: "A pausa tem de começar dentro do horário de trabalho",
+    path: ["lunchStart"],
+  })
+  .refine((d) => !d.lunchEnabled || d.lunchEnd <= d.workingHoursEnd + 1, {
+    message: "A pausa tem de terminar dentro do horário de trabalho",
+    path: ["lunchEnd"],
   });
 
 export type UserPreferences = typeof userPreferences.$inferSelect;
