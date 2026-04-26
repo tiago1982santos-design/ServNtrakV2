@@ -1,0 +1,14 @@
+{
+    "files.exclude": {
+        "**/.local": true,
+        "**/.agents": true
+    },
+    "search.exclude": {
+        "**/.local": true,
+        "**/.agents": true
+    },
+    "files.watcherExclude": {
+        "**/.local/**": true,
+        "**/.agents/**": true
+    }
+}
