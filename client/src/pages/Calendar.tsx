@@ -7,6 +7,7 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { format, isSameDay, isAfter, startOfDay, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
+import { suggestNextDaySlots, suggestSameDayHours } from "@/lib/suggestSlots";
 import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus, AlertTriangle, ClipboardList, Wand2, Trash2, CheckCheck } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -560,20 +561,24 @@ export default function CalendarPage() {
                       )
                     : [];
 
-                  const WORKING_HOURS = workingHourSlots;
                   const occupiedHours = new Set(
                     sameDayAppointments.map(apt => new Date(apt.date).getHours())
                   );
                   const pivotHour = selectedDate ? selectedDate.getHours() : 9;
                   const suggestedFreeHours = overlappingAppointments.length > 0 && selectedDate
-                    ? WORKING_HOURS
-                        .filter(h => !occupiedHours.has(h))
-                        .sort((a, b) =>
-                          Math.abs(a - pivotHour) - Math.abs(b - pivotHour) || a - b
-                        )
-                        .slice(0, 3)
-                        .sort((a, b) => a - b)
+                    ? suggestSameDayHours(selectedDate, occupiedHours, pivotHour, workingHourSlots)
                     : [];
+
+                  const suggestedNextDaySlots =
+                    overlappingAppointments.length > 0 &&
+                    suggestedFreeHours.length === 0 &&
+                    selectedDate
+                      ? suggestNextDaySlots(
+                          selectedDate,
+                          (appointments ?? []).map(apt => new Date(apt.date)),
+                          { workingHours: workingHourSlots },
+                        )
+                      : [];
 
                   return (
                     <FormItem>
@@ -640,6 +645,32 @@ export default function CalendarPage() {
                                         data-testid={`button-suggest-hour-${h}`}
                                       >
                                         {`${String(h).padStart(2, "0")}:00`}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {suggestedFreeHours.length === 0 && suggestedNextDaySlots.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-yellow-200 dark:border-yellow-800">
+                                  <p className="text-xs text-yellow-800 dark:text-yellow-300 mb-1.5">
+                                    Sem horas livres neste dia. Tenta:
+                                  </p>
+                                  <div
+                                    className="flex flex-wrap gap-1.5"
+                                    data-testid="suggested-next-day-slots"
+                                  >
+                                    {suggestedNextDaySlots.map(slot => (
+                                      <button
+                                        key={slot.key}
+                                        type="button"
+                                        onClick={() => {
+                                          field.onChange(new Date(slot.date));
+                                        }}
+                                        className="px-2.5 py-1 rounded-md text-xs font-medium bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800 transition-colors capitalize"
+                                        data-testid={`button-suggest-next-day-${slot.key}`}
+                                      >
+                                        {slot.label}
                                       </button>
                                     ))}
                                   </div>
