@@ -569,6 +569,7 @@ export function CreateClientWizard() {
                               <span className="text-sm text-muted-foreground">de cada mês</span>
                             </div>
                           </FormControl>
+                          <FormMessage />
                           <p className="text-xs text-muted-foreground">Opcional — indica quando o cliente costuma fazer a transferência</p>
                         </FormItem>
                       )}
@@ -600,6 +601,7 @@ export function CreateClientWizard() {
                             <FormControl>
                               <Input type="number" step="0.1" placeholder={f.placeholder} className="rounded-xl" data-testid={f.testId} {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} />
                             </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )} />
                       ))}
@@ -630,6 +632,7 @@ export function CreateClientWizard() {
                             <FormControl>
                               <Input type="number" step="0.1" placeholder={f.placeholder} className="rounded-xl" data-testid={f.testId} {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} />
                             </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )} />
                       ))}
