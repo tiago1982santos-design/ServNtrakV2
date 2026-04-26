@@ -133,6 +133,27 @@ export default function CalendarPage() {
 
   const daysWithAppointments = appointments?.map(a => new Date(a.date)) || [];
 
+  const fullDays = (() => {
+    if (!appointments || workingHourSlots.length === 0) return [] as Date[];
+    const workingSet = new Set(workingHourSlots);
+    const occupied = new Map<string, Set<number>>();
+    for (const apt of appointments) {
+      const d = new Date(apt.date);
+      const hour = d.getHours();
+      if (!workingSet.has(hour)) continue;
+      const key = format(d, "yyyy-MM-dd");
+      if (!occupied.has(key)) occupied.set(key, new Set());
+      occupied.get(key)!.add(hour);
+    }
+    const out: Date[] = [];
+    occupied.forEach((hours, key) => {
+      if (hours.size >= workingHourSlots.length) {
+        out.push(parseISO(key));
+      }
+    });
+    return out;
+  })();
+
   const isFutureOrTodayDate = (d: Date) =>
     isAfter(startOfDay(d), startOfDay(new Date())) || isSameDay(d, new Date());
 
@@ -220,9 +241,10 @@ export default function CalendarPage() {
             onSelect={setDate}
             onDayClick={handleDayClick}
             locale={pt}
-            modifiers={{ hasAppointment: daysWithAppointments }}
+            modifiers={{ hasAppointment: daysWithAppointments, fullDay: fullDays }}
             modifiersClassNames={{
-              hasAppointment: 'has-appointment'
+              hasAppointment: 'has-appointment',
+              fullDay: 'full-day'
             }}
             className="mx-auto calendar-modern"
           />
@@ -260,6 +282,14 @@ export default function CalendarPage() {
           height: 4px;
           background: hsl(var(--primary));
           border-radius: 50%;
+        }
+        .calendar-modern .full-day:not(.rdp-day_selected) {
+          background: hsl(var(--muted));
+          color: hsl(var(--muted-foreground));
+          border-radius: 50%;
+        }
+        .calendar-modern .full-day::after {
+          background: hsl(var(--destructive));
         }
         .calendar-modern .rdp-caption_label {
           font-weight: 700;
