@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAppointments, useCreateAppointment } from "@/hooks/use-appointments";
 import { useClients } from "@/hooks/use-clients";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -98,7 +98,12 @@ export default function CalendarPage() {
 
   const daysWithAppointments = appointments?.map(a => new Date(a.date)) || [];
 
-  const isFutureOrToday = date && (isAfter(startOfDay(date), startOfDay(new Date())) || isSameDay(date, new Date()));
+  const isFutureOrTodayDate = (d: Date) =>
+    isAfter(startOfDay(d), startOfDay(new Date())) || isSameDay(d, new Date());
+
+  const isFutureOrToday = date && isFutureOrTodayDate(date);
+
+  const lastTapRef = useRef<{ time: number; day: Date } | null>(null);
 
   const form = useForm<z.infer<typeof appointmentFormSchema>>({
     resolver: zodResolver(appointmentFormSchema),
@@ -110,9 +115,10 @@ export default function CalendarPage() {
     }
   });
 
-  const handleOpenDialog = () => {
-    if (date) {
-      const dateWithTime = new Date(date);
+  const handleOpenDialog = (target?: Date) => {
+    const baseDate = target ?? date;
+    if (baseDate) {
+      const dateWithTime = new Date(baseDate);
       dateWithTime.setHours(9, 0, 0, 0);
       form.reset({
         clientId: 0,
@@ -122,6 +128,22 @@ export default function CalendarPage() {
       });
     }
     setDialogOpen(true);
+  };
+
+  const handleDayClick = (day: Date) => {
+    if (!isFutureOrTodayDate(day)) {
+      lastTapRef.current = null;
+      return;
+    }
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last && isSameDay(last.day, day) && now - last.time < 500) {
+      lastTapRef.current = null;
+      setDate(day);
+      handleOpenDialog(day);
+      return;
+    }
+    lastTapRef.current = { time: now, day };
   };
 
   const onSubmit = async (values: z.infer<typeof appointmentFormSchema>) => {
@@ -159,7 +181,8 @@ export default function CalendarPage() {
           <DayPicker
             mode="single"
             selected={date}
-            onSelect={setDate}
+            onSelect={(d) => { if (d) setDate(d); }}
+            onDayClick={handleDayClick}
             locale={pt}
             modifiers={{ hasAppointment: daysWithAppointments }}
             modifiersClassNames={{
@@ -167,6 +190,12 @@ export default function CalendarPage() {
             }}
             className="mx-auto calendar-modern"
           />
+          <p
+            className="text-center text-xs text-muted-foreground mt-2"
+            data-testid="text-calendar-quick-create-hint"
+          >
+            Toca duas vezes numa data para agendar rapidamente
+          </p>
         </div>
       </div>
 
@@ -224,7 +253,7 @@ export default function CalendarPage() {
             <Button
               size="icon"
               className="rounded-full h-10 w-10 shadow-lg"
-              onClick={handleOpenDialog}
+              onClick={() => handleOpenDialog()}
               data-testid="button-add-appointment"
               aria-label="Adicionar marcação"
             >
@@ -296,7 +325,7 @@ export default function CalendarPage() {
             {isFutureOrToday && (
               <Button
                 className="mt-4"
-                onClick={handleOpenDialog}
+                onClick={() => handleOpenDialog()}
                 data-testid="button-add-appointment-empty"
               >
                 <Plus className="w-4 h-4 mr-2" />
