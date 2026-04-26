@@ -1898,7 +1898,7 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     const userId = req.user!.id;
     const prefs = await storage.getUserPreferences(userId);
     if (!prefs) {
-      return res.json(defaultWorkingHours);
+      return res.json({ ...defaultWorkingHours, hasPreferences: false });
     }
     res.json({
       workingHoursStart: prefs.workingHoursStart,
@@ -1906,6 +1906,7 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
       lunchEnabled: prefs.lunchEnabled,
       lunchStart: prefs.lunchStart,
       lunchEnd: prefs.lunchEnd,
+      hasPreferences: true,
     });
   });
 
@@ -1920,6 +1921,7 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
         lunchEnabled: prefs.lunchEnabled,
         lunchStart: prefs.lunchStart,
         lunchEnd: prefs.lunchEnd,
+        hasPreferences: true,
       });
     } catch (err) {
       if (err instanceof z.ZodError) {

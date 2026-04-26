@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -7,6 +7,7 @@ import {
   fromDTO,
   normalizeSettings,
   readCachedSettings,
+  settingsEqual,
   toDTO,
   writeCachedSettings,
   type WorkingHoursDTO,
@@ -20,6 +21,7 @@ export function useWorkingHours() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const queryKey = [ENDPOINT, userId] as const;
+  const migratedRef = useRef<string | null>(null);
 
   const query = useQuery<WorkingHoursDTO>({
     queryKey,
@@ -34,12 +36,17 @@ export function useWorkingHours() {
   });
 
   const serverSettings = query.data ? fromDTO(query.data) : null;
+  const serverHasPrefs = query.data?.hasPreferences === true;
   const cached = readCachedSettings(userId);
-  const settings: WorkingHoursSettings = serverSettings ?? cached ?? DEFAULT_WORKING_HOURS;
+  const settings: WorkingHoursSettings = serverHasPrefs
+    ? (serverSettings ?? DEFAULT_WORKING_HOURS)
+    : (cached ?? serverSettings ?? DEFAULT_WORKING_HOURS);
 
   useEffect(() => {
-    if (serverSettings && userId) writeCachedSettings(userId, serverSettings);
-  }, [serverSettings, userId]);
+    if (serverSettings && userId && query.data?.hasPreferences) {
+      writeCachedSettings(userId, serverSettings);
+    }
+  }, [serverSettings, userId, query.data?.hasPreferences]);
 
   const mutation = useMutation({
     mutationFn: async (next: WorkingHoursSettings) => {
@@ -51,14 +58,22 @@ export function useWorkingHours() {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<WorkingHoursDTO>(queryKey);
       const normalized = normalizeSettings(next);
-      queryClient.setQueryData<WorkingHoursDTO>(queryKey, toDTO(normalized));
+      queryClient.setQueryData<WorkingHoursDTO>(queryKey, {
+        ...toDTO(normalized),
+        hasPreferences: true,
+      });
       writeCachedSettings(userId, normalized);
       return { previous };
     },
     onError: (_err, _next, ctx) => {
       if (ctx?.previous) {
         queryClient.setQueryData(queryKey, ctx.previous);
-        writeCachedSettings(userId, fromDTO(ctx.previous));
+        if (ctx.previous.hasPreferences) {
+          writeCachedSettings(userId, fromDTO(ctx.previous));
+        }
+      }
+      if (migratedRef.current === userId) {
+        migratedRef.current = null;
       }
     },
     onSettled: () => {
@@ -72,6 +87,18 @@ export function useWorkingHours() {
     },
     [mutation]
   );
+
+  useEffect(() => {
+    if (!userId) return;
+    if (query.data?.hasPreferences !== false) return;
+    if (mutation.isPending) return;
+    if (migratedRef.current === userId) return;
+    const localCache = readCachedSettings(userId);
+    if (!localCache) return;
+    if (settingsEqual(localCache, DEFAULT_WORKING_HOURS)) return;
+    migratedRef.current = userId;
+    mutation.mutate(localCache);
+  }, [userId, query.data?.hasPreferences, mutation]);
 
   return [settings, setSettings] as const;
 }

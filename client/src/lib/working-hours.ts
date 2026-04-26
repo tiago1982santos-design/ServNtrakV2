@@ -44,6 +44,17 @@ export interface WorkingHoursDTO {
   lunchEnabled: boolean;
   lunchStart: number;
   lunchEnd: number;
+  hasPreferences?: boolean;
+}
+
+export function settingsEqual(a: WorkingHoursSettings, b: WorkingHoursSettings): boolean {
+  return (
+    a.start === b.start &&
+    a.end === b.end &&
+    a.lunchEnabled === b.lunchEnabled &&
+    a.lunchStart === b.lunchStart &&
+    a.lunchEnd === b.lunchEnd
+  );
 }
 
 export function fromDTO(dto: WorkingHoursDTO): WorkingHoursSettings {
