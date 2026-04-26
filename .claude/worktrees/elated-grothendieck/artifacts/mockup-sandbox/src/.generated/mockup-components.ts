@@ -2,10 +2,6 @@
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/NotaDespesaPreview.tsx": () => import("../components/mockups/NotaDespesaPreview.tsx"),
-  "./components/mockups/nota-despesa-variants/NotaCompacta.tsx": () => import("../components/mockups/nota-despesa-variants/NotaCompacta.tsx"),
-  "./components/mockups/nota-despesa-variants/NotaModerna.tsx": () => import("../components/mockups/nota-despesa-variants/NotaModerna.tsx"),
-  "./components/mockups/nota-despesa-variants/NotaPremium.tsx": () => import("../components/mockups/nota-despesa-variants/NotaPremium.tsx"),
-  "./components/mockups/nota-despesa-variants/RelatorioServico.tsx": () => import("../components/mockups/nota-despesa-variants/RelatorioServico.tsx"),
   "./components/mockups/home-redesign/CleanProfessional.tsx": () => import("../components/mockups/home-redesign/CleanProfessional.tsx"),
   "./components/mockups/home-redesign/CommandBriefing.tsx": () => import("../components/mockups/home-redesign/CommandBriefing.tsx"),
   "./components/mockups/home-redesign/EditorialPrint.tsx": () => import("../components/mockups/home-redesign/EditorialPrint.tsx"),
@@ -18,5 +14,9 @@ export const modules: ModuleMap = {
   "./components/mockups/home-redesign/SunnyFieldwork.tsx": () => import("../components/mockups/home-redesign/SunnyFieldwork.tsx"),
   "./components/mockups/home-redesign/SunnyPolished.tsx": () => import("../components/mockups/home-redesign/SunnyPolished.tsx"),
   "./components/mockups/home-redesign/TerraQuente.tsx": () => import("../components/mockups/home-redesign/TerraQuente.tsx"),
-  "./components/mockups/home-redesign/TimelineJourney.tsx": () => import("../components/mockups/home-redesign/TimelineJourney.tsx")
+  "./components/mockups/home-redesign/TimelineJourney.tsx": () => import("../components/mockups/home-redesign/TimelineJourney.tsx"),
+  "./components/mockups/nota-despesa-variants/NotaCompacta.tsx": () => import("../components/mockups/nota-despesa-variants/NotaCompacta.tsx"),
+  "./components/mockups/nota-despesa-variants/NotaModerna.tsx": () => import("../components/mockups/nota-despesa-variants/NotaModerna.tsx"),
+  "./components/mockups/nota-despesa-variants/NotaPremium.tsx": () => import("../components/mockups/nota-despesa-variants/NotaPremium.tsx"),
+  "./components/mockups/nota-despesa-variants/RelatorioServico.tsx": () => import("../components/mockups/nota-despesa-variants/RelatorioServico.tsx")
 };
