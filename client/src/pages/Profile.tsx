@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { PushHealthBanner } from "@/components/PushHealthBanner";
+import { WorkingHoursSection } from "@/components/WorkingHoursSection";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -840,6 +841,8 @@ export default function Profile() {
         <BiometricSection />
 
         <PushNotificationSection />
+
+        <WorkingHoursSection />
 
         <Card data-testid="card-appearance">
           <CardHeader>

@@ -22,6 +22,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkingHours } from "@/hooks/use-working-hours";
+import { computeWorkingHours } from "@/lib/working-hours";
 import type { PendingTaskWithClient, AppointmentPreview } from "@shared/schema";
 
 const appointmentFormSchema = z.object({
@@ -39,6 +41,8 @@ export default function CalendarPage() {
   const createApt = useCreateAppointment();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [workingHoursSettings] = useWorkingHours();
+  const workingHourSlots = computeWorkingHours(workingHoursSettings);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [previewMonth, setPreviewMonth] = useState(new Date().getMonth() + 1);
   const [previewYear, setPreviewYear] = useState(new Date().getFullYear());
@@ -556,7 +560,7 @@ export default function CalendarPage() {
                       )
                     : [];
 
-                  const WORKING_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+                  const WORKING_HOURS = workingHourSlots;
                   const occupiedHours = new Set(
                     sameDayAppointments.map(apt => new Date(apt.date).getHours())
                   );
