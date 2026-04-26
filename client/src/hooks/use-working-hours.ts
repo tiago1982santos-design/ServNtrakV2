@@ -13,15 +13,21 @@ import {
   type WorkingHoursSettings,
 } from "@/lib/working-hours";
 
-const QUERY_KEY = ["/api/user/preferences/working-hours"] as const;
+const ENDPOINT = "/api/user/preferences/working-hours";
 
 export function useWorkingHours() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const queryKey = [ENDPOINT, userId] as const;
 
   const query = useQuery<WorkingHoursDTO>({
-    queryKey: QUERY_KEY,
+    queryKey,
+    queryFn: async () => {
+      const res = await fetch(ENDPOINT, { credentials: "include" });
+      if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+      return (await res.json()) as WorkingHoursDTO;
+    },
     retry: false,
     staleTime: 60_000,
     enabled: !!userId,
@@ -38,25 +44,25 @@ export function useWorkingHours() {
   const mutation = useMutation({
     mutationFn: async (next: WorkingHoursSettings) => {
       const normalized = normalizeSettings(next);
-      const res = await apiRequest("PUT", "/api/user/preferences/working-hours", toDTO(normalized));
+      const res = await apiRequest("PUT", ENDPOINT, toDTO(normalized));
       return (await res.json()) as WorkingHoursDTO;
     },
     onMutate: async (next) => {
-      await queryClient.cancelQueries({ queryKey: QUERY_KEY });
-      const previous = queryClient.getQueryData<WorkingHoursDTO>(QUERY_KEY);
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<WorkingHoursDTO>(queryKey);
       const normalized = normalizeSettings(next);
-      queryClient.setQueryData<WorkingHoursDTO>(QUERY_KEY, toDTO(normalized));
+      queryClient.setQueryData<WorkingHoursDTO>(queryKey, toDTO(normalized));
       writeCachedSettings(userId, normalized);
       return { previous };
     },
     onError: (_err, _next, ctx) => {
       if (ctx?.previous) {
-        queryClient.setQueryData(QUERY_KEY, ctx.previous);
+        queryClient.setQueryData(queryKey, ctx.previous);
         writeCachedSettings(userId, fromDTO(ctx.previous));
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 
