@@ -14,8 +14,7 @@ export const DEFAULT_WORKING_HOURS: WorkingHoursSettings = {
   lunchEnd: 14,
 };
 
-const STORAGE_KEY = "servntrak-working-hours";
-const CHANGE_EVENT = "servntrak-working-hours-change";
+const CACHE_KEY = "servntrak-working-hours-cache";
 
 function clampHour(value: unknown, fallback: number, min: number, max: number): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -23,13 +22,12 @@ function clampHour(value: unknown, fallback: number, min: number, max: number): 
   return Math.max(min, Math.min(max, Math.round(n)));
 }
 
-function normalize(raw: Partial<WorkingHoursSettings> | null | undefined): WorkingHoursSettings {
+export function normalizeSettings(raw: Partial<WorkingHoursSettings> | null | undefined): WorkingHoursSettings {
   const start = clampHour(raw?.start, DEFAULT_WORKING_HOURS.start, 0, 23);
   const endRaw = clampHour(raw?.end, DEFAULT_WORKING_HOURS.end, 0, 23);
   const end = endRaw < start ? start : endRaw;
-  const lunchStartRaw = clampHour(raw?.lunchStart, DEFAULT_WORKING_HOURS.lunchStart, 0, 23);
+  const lunchStart = clampHour(raw?.lunchStart, DEFAULT_WORKING_HOURS.lunchStart, 0, 23);
   const lunchEndRaw = clampHour(raw?.lunchEnd, DEFAULT_WORKING_HOURS.lunchEnd, 1, 24);
-  const lunchStart = lunchStartRaw;
   const lunchEnd = lunchEndRaw <= lunchStart ? lunchStart + 1 : lunchEndRaw;
   return {
     start,
@@ -40,34 +38,61 @@ function normalize(raw: Partial<WorkingHoursSettings> | null | undefined): Worki
   };
 }
 
-export function loadWorkingHours(): WorkingHoursSettings {
-  if (typeof window === "undefined") return DEFAULT_WORKING_HOURS;
+export interface WorkingHoursDTO {
+  workingHoursStart: number;
+  workingHoursEnd: number;
+  lunchEnabled: boolean;
+  lunchStart: number;
+  lunchEnd: number;
+}
+
+export function fromDTO(dto: WorkingHoursDTO): WorkingHoursSettings {
+  return normalizeSettings({
+    start: dto.workingHoursStart,
+    end: dto.workingHoursEnd,
+    lunchEnabled: dto.lunchEnabled,
+    lunchStart: dto.lunchStart,
+    lunchEnd: dto.lunchEnd,
+  });
+}
+
+export function toDTO(s: WorkingHoursSettings): WorkingHoursDTO {
+  return {
+    workingHoursStart: s.start,
+    workingHoursEnd: s.end,
+    lunchEnabled: s.lunchEnabled,
+    lunchStart: s.lunchStart,
+    lunchEnd: s.lunchEnd,
+  };
+}
+
+interface CacheEntry {
+  userId: string;
+  settings: WorkingHoursSettings;
+}
+
+export function readCachedSettings(userId: string | null | undefined): WorkingHoursSettings | null {
+  if (typeof window === "undefined" || !userId) return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_WORKING_HOURS;
-    return normalize(JSON.parse(raw));
+    const raw = window.localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<CacheEntry>;
+    if (parsed?.userId !== userId || !parsed.settings) return null;
+    return normalizeSettings(parsed.settings);
   } catch {
-    return DEFAULT_WORKING_HOURS;
+    return null;
   }
 }
 
-export function saveWorkingHours(settings: WorkingHoursSettings): WorkingHoursSettings {
-  const normalized = normalize(settings);
+export function writeCachedSettings(
+  userId: string | null | undefined,
+  settings: WorkingHoursSettings
+): void {
+  if (typeof window === "undefined" || !userId) return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-    window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+    const entry: CacheEntry = { userId, settings };
+    window.localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
   } catch {}
-  return normalized;
-}
-
-export function subscribeToWorkingHours(listener: () => void): () => void {
-  const onChange = () => listener();
-  window.addEventListener(CHANGE_EVENT, onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    window.removeEventListener(CHANGE_EVENT, onChange);
-    window.removeEventListener("storage", onChange);
-  };
 }
 
 export function computeWorkingHours(settings: WorkingHoursSettings): number[] {

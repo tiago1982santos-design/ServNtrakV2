@@ -9,6 +9,36 @@ export * from "./models/chat";
 
 // === TABLE DEFINITIONS ===
 
+export const userPreferences = pgTable("user_preferences", {
+  userId: text("user_id").primaryKey(),
+  workingHoursStart: integer("working_hours_start").notNull().default(8),
+  workingHoursEnd: integer("working_hours_end").notNull().default(18),
+  lunchEnabled: boolean("lunch_enabled").notNull().default(false),
+  lunchStart: integer("lunch_start").notNull().default(12),
+  lunchEnd: integer("lunch_end").notNull().default(14),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const updateWorkingHoursSchema = z
+  .object({
+    workingHoursStart: z.number().int().min(0).max(23),
+    workingHoursEnd: z.number().int().min(0).max(23),
+    lunchEnabled: z.boolean(),
+    lunchStart: z.number().int().min(0).max(23),
+    lunchEnd: z.number().int().min(1).max(24),
+  })
+  .refine((d) => d.workingHoursEnd >= d.workingHoursStart, {
+    message: "A hora de fim tem de ser igual ou posterior à de início",
+    path: ["workingHoursEnd"],
+  })
+  .refine((d) => !d.lunchEnabled || d.lunchEnd > d.lunchStart, {
+    message: "O fim da pausa tem de ser depois do início",
+    path: ["lunchEnd"],
+  });
+
+export type UserPreferences = typeof userPreferences.$inferSelect;
+export type UpdateWorkingHours = z.infer<typeof updateWorkingHoursSchema>;
+
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(), // Owner of the client record

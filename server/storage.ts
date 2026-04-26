@@ -33,6 +33,8 @@ import {
   type InsertExpenseNoteItem, type ExpenseNoteItem, type ExpenseNoteWithDetails,
   type InsertQuote, type Quote,
   type InsertQuoteItem, type QuoteItem, type QuoteWithDetails,
+  userPreferences,
+  type UserPreferences, type UpdateWorkingHours,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -170,6 +172,10 @@ export interface IStorage {
   updateQuoteItems(quoteId: number, userId: string, items: Omit<InsertQuoteItem, 'quoteId'>[]): Promise<QuoteItem[]>;
   deleteQuote(id: number, userId: string): Promise<void>;
   generateQuoteNumber(userId: string): Promise<string>;
+
+  // User Preferences
+  getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
+  upsertUserPreferences(userId: string, prefs: UpdateWorkingHours): Promise<UserPreferences>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1693,6 +1699,30 @@ export class DatabaseStorage implements IStorage {
 
     await db.delete(quoteItems).where(eq(quoteItems.quoteId, id));
     await db.delete(quotes).where(and(eq(quotes.id, id), eq(quotes.userId, userId)));
+  }
+
+  // User Preferences
+  async getUserPreferences(userId: string): Promise<UserPreferences | undefined> {
+    const [prefs] = await db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId));
+    return prefs;
+  }
+
+  async upsertUserPreferences(
+    userId: string,
+    prefs: UpdateWorkingHours
+  ): Promise<UserPreferences> {
+    const [row] = await db
+      .insert(userPreferences)
+      .values({ userId, ...prefs, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: userPreferences.userId,
+        set: { ...prefs, updatedAt: new Date() },
+      })
+      .returning();
+    return row;
   }
 }
 

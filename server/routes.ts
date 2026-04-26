@@ -6,7 +6,7 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { api } from "@shared/routes";
-import { serviceVisits, appointments, serviceLogs } from "@shared/schema";
+import { serviceVisits, appointments, serviceLogs, updateWorkingHoursSchema } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { saveSubscription, removeSubscription, sendPushToUser, getVapidPublicKey, getPushHealthStatus, isAllowedPushEndpoint, InvalidPushEndpointError } from "./pushService";
@@ -1882,6 +1882,53 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     } catch (error) {
       console.error("Erro ao apagar orçamento:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // User preferences (working hours)
+  const defaultWorkingHours = {
+    workingHoursStart: 8,
+    workingHoursEnd: 18,
+    lunchEnabled: false,
+    lunchStart: 12,
+    lunchEnd: 14,
+  };
+
+  app.get("/api/user/preferences/working-hours", requireAuth, async (req, res) => {
+    const userId = req.user!.id;
+    const prefs = await storage.getUserPreferences(userId);
+    if (!prefs) {
+      return res.json(defaultWorkingHours);
+    }
+    res.json({
+      workingHoursStart: prefs.workingHoursStart,
+      workingHoursEnd: prefs.workingHoursEnd,
+      lunchEnabled: prefs.lunchEnabled,
+      lunchStart: prefs.lunchStart,
+      lunchEnd: prefs.lunchEnd,
+    });
+  });
+
+  app.put("/api/user/preferences/working-hours", requireAuth, async (req, res) => {
+    try {
+      const input = updateWorkingHoursSchema.parse(req.body);
+      const userId = req.user!.id;
+      const prefs = await storage.upsertUserPreferences(userId, input);
+      res.json({
+        workingHoursStart: prefs.workingHoursStart,
+        workingHoursEnd: prefs.workingHoursEnd,
+        lunchEnabled: prefs.lunchEnabled,
+        lunchStart: prefs.lunchStart,
+        lunchEnd: prefs.lunchEnd,
+      });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      throw err;
     }
   });
 
