@@ -284,7 +284,9 @@ export default function Purchases() {
                               setShowItemHistory(true);
                             }}>
                             <td className="p-2">{productName}</td>
-                            <td className="text-right p-2 text-primary font-medium">{purchase.id}</td>
+                            <td className="text-right p-2 text-primary font-medium">
+                              {format(new Date(purchase.purchaseDate), "dd/MM/yyyy", { locale: pt })}
+                            </td>
                           </tr>
                         ))}
                     </tbody>
