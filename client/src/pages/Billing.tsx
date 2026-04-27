@@ -3,6 +3,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Loader2, Euro, Clock, Users, CalendarDays, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { BackButton } from "@/components/BackButton";
+import { DataTable, type ColumnDef, type SortDir } from "@/components/ui/data-table";
 
 export default function Billing() {
   const { data: clients, isLoading } = useClients();
@@ -50,23 +51,16 @@ export default function Billing() {
 
             {monthlyClients.length > 0 ? (
               <>
-                <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm">
-                  {monthlyClients.map((client, idx) => (
-                    <Link 
-                      key={client.id} 
-                      href={`/clients/${client.id}`}
-                      className={`flex items-center justify-between p-4 hover:bg-muted/50 transition-colors ${idx !== monthlyClients.length - 1 ? 'border-b border-border/50' : ''}`}
-                      data-testid={`billing-monthly-client-${client.id}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Users className="w-5 h-5 text-primary" />
-                        </div>
-                        <span className="font-medium text-foreground">{client.name}</span>
-                      </div>
-                      <span className="font-bold text-green-700 dark:text-green-400">{client.monthlyRate?.toFixed(2)} €</span>
-                    </Link>
-                  ))}
+                <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm p-4">
+                  <DataTable
+                    columns={[
+                      { key: 'name', header: 'Cliente', cell: (c) => <Link href={`/clients/${c.id}`} className="font-medium truncate">{c.name}</Link>, sortable: true },
+                      { key: 'monthlyRate', header: '€/Mês', cell: (c) => c.monthlyRate ? `${c.monthlyRate.toFixed(2)} €` : '—', className: 'text-right', sortable: true },
+                      { key: 'actions', header: 'Ações', isAction: true, cell: (c) => <Link href={`/clients/${c.id}`} className="text-sm text-muted-foreground hover:text-foreground">Ver</Link> }
+                    ] as ColumnDef<any>[]}
+                    data={monthlyClients}
+                    pageSize={20}
+                  />
                 </div>
                 <div className="mt-4 bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-100 dark:border-green-800/30">
                   <div className="flex items-center justify-between">
@@ -94,35 +88,16 @@ export default function Billing() {
             </div>
 
             {hourlyClients.length > 0 ? (
-              <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cliente</th>
-                        <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">€/Hora</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {hourlyClients.map((client, idx) => (
-                        <tr 
-                          key={client.id} 
-                          className={`hover:bg-muted/30 transition-colors ${idx !== hourlyClients.length - 1 ? 'border-b border-border/50' : ''}`}
-                          data-testid={`billing-hourly-client-${client.id}`}
-                        >
-                          <td className="px-4 py-3">
-                            <Link href={`/clients/${client.id}`} className="font-medium text-foreground hover:text-primary">
-                              {client.name}
-                            </Link>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className="font-bold text-blue-700 dark:text-blue-400">{client.hourlyRate?.toFixed(2)} €</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm p-4">
+                <DataTable
+                  columns={[
+                    { key: 'name', header: 'Cliente', cell: (c) => <Link href={`/clients/${c.id}`} className="font-medium truncate">{c.name}</Link>, sortable: true },
+                    { key: 'hourlyRate', header: '€/Hora', cell: (c) => c.hourlyRate ? `${c.hourlyRate.toFixed(2)} €` : '—', className: 'text-right', sortable: true },
+                    { key: 'actions', header: 'Ações', isAction: true, cell: (c) => <Link href={`/clients/${c.id}`} className="text-sm text-muted-foreground hover:text-foreground">Ver</Link> }
+                  ] as ColumnDef<any>[]}
+                  data={hourlyClients}
+                  pageSize={20}
+                />
               </div>
             ) : (
               <div className="bg-card rounded-2xl p-6 text-center border border-border/50">
@@ -143,35 +118,16 @@ export default function Billing() {
             </div>
 
             {perVisitClients.length > 0 ? (
-              <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cliente</th>
-                        <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">€/Visita</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {perVisitClients.map((client, idx) => (
-                        <tr 
-                          key={client.id} 
-                          className={`hover:bg-muted/30 transition-colors ${idx !== perVisitClients.length - 1 ? 'border-b border-border/50' : ''}`}
-                          data-testid={`billing-per-visit-client-${client.id}`}
-                        >
-                          <td className="px-4 py-3">
-                            <Link href={`/clients/${client.id}`} className="font-medium text-foreground hover:text-primary">
-                              {client.name}
-                            </Link>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className="font-bold text-foreground">{client.perVisitRate?.toFixed(2)} €</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm p-4">
+                <DataTable
+                  columns={[
+                    { key: 'name', header: 'Cliente', cell: (c) => <Link href={`/clients/${c.id}`} className="font-medium truncate">{c.name}</Link>, sortable: true },
+                    { key: 'perVisitRate', header: '€/Visita', cell: (c) => c.perVisitRate ? `${c.perVisitRate.toFixed(2)} €` : '—', className: 'text-right', sortable: true },
+                    { key: 'actions', header: 'Ações', isAction: true, cell: (c) => <Link href={`/clients/${c.id}`} className="text-sm text-muted-foreground hover:text-foreground">Ver</Link> }
+                  ] as ColumnDef<any>[]}
+                  data={perVisitClients}
+                  pageSize={20}
+                />
               </div>
             ) : (
               <div className="bg-card rounded-2xl p-6 text-center border border-border/50">
