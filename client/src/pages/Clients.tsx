@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useClients } from "@/hooks/use-clients";
 import { BottomNav } from "@/components/BottomNav";
 import { Link } from "wouter";
-import { Search, MapPin, Leaf, Waves, ThermometerSun, Loader2, Phone, Users, Euro, Clock, ChevronRight, ArrowUpDown, CheckCircle, AlertCircle, Calendar, PhoneCall, CalendarDays } from "lucide-react";
+import { Search, Leaf, Waves, ThermometerSun, Loader2, Phone, Users, Euro, Clock, ChevronRight, ArrowUpDown, CheckCircle, AlertCircle, Calendar, CalendarDays } from "lucide-react";
 import type { Client, ClientPaymentWithClient } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreateClientWizard } from "@/components/CreateClientWizard";
 import { BackButton } from "@/components/BackButton";
+import { DataTable, type ColumnDef, type SortDir } from "@/components/ui/data-table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,12 +25,16 @@ type ServiceFilter = "all" | "garden" | "pool" | "jacuzzi";
 type BillingFilter = "all" | "monthly" | "hourly" | "per_visit";
 type SortOption = "name" | "value" | "recent";
 
+const PAGE_SIZE = 20;
+
 export default function Clients() {
   const { data: clients, isLoading } = useClients();
   const [search, setSearch] = useState("");
   const [serviceFilter, setServiceFilter] = useState<ServiceFilter>("all");
   const [billingFilter, setBillingFilter] = useState<BillingFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("name");
+  const [tableSortDir, setTableSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -62,7 +67,6 @@ export default function Clients() {
   const paymentStatusMap = useMemo(() => {
     const map = new Map<number, 'paid' | 'pending' | 'none'>();
     if (!currentMonthPayments) return map;
-    
     currentMonthPayments.forEach(payment => {
       map.set(payment.clientId, payment.isPaid ? 'paid' : 'pending');
     });
@@ -75,8 +79,8 @@ export default function Clients() {
   };
 
   const filteredAndSortedClients = useMemo(() => {
-    let result = clients?.filter(c => 
-      c.name.toLowerCase().includes(search.toLowerCase()) || 
+    let result = clients?.filter(c =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.address?.toLowerCase().includes(search.toLowerCase())
     ) || [];
 
@@ -93,36 +97,34 @@ export default function Clients() {
       result = result.filter(c => c.billingType === billingFilter);
     }
 
+    const dirMult = tableSortDir === "asc" ? 1 : -1;
     result.sort((a, b) => {
-      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "recent") {
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      }
+      if (sortBy === "name") return a.name.localeCompare(b.name) * dirMult;
       if (sortBy === "value") {
         const aValue = a.monthlyRate || a.hourlyRate || a.perVisitRate || 0;
         const bValue = b.monthlyRate || b.hourlyRate || b.perVisitRate || 0;
-        return bValue - aValue;
-      }
-      if (sortBy === "recent") {
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        return (aValue - bValue) * dirMult;
       }
       return 0;
     });
 
     return result;
-  }, [clients, search, serviceFilter, billingFilter, sortBy]);
+  }, [clients, search, serviceFilter, billingFilter, sortBy, tableSortDir]);
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
+  useEffect(() => {
+    setPage(1);
+  }, [search, serviceFilter, billingFilter, sortBy, tableSortDir]);
+
+  const getInitials = (name: string) =>
+    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   const getClientValue = (client: Client) => {
-    if (client.billingType === 'monthly' && client.monthlyRate) {
-      return `${client.monthlyRate}€/mês`;
-    }
-    if (client.billingType === 'hourly' && client.hourlyRate) {
-      return `${client.hourlyRate}€/hora`;
-    }
-    if (client.billingType === 'per_visit' && client.perVisitRate) {
-      return `${client.perVisitRate}€/visita`;
-    }
+    if (client.billingType === 'monthly' && client.monthlyRate) return `${client.monthlyRate}€/mês`;
+    if (client.billingType === 'hourly' && client.hourlyRate) return `${client.hourlyRate}€/hora`;
+    if (client.billingType === 'per_visit' && client.perVisitRate) return `${client.perVisitRate}€/visita`;
     return null;
   };
 
@@ -132,6 +134,124 @@ export default function Clients() {
     { key: "pool", label: "Piscina", icon: Waves, color: "text-blue-600 dark:text-blue-400" },
     { key: "jacuzzi", label: "Jacuzzi", icon: ThermometerSun, color: "text-muted-foreground" },
   ];
+
+  // Map sortBy to DataTable sort props (undefined when "recent" — no column is highlighted)
+  const tableSortKey = sortBy === "name" ? "name" : sortBy === "value" ? "billing" : undefined;
+
+  const handleSort = (key: string, dir: SortDir) => {
+    if (key === "name") setSortBy("name");
+    else if (key === "billing") setSortBy("value");
+    setTableSortDir(dir);
+  };
+
+  const handleDropdownSort = (option: SortOption) => {
+    setSortBy(option);
+    setTableSortDir("asc");
+  };
+
+  const columns: ColumnDef<Client>[] = [
+    {
+      key: "name",
+      header: "Nome",
+      sortable: true,
+      cell: (client) => (
+        <div className="flex items-center gap-3">
+          <div className="relative shrink-0">
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="text-xs font-bold text-primary">{getInitials(client.name)}</span>
+            </div>
+            {getPaymentStatus(client) === 'paid' && (
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center border-2 border-background" title="Pago este mês">
+                <CheckCircle className="w-2.5 h-2.5 text-white" />
+              </div>
+            )}
+            {getPaymentStatus(client) === 'pending' && (
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive flex items-center justify-center border-2 border-background" title="Pagamento pendente">
+                <AlertCircle className="w-2.5 h-2.5 text-white" />
+              </div>
+            )}
+          </div>
+          <span className="font-medium" data-testid={`text-client-name-${client.id}`}>{client.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: "phone",
+      header: "Telefone",
+      sortable: false,
+      cell: (client) =>
+        client.phone ? (
+          <a
+            href={`tel:${client.phone}`}
+            className="flex items-center gap-1.5 text-primary hover:underline"
+            onClick={(e) => e.stopPropagation()}
+            data-testid={`button-call-${client.id}`}
+          >
+            <Phone className="w-3.5 h-3.5 shrink-0" />
+            {client.phone}
+          </a>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "services",
+      header: "Serviços",
+      sortable: false,
+      cell: (client) => (
+        <div className="flex flex-wrap gap-1">
+          {client.hasGarden && (
+            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">
+              <Leaf className="w-2.5 h-2.5 mr-1" aria-hidden="true" />Jardim
+            </Badge>
+          )}
+          {client.hasPool && (
+            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">
+              <Waves className="w-2.5 h-2.5 mr-1" aria-hidden="true" />Piscina
+            </Badge>
+          )}
+          {client.hasJacuzzi && (
+            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground border-0">
+              <ThermometerSun className="w-2.5 h-2.5 mr-1" aria-hidden="true" />Jacuzzi
+            </Badge>
+          )}
+          {!client.hasGarden && !client.hasPool && !client.hasJacuzzi && (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "billing",
+      header: "Faturação",
+      sortable: true,
+      cell: (client) => {
+        const value = getClientValue(client);
+        return value
+          ? <span className="font-medium text-primary">{value}</span>
+          : <span className="text-muted-foreground">—</span>;
+      },
+    },
+    {
+      key: "action",
+      header: "",
+      sortable: false,
+      isAction: true,
+      cell: (client) => (
+        <Link href={`/clients/${client.id}`} data-testid={`card-client-${client.id}`}>
+          <Button size="sm" variant="ghost" className="gap-1">
+            Ver
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </Link>
+      ),
+    },
+  ];
+
+  const paginatedClients = filteredAndSortedClients.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   return (
     <div className="min-h-screen bg-background pb-24 page-transition">
@@ -143,11 +263,11 @@ export default function Clients() {
           </div>
           <CreateClientWizard />
         </div>
-        
+
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Pesquisar clientes..." 
+          <Input
+            placeholder="Pesquisar clientes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 rounded-xl bg-muted/50 border-none shadow-inner"
@@ -210,13 +330,13 @@ export default function Clients() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel className="text-xs">Ordenar</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setSortBy("name")} data-testid="sort-name">
+              <DropdownMenuItem onClick={() => handleDropdownSort("name")} data-testid="sort-name">
                 Por Nome {sortBy === "name" && "✓"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("value")} data-testid="sort-value">
+              <DropdownMenuItem onClick={() => handleDropdownSort("value")} data-testid="sort-value">
                 Por Valor {sortBy === "value" && "✓"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("recent")} data-testid="sort-recent">
+              <DropdownMenuItem onClick={() => handleDropdownSort("recent")} data-testid="sort-recent">
                 Mais Recentes {sortBy === "recent" && "✓"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -241,117 +361,28 @@ export default function Clients() {
         </div>
       </div>
 
-      <div className="px-5 py-4 space-y-3">
+      <div className="px-5 py-4">
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
-        ) : filteredAndSortedClients.length > 0 ? (
-          filteredAndSortedClients.map((client) => (
-            <Link key={client.id} href={`/clients/${client.id}`}>
-              <Card className="mobile-card cursor-pointer" data-testid={`card-client-${client.id}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-bold text-primary">{getInitials(client.name)}</span>
-                      </div>
-                      {getPaymentStatus(client) === 'paid' && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center border-2 border-background" title="Pago este mês">
-                          <CheckCircle className="w-3 h-3 text-white" />
-                        </div>
-                      )}
-                      {getPaymentStatus(client) === 'pending' && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-destructive flex items-center justify-center border-2 border-background" title="Pagamento pendente">
-                          <AlertCircle className="w-3 h-3 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-foreground truncate" data-testid={`text-client-name-${client.id}`}>
-                            {client.name}
-                          </h3>
-                          {client.address && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 truncate">
-                              <MapPin className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">{client.address}</span>
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {getClientValue(client) && (
-                            <Badge variant="secondary" className="text-xs font-semibold bg-primary/10 text-primary border-0">
-                              {client.billingType === 'monthly' && <Euro className="w-3 h-3 mr-1" />}
-                              {client.billingType === 'hourly' && <Clock className="w-3 h-3 mr-1" />}
-                              {client.billingType === 'per_visit' && <CalendarDays className="w-3 h-3 mr-1" />}
-                              {getClientValue(client)}
-                            </Badge>
-                          )}
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 mt-3">
-                        <div className="flex gap-1.5 flex-1">
-                          {client.hasGarden && (
-                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">
-                              <Leaf className="w-2.5 h-2.5 mr-1" aria-hidden="true" />
-                              Jardim
-                            </Badge>
-                          )}
-                          {client.hasPool && (
-                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">
-                              <Waves className="w-2.5 h-2.5 mr-1" aria-hidden="true" />
-                              Piscina
-                            </Badge>
-                          )}
-                          {client.hasJacuzzi && (
-                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground border-0">
-                              <ThermometerSun className="w-2.5 h-2.5 mr-1" aria-hidden="true" />
-                              Jacuzzi
-                            </Badge>
-                          )}
-                          {(client.gardenVisitFrequency === "on_demand" || client.poolVisitFrequency === "on_demand" || client.jacuzziVisitFrequency === "on_demand") && (
-                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-purple-300 text-purple-600 dark:border-purple-600 dark:text-purple-400">
-                              <PhoneCall className="w-2.5 h-2.5 mr-1" aria-hidden="true" />
-                              A pedido
-                            </Badge>
-                          )}
-                        </div>
-                        {client.phone && (
-                          <a 
-                            href={`tel:${client.phone}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
-                            data-testid={`button-call-${client.id}`}
-                          >
-                            <Phone className="w-4 h-4" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))
         ) : (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <p className="text-foreground font-medium">Nenhum cliente encontrado</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {search || serviceFilter !== "all" 
-                  ? "Tente ajustar os filtros de pesquisa"
-                  : "Adicione o seu primeiro cliente para começar!"}
-              </p>
-            </CardContent>
-          </Card>
+          <DataTable
+            columns={columns}
+            data={paginatedClients}
+            onSort={handleSort}
+            sortKey={tableSortKey}
+            sortDir={tableSortDir}
+            page={page}
+            pageSize={PAGE_SIZE}
+            totalCount={filteredAndSortedClients.length}
+            onPageChange={setPage}
+            emptyMessage={
+              search || serviceFilter !== "all"
+                ? "Nenhum cliente encontrado. Tente ajustar os filtros."
+                : "Adicione o seu primeiro cliente para começar!"
+            }
+          />
         )}
       </div>
 
