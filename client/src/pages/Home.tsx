@@ -271,12 +271,12 @@ export default function Home() {
 
   const userName = user?.firstName || "Utilizador";
 
-  const getGreeting = () => {
+  const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return "Bom dia";
     if (h < 19) return "Boa tarde";
     return "Boa noite";
-  };
+  })();
 
   const todayAppointments = useMemo(
     () =>
@@ -375,8 +375,8 @@ export default function Home() {
 
       {/* ── HEADER ─────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border/30 px-5 py-3 flex justify-between items-center shadow-sm">
-        <span className="text-[15px] font-bold text-slate-900 tracking-tight" data-testid="text-greeting">
-          {getGreeting()}, {userName}
+        <span className="text-[19px] font-bold text-slate-900 tracking-tight" data-testid="text-greeting">
+          {greeting}, {userName}
         </span>
         <WeatherStrip />
       </header>
