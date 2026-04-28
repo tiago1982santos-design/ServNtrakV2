@@ -619,10 +619,12 @@ export const insertExpenseNoteSchema = createInsertSchema(expenseNotes).omit({
   updatedAt: true,
 });
 
-export const insertExpenseNoteItemSchema = createInsertSchema(expenseNoteItems).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertExpenseNoteItemSchema = createInsertSchema(expenseNoteItems)
+  .omit({ id: true, createdAt: true })
+  .refine((d) => d.sourceType !== "edited" || (d.editReason != null && d.editReason.trim() !== ""), {
+    message: "O motivo de edição é obrigatório quando sourceType é 'edited'",
+    path: ["editReason"],
+  });
 
 export const insertQuoteSchema = createInsertSchema(quotes).omit({
   id: true,
