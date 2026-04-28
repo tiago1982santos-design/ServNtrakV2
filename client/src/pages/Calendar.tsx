@@ -257,10 +257,6 @@ export default function CalendarPage() {
   };
 
   const handleDayClick = (day: Date) => {
-    if (!isFutureOrTodayDate(day)) {
-      lastTapRef.current = null;
-      return;
-    }
     const now = Date.now();
     const last = lastTapRef.current;
     if (last && isSameDay(last.day, day) && now - last.time < 500) {
@@ -574,17 +570,15 @@ export default function CalendarPage() {
           <h2 className="section-title">
             {date ? format(date, "EEEE, d 'de' MMMM", { locale: pt }) : "Selecione uma data"}
           </h2>
-          {isFutureOrToday && (
-            <Button
-              size="icon"
-              className="rounded-full h-10 w-10 shadow-lg"
+          <Button
+              size="sm"
+              className="rounded-full h-9 px-3 shadow-lg gap-1.5"
               onClick={() => handleOpenDialog()}
               data-testid="button-add-appointment"
-              aria-label="Adicionar marcação"
             >
-              <Plus className="w-5 h-5" aria-hidden="true" />
+              <Plus className="w-4 h-4" aria-hidden="true" />
+              <span className="text-xs font-medium">Adicionar</span>
             </Button>
-          )}
         </div>
 
         {isLoading ? (
@@ -636,8 +630,7 @@ export default function CalendarPage() {
             </div>
             <h3 className="font-semibold text-foreground">Sem agendamentos</h3>
             <p className="text-sm text-muted-foreground mt-1">Nenhuma visita marcada para este dia</p>
-            {isFutureOrToday && (
-              <Button
+            <Button
                 className="mt-4"
                 onClick={() => handleOpenDialog()}
                 data-testid="button-add-appointment-empty"
@@ -645,7 +638,6 @@ export default function CalendarPage() {
                 <Plus className="w-4 h-4 mr-2" />
                 Agendar Serviço
               </Button>
-            )}
           </div>
         )}
       </div>
