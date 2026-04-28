@@ -612,12 +612,11 @@ export const insertPendingTaskSchema = createInsertSchema(pendingTasks).omit({ i
 
 export const insertSuggestedWorkSchema = createInsertSchema(suggestedWorks).omit({ id: true, userId: true, createdAt: true, acceptedAt: true, rejectedAt: true, completedAt: true });
 
-export const insertExpenseNoteSchema = createInsertSchema(expenseNotes).omit({
-  id: true,
-  userId: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const insertExpenseNoteSchema = createInsertSchema(expenseNotes)
+  .omit({ id: true, userId: true, createdAt: true, updatedAt: true })
+  .extend({
+    issueDate: z.union([z.date(), z.string().transform((s) => new Date(s))]).nullish(),
+  });
 
 export const insertExpenseNoteItemSchema = createInsertSchema(expenseNoteItems)
   .omit({ id: true, createdAt: true })
