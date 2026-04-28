@@ -108,11 +108,12 @@ export const serviceLogs = pgTable("service_logs", {
   clientId: integer("client_id").notNull(),
   date: timestamp("date").notNull(),
   type: text("type").notNull(), // 'Garden', 'Pool', 'Jacuzzi', 'General'
-  description: text("description").notNull(), // What was done
-  photosBefore: text("photos_before").array(), // URLs of before photos
-  photosAfter: text("photos_after").array(), // URLs of after photos
+  description: text("description").notNull(),
+  photosBefore: text("photos_before").array(),
+  photosAfter: text("photos_after").array(),
   // Billing fields
-  billingType: text("billing_type").default("monthly"), // 'monthly' (included) or 'extra' (additional charge)
+  billingType: text("billing_type").default("monthly"), // 'monthly' or 'extra'
+  isIncludedInMonthly: boolean("is_included_in_monthly").default(true), // when monthly: if true, labor/materials are record-only
   laborSubtotal: doublePrecision("labor_subtotal").default(0),
   materialsSubtotal: doublePrecision("materials_subtotal").default(0),
   totalAmount: doublePrecision("total_amount").default(0),

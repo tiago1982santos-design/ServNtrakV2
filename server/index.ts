@@ -116,6 +116,11 @@ app.use((req, res, next) => {
   `);
 
   await pool.query(`
+    ALTER TABLE service_logs
+    ADD COLUMN IF NOT EXISTS is_included_in_monthly BOOLEAN DEFAULT TRUE
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS push_send_events (
       id SERIAL PRIMARY KEY,
       at TIMESTAMP NOT NULL DEFAULT NOW(),

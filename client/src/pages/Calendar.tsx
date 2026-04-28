@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useLocation } from "wouter";
 import { useAppointments, useCreateAppointment, useUpdateAppointment, useDeleteAppointment } from "@/hooks/use-appointments";
 import { useClients } from "@/hooks/use-clients";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +9,7 @@ import "react-day-picker/dist/style.css";
 import { format, isSameDay, isAfter, startOfDay, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
 import { getFreeHoursForDay, suggestNextDaySlots, suggestSameDayHours } from "@/lib/suggestSlots";
-import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus, AlertTriangle, ClipboardList, Wand2, Trash2, CheckCheck, ChevronDown, Pencil, X } from "lucide-react";
+import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus, AlertTriangle, ClipboardList, Wand2, Trash2, CheckCheck, ChevronDown, Pencil, X, FileText } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/BackButton";
@@ -51,6 +52,7 @@ export default function CalendarPage() {
   const createApt = useCreateAppointment();
   const updateApt = useUpdateAppointment();
   const deleteApt = useDeleteAppointment();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   type AptWithClient = NonNullable<typeof appointments>[number];
   const [selectedApt, setSelectedApt] = useState<AptWithClient | null>(null);
@@ -938,6 +940,16 @@ export default function CalendarPage() {
               )}
 
               <div className="flex gap-2 pt-1">
+                <Button
+                  className="flex-1"
+                  variant="outline"
+                  onClick={() => navigate(`/expense-notes/new?clientId=${selectedApt.clientId}`)}
+                >
+                  <FileText className="w-4 h-4 mr-2" /> Nota de Despesa
+                </Button>
+              </div>
+
+              <div className="flex gap-2">
                 <Button className="flex-1" variant="outline" onClick={handleEditMode}>
                   <Pencil className="w-4 h-4 mr-2" /> Editar
                 </Button>

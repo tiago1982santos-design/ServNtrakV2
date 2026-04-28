@@ -869,15 +869,16 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
   const [photosAfter, setPhotosAfter] = useState<string[]>([]);
   const [laborEntries, setLaborEntries] = useState<LaborEntry[]>([]);
   const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([]);
+  const [isIncludedInMonthly, setIsIncludedInMonthly] = useState(true);
   const beforeInputRef = useRef<HTMLInputElement>(null);
   const afterInputRef = useRef<HTMLInputElement>(null);
   const createLog = useCreateServiceLog();
   const { uploadFile, isUploading } = useUpload();
-  
+
   const { data: employees } = useQuery<Employee[]>({
     queryKey: ['/api/employees'],
   });
-  
+
   const form = useForm<z.infer<typeof serviceLogFormSchema>>({
     resolver: zodResolver(serviceLogFormSchema),
     defaultValues: {
@@ -888,6 +889,8 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
       billingType: "monthly",
     }
   });
+
+  const billingTypeWatch = form.watch("billingType");
 
   const laborSubtotal = laborEntries.reduce((sum, e) => sum + e.cost, 0);
   const materialsSubtotal = materialEntries.reduce((sum, e) => sum + e.cost, 0);
@@ -968,8 +971,10 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
 
   const onSubmit = async (values: z.infer<typeof serviceLogFormSchema>) => {
     try {
+      const included = values.billingType === "monthly" ? isIncludedInMonthly : false;
       await createLog.mutateAsync({
         ...values,
+        isIncludedInMonthly: included,
         photosBefore,
         photosAfter,
         laborEntries: laborEntries.filter(e => e.workerName && e.hours > 0),
@@ -981,6 +986,7 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
       setPhotosAfter([]);
       setLaborEntries([]);
       setMaterialEntries([]);
+      setIsIncludedInMonthly(true);
     } catch (e) {}
   };
 
@@ -1005,6 +1011,25 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data do Serviço</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      className="rounded-xl"
+                      value={field.value ? format(new Date(field.value), "yyyy-MM-dd") : ""}
+                      onChange={(e) => field.onChange(new Date(e.target.value + "T12:00:00"))}
+                      data-testid="input-service-date"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="type"
@@ -1078,11 +1103,35 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
               )}
             />
 
+            {billingTypeWatch === "monthly" && (
+              <div className="flex items-start gap-3 p-3 rounded-xl border bg-green-50/50 border-green-200">
+                <Checkbox
+                  id="includedInMonthly"
+                  checked={isIncludedInMonthly}
+                  onCheckedChange={(v) => setIsIncludedInMonthly(v === true)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <Label htmlFor="includedInMonthly" className="text-sm font-medium text-green-800 cursor-pointer">
+                    Incluído no valor da mensalidade
+                  </Label>
+                  <p className="text-xs text-green-700 mt-0.5">
+                    {isIncludedInMonthly
+                      ? "Horas e valores são opcionais — ficam apenas para registo interno."
+                      : "As horas e valores serão contabilizados para este cliente."}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3 p-3 rounded-xl border bg-blue-50/50">
               <div className="flex items-center justify-between">
                 <FormLabel className="flex items-center gap-2 text-blue-700">
                   <Clock className="w-4 h-4" />
                   Mão de Obra
+                  {billingTypeWatch === "monthly" && isIncludedInMonthly && (
+                    <span className="text-[10px] font-normal text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">apenas registo</span>
+                  )}
                 </FormLabel>
                 <Button type="button" size="sm" variant="outline" onClick={addLaborEntry} className="h-7 text-xs">
                   <Plus className="w-3 h-3 mr-1" /> Adicionar
@@ -1168,6 +1217,9 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
                 <FormLabel className="flex items-center gap-2 text-muted-foreground">
                   <FolderPlus className="w-4 h-4" />
                   Materiais
+                  {billingTypeWatch === "monthly" && isIncludedInMonthly && (
+                    <span className="text-[10px] font-normal text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">apenas registo</span>
+                  )}
                 </FormLabel>
                 <Button type="button" size="sm" variant="outline" onClick={addMaterialEntry} className="h-7 text-xs">
                   <Plus className="w-3 h-3 mr-1" /> Adicionar
@@ -1213,10 +1265,15 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
             </div>
 
             {(laborEntries.length > 0 || materialEntries.length > 0) && (
-              <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+              <div className={`p-3 rounded-xl border ${billingTypeWatch === "monthly" && isIncludedInMonthly ? "bg-green-50 border-green-200" : "bg-primary/10 border-primary/20"}`}>
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-primary">TOTAL</span>
-                  <span className="text-lg font-bold text-primary">{total.toFixed(2)}€</span>
+                  <div>
+                    <span className={`font-bold ${billingTypeWatch === "monthly" && isIncludedInMonthly ? "text-green-700" : "text-primary"}`}>TOTAL</span>
+                    {billingTypeWatch === "monthly" && isIncludedInMonthly && (
+                      <p className="text-[10px] text-green-600 mt-0.5">apenas registo — não contabilizado</p>
+                    )}
+                  </div>
+                  <span className={`text-lg font-bold ${billingTypeWatch === "monthly" && isIncludedInMonthly ? "text-green-700" : "text-primary"}`}>{total.toFixed(2)}€</span>
                 </div>
               </div>
             )}
