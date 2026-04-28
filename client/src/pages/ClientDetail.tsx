@@ -861,6 +861,7 @@ const serviceLogFormSchema = insertServiceLogSchema.extend({
   type: z.string().min(1, "Tipo obrigatório"),
   description: z.string().min(1, "Descrição obrigatória"),
   billingType: z.enum(["monthly", "extra"]).default("monthly"),
+  date: z.union([z.date(), z.string().transform((s) => new Date(s))]),
 });
 
 function AddServiceLogDialog({ clientId }: { clientId: number }) {
