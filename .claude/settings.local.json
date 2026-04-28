@@ -27,7 +27,8 @@
       "Bash(node -e \"import\\('./node_modules/web-push/src/index.js'\\).then\\(wp => { const lib = wp.default || wp['module.exports']; const keys = lib.generateVAPIDKeys\\(\\); console.log\\('PUBLIC=' + keys.publicKey\\); console.log\\('PRIVATE=' + keys.privateKey\\); }\\)\")",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git config *)"
     ]
   }
 }
