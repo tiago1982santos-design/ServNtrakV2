@@ -858,7 +858,7 @@ type LaborEntry = { employeeId?: number; workerName: string; hours: number; hour
 type MaterialEntry = { materialName: string; quantity: number; unitPrice: number; cost: number };
 
 const serviceLogFormSchema = insertServiceLogSchema.extend({
-  type: z.enum(["Garden", "Pool", "Jacuzzi", "General"]),
+  type: z.string().min(1, "Tipo obrigatório"),
   description: z.string().min(1, "Descrição obrigatória"),
   billingType: z.enum(["monthly", "extra"]).default("monthly"),
 });
@@ -869,11 +869,27 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
   const [photosAfter, setPhotosAfter] = useState<string[]>([]);
   const [laborEntries, setLaborEntries] = useState<LaborEntry[]>([]);
   const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([]);
+  const [isCustomType, setIsCustomType] = useState(false);
+  const [creatingEmployeeForIdx, setCreatingEmployeeForIdx] = useState<number | null>(null);
+  const [newEmpName, setNewEmpName] = useState("");
+  const [newEmpChargeRate, setNewEmpChargeRate] = useState("");
+  const [newEmpPayRate, setNewEmpPayRate] = useState("");
   const beforeInputRef = useRef<HTMLInputElement>(null);
   const afterInputRef = useRef<HTMLInputElement>(null);
   const createLog = useCreateServiceLog();
   const { uploadFile, isUploading } = useUpload();
-  
+  const queryClient = useQueryClient();
+
+  const createEmployee = useMutation({
+    mutationFn: async (data: { name: string; hourlyChargeRate: number; hourlyPayRate: number }) => {
+      const res = await apiRequest("POST", "/api/employees", data);
+      return res.json() as Promise<Employee>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+    },
+  });
+
   const { data: employees } = useQuery<Employee[]>({
     queryKey: ['/api/employees'],
   });
@@ -900,6 +916,10 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
   };
 
   const selectEmployee = (index: number, employeeId: string) => {
+    if (employeeId === "criar_novo") {
+      setCreatingEmployeeForIdx(index);
+      return;
+    }
     const updated = [...laborEntries];
     if (employeeId === "manual") {
       updated[index].employeeId = undefined;
@@ -917,6 +937,28 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
     }
     updated[index].cost = updated[index].hours * updated[index].hourlyRate;
     setLaborEntries(updated);
+  };
+
+  const handleCreateEmployee = async (idx: number) => {
+    if (!newEmpName.trim()) return;
+    try {
+      const emp = await createEmployee.mutateAsync({
+        name: newEmpName.trim(),
+        hourlyChargeRate: parseFloat(newEmpChargeRate) || 0,
+        hourlyPayRate: parseFloat(newEmpPayRate) || 0,
+      });
+      const updated = [...laborEntries];
+      updated[idx].employeeId = emp.id;
+      updated[idx].workerName = emp.name;
+      updated[idx].hourlyRate = Number(emp.hourlyChargeRate) || 0;
+      updated[idx].hourlyPayRate = Number(emp.hourlyPayRate) || 0;
+      updated[idx].cost = updated[idx].hours * updated[idx].hourlyRate;
+      setLaborEntries(updated);
+      setCreatingEmployeeForIdx(null);
+      setNewEmpName("");
+      setNewEmpChargeRate("");
+      setNewEmpPayRate("");
+    } catch (e) {}
   };
 
   const updateLaborEntry = (index: number, field: keyof LaborEntry, value: string | number) => {
@@ -981,6 +1023,11 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
       setPhotosAfter([]);
       setLaborEntries([]);
       setMaterialEntries([]);
+      setIsCustomType(false);
+      setCreatingEmployeeForIdx(null);
+      setNewEmpName("");
+      setNewEmpChargeRate("");
+      setNewEmpPayRate("");
     } catch (e) {}
   };
 
@@ -1011,10 +1058,23 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo de Serviço</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    value={isCustomType ? "outro" : field.value}
+                    onValueChange={(val) => {
+                      if (val === "outro") {
+                        setIsCustomType(true);
+                        field.onChange("");
+                      } else {
+                        setIsCustomType(false);
+                        field.onChange(val);
+                      }
+                    }}
+                  >
                     <FormControl>
                       <SelectTrigger className="rounded-xl" data-testid="select-service-type">
-                        <SelectValue placeholder="Selecione o tipo" />
+                        <SelectValue placeholder="Selecione o tipo">
+                          {isCustomType && field.value ? field.value : undefined}
+                        </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -1022,12 +1082,40 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
                       <SelectItem value="Pool">Piscina</SelectItem>
                       <SelectItem value="Jacuzzi">Jacuzzi</SelectItem>
                       <SelectItem value="General">Geral</SelectItem>
+                      <SelectItem value="outro">+ Outro tipo...</SelectItem>
                     </SelectContent>
                   </Select>
+                  {isCustomType && (
+                    <Input
+                      placeholder="Escreva o tipo de serviço..."
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="mt-2 rounded-xl"
+                      autoFocus
+                    />
+                  )}
                 </FormItem>
               )}
             />
             
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      className="rounded-xl"
+                      value={field.value ? format(new Date(field.value), "yyyy-MM-dd") : ""}
+                      onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : new Date())}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="description"
@@ -1035,11 +1123,11 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
                 <FormItem>
                   <FormLabel>Descrição</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="O que fez hoje?" 
-                      className="rounded-xl" 
+                    <Textarea
+                      placeholder="O que fez hoje?"
+                      className="rounded-xl"
                       data-testid="input-service-description"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                 </FormItem>
@@ -1098,22 +1186,77 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
                           onValueChange={(val) => selectEmployee(idx, val)}
                         >
                           <SelectTrigger className="flex-1 h-8 text-xs rounded-lg" data-testid={`select-employee-${idx}`}>
-                            <SelectValue placeholder="Selecionar funcionário" />
+                            <SelectValue placeholder="Selecionar trabalhador" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="manual">Entrada manual</SelectItem>
+                            <SelectItem value="manual">Outro (escrever nome)</SelectItem>
                             {activeEmployees.map((emp) => (
                               <SelectItem key={emp.id} value={emp.id.toString()}>
                                 {emp.name} ({Number(emp.hourlyChargeRate).toFixed(0)}€/h)
                               </SelectItem>
                             ))}
+                            <SelectItem value="criar_novo">+ Criar funcionário...</SelectItem>
                           </SelectContent>
                         </Select>
                         <Button type="button" size="icon" variant="ghost" onClick={() => removeLaborEntry(idx)} className="h-6 w-6 shrink-0">
                           <X className="w-3 h-3 text-red-500" />
                         </Button>
                       </div>
-                      {!entry.employeeId && (
+                      {creatingEmployeeForIdx === idx && (
+                        <div className="p-2 rounded-lg bg-green-50 border border-green-200 space-y-2">
+                          <p className="text-xs font-medium text-green-700">Novo Funcionário</p>
+                          <Input
+                            placeholder="Nome *"
+                            value={newEmpName}
+                            onChange={(e) => setNewEmpName(e.target.value)}
+                            className="h-8 text-xs rounded-lg"
+                            autoFocus
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-muted-foreground">€/hora cobrado</label>
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                value={newEmpChargeRate}
+                                onChange={(e) => setNewEmpChargeRate(e.target.value)}
+                                className="h-8 text-xs rounded-lg"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-muted-foreground">€/hora pago</label>
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                value={newEmpPayRate}
+                                onChange={(e) => setNewEmpPayRate(e.target.value)}
+                                className="h-8 text-xs rounded-lg"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-7 text-xs flex-1"
+                              onClick={() => handleCreateEmployee(idx)}
+                              disabled={!newEmpName.trim() || createEmployee.isPending}
+                            >
+                              {createEmployee.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Criar e Selecionar"}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs"
+                              onClick={() => setCreatingEmployeeForIdx(null)}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {!entry.employeeId && creatingEmployeeForIdx !== idx && (
                         <Input
                           placeholder="Nome do trabalhador"
                           value={entry.workerName}
