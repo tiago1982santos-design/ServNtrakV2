@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useAppointments, useCreateAppointment } from "@/hooks/use-appointments";
+import { useAppointments, useCreateAppointment, useUpdateAppointment, useDeleteAppointment } from "@/hooks/use-appointments";
 import { useClients } from "@/hooks/use-clients";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
@@ -8,14 +8,14 @@ import "react-day-picker/dist/style.css";
 import { format, isSameDay, isAfter, startOfDay, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
 import { getFreeHoursForDay, suggestNextDaySlots, suggestSameDayHours } from "@/lib/suggestSlots";
-import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus, AlertTriangle, ClipboardList, Wand2, Trash2, CheckCheck, ChevronDown } from "lucide-react";
+import { Loader2, MapPin, Clock, CheckCircle2, ChevronRight, CalendarDays, Plus, AlertTriangle, ClipboardList, Wand2, Trash2, CheckCheck, ChevronDown, Pencil, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,9 +31,17 @@ import type { PendingTaskWithClient, AppointmentPreview } from "@shared/schema";
 const appointmentFormSchema = z.object({
   clientId: z.number().min(1, "Selecione um cliente"),
   type: z.string(),
+  serviceType: z.string().optional(),
   notes: z.string().optional(),
   date: z.coerce.date(),
 });
+
+const DEFAULT_ZONES = ["Garden", "Pool", "Jacuzzi", "General"] as const;
+const DEFAULT_SERVICE_TYPES = ["Manutenção", "Limpeza", "Tratamento", "Reparação", "Instalação"];
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback; } catch { return fallback; }
+}
 
 export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -41,7 +49,19 @@ export default function CalendarPage() {
   const { data: appointments, isLoading } = useAppointments();
   const { data: clients } = useClients();
   const createApt = useCreateAppointment();
+  const updateApt = useUpdateAppointment();
+  const deleteApt = useDeleteAppointment();
   const { toast } = useToast();
+  type AptWithClient = NonNullable<typeof appointments>[number];
+  const [selectedApt, setSelectedApt] = useState<AptWithClient | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [customZones, setCustomZones] = useState<string[]>(() => loadFromStorage("apt_customZones", []));
+  const [customServiceTypes, setCustomServiceTypes] = useState<string[]>(() => loadFromStorage("apt_customServiceTypes", DEFAULT_SERVICE_TYPES));
+  const [addingZone, setAddingZone] = useState(false);
+  const [newZoneInput, setNewZoneInput] = useState("");
+  const [addingServiceType, setAddingServiceType] = useState(false);
+  const [newServiceTypeInput, setNewServiceTypeInput] = useState("");
   const queryClient = useQueryClient();
   const [workingHoursSettings] = useWorkingHours();
   const workingHourSlots = computeWorkingHours(workingHoursSettings);
@@ -167,6 +187,7 @@ export default function CalendarPage() {
     defaultValues: {
       clientId: 0,
       type: "Garden",
+      serviceType: "",
       notes: "",
       date: date || new Date(),
     }
@@ -180,11 +201,57 @@ export default function CalendarPage() {
       form.reset({
         clientId: 0,
         type: "Garden",
+        serviceType: "",
         notes: "",
         date: dateWithTime,
       });
     }
+    setAddingZone(false);
+    setAddingServiceType(false);
+    setEditMode(false);
     setDialogOpen(true);
+  };
+
+  const handleOpenDetail = (apt: AptWithClient) => {
+    setSelectedApt(apt);
+    setEditMode(false);
+    setDetailOpen(true);
+  };
+
+  const handleEditMode = () => {
+    if (!selectedApt) return;
+    form.reset({
+      clientId: selectedApt.clientId,
+      type: selectedApt.type,
+      serviceType: (selectedApt as any).serviceType ?? "",
+      notes: selectedApt.notes ?? "",
+      date: new Date(selectedApt.date),
+    });
+    setAddingZone(false);
+    setAddingServiceType(false);
+    setEditMode(true);
+  };
+
+  const addCustomZone = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || customZones.includes(trimmed)) return;
+    const updated = [...customZones, trimmed];
+    setCustomZones(updated);
+    localStorage.setItem("apt_customZones", JSON.stringify(updated));
+    form.setValue("type", trimmed);
+    setAddingZone(false);
+    setNewZoneInput("");
+  };
+
+  const addCustomServiceType = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || customServiceTypes.includes(trimmed)) return;
+    const updated = [...customServiceTypes, trimmed];
+    setCustomServiceTypes(updated);
+    localStorage.setItem("apt_customServiceTypes", JSON.stringify(updated));
+    form.setValue("serviceType", trimmed);
+    setAddingServiceType(false);
+    setNewServiceTypeInput("");
   };
 
   const handleDayClick = (day: Date) => {
@@ -205,11 +272,200 @@ export default function CalendarPage() {
 
   const onSubmit = async (values: z.infer<typeof appointmentFormSchema>) => {
     try {
-      await createApt.mutateAsync(values);
-      setDialogOpen(false);
+      if (editMode && selectedApt) {
+        await updateApt.mutateAsync({ id: selectedApt.id, ...values });
+        setDetailOpen(false);
+      } else {
+        await createApt.mutateAsync(values);
+        setDialogOpen(false);
+      }
       form.reset();
     } catch (e) {}
   };
+
+  const onDelete = async () => {
+    if (!selectedApt) return;
+    try {
+      await deleteApt.mutateAsync(selectedApt.id);
+      setDetailOpen(false);
+      setSelectedApt(null);
+    } catch (e) {}
+  };
+
+  const zoneLabel = (z: string) =>
+    z === "Garden" ? "Jardim" : z === "Pool" ? "Piscina" : z === "Jacuzzi" ? "Jacuzzi" : z === "General" ? "Outro" : z;
+
+  const zoneColor = (z: string) =>
+    z === "Garden" ? "bg-green-100 text-green-700" :
+    z === "Pool" ? "bg-blue-100 text-blue-700" :
+    z === "Jacuzzi" ? "bg-cyan-100 text-cyan-700" :
+    "bg-muted text-muted-foreground";
+
+  const zoneGradient = (z: string) =>
+    z === "Garden" ? "bg-gradient-to-br from-green-100 to-green-50 text-green-700" :
+    z === "Pool" ? "bg-gradient-to-br from-blue-100 to-blue-50 text-blue-700" :
+    z === "Jacuzzi" ? "bg-gradient-to-br from-cyan-100 to-cyan-50 text-cyan-700" :
+    "bg-gradient-to-br from-muted to-muted/50 text-muted-foreground";
+
+  const sortedClients = [...(clients ?? [])].sort((a, b) => a.name.localeCompare(b.name, "pt"));
+
+  const renderFormFields = () => (
+    <>
+      {/* Client */}
+      <FormField
+        control={form.control}
+        name="clientId"
+        render={({ field }) => {
+          const clientPendingTasks = field.value ? allPendingTasks?.filter(t => t.clientId === field.value) : [];
+          return (
+            <FormItem>
+              <FormLabel>Cliente</FormLabel>
+              <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? field.value.toString() : ""}>
+                <FormControl>
+                  <SelectTrigger className="rounded-xl" data-testid="select-appointment-client">
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {sortedClients.map((client) => {
+                    const hasPendingTasks = allPendingTasks?.some(t => t.clientId === client.id);
+                    return (
+                      <SelectItem key={client.id} value={client.id.toString()}>
+                        <span className="flex items-center gap-2">
+                          {client.name}
+                          {hasPendingTasks && <ClipboardList className="w-3 h-3 text-destructive" />}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {clientPendingTasks && clientPendingTasks.length > 0 && (
+                <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-destructive">
+                        {clientPendingTasks.length} tarefa{clientPendingTasks.length !== 1 ? "s" : ""} pendente{clientPendingTasks.length !== 1 ? "s" : ""}
+                      </p>
+                      <ul className="mt-1 space-y-1">
+                        {clientPendingTasks.slice(0, 3).map(task => (
+                          <li key={task.id} className="text-xs text-destructive flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-destructive" />
+                            <span className="truncate">{task.description}</span>
+                            {(task.priority === "urgent" || task.priority === "high") && (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-red-100 text-red-600">
+                                {task.priority === "urgent" ? "Urgente" : "Alta"}
+                              </Badge>
+                            )}
+                          </li>
+                        ))}
+                        {clientPendingTasks.length > 3 && (
+                          <li className="text-xs text-destructive">+{clientPendingTasks.length - 3} mais...</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </FormItem>
+          );
+        }}
+      />
+
+      {/* Zone */}
+      <FormField
+        control={form.control}
+        name="type"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Zona</FormLabel>
+            <Select
+              onValueChange={(v) => {
+                if (v === "__add_zone__") { setAddingZone(true); }
+                else { field.onChange(v); setAddingZone(false); }
+              }}
+              value={addingZone ? "__add_zone__" : field.value}
+            >
+              <FormControl>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Selecione a zona" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="Garden">Jardim</SelectItem>
+                <SelectItem value="Pool">Piscina</SelectItem>
+                <SelectItem value="Jacuzzi">Jacuzzi</SelectItem>
+                <SelectItem value="General">Outro</SelectItem>
+                {customZones.map(z => <SelectItem key={z} value={z}>{z}</SelectItem>)}
+                <SelectItem value="__add_zone__" className="text-primary font-medium">＋ Adicionar zona</SelectItem>
+              </SelectContent>
+            </Select>
+            {addingZone && (
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={newZoneInput}
+                  onChange={e => setNewZoneInput(e.target.value)}
+                  placeholder="Nome da zona..."
+                  className="rounded-xl"
+                  onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustomZone(newZoneInput))}
+                  autoFocus
+                />
+                <Button type="button" size="sm" onClick={() => addCustomZone(newZoneInput)}>Adicionar</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setAddingZone(false); setNewZoneInput(""); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </FormItem>
+        )}
+      />
+
+      {/* Service Type */}
+      <FormField
+        control={form.control}
+        name="serviceType"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Tipo de Serviço</FormLabel>
+            <Select
+              onValueChange={(v) => {
+                if (v === "__add_st__") { setAddingServiceType(true); }
+                else { field.onChange(v); setAddingServiceType(false); }
+              }}
+              value={addingServiceType ? "__add_st__" : (field.value || "")}
+            >
+              <FormControl>
+                <SelectTrigger className="rounded-xl" data-testid="select-appointment-type">
+                  <SelectValue placeholder="Selecione o tipo de serviço" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {customServiceTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                <SelectItem value="__add_st__" className="text-primary font-medium">＋ Adicionar tipo</SelectItem>
+              </SelectContent>
+            </Select>
+            {addingServiceType && (
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={newServiceTypeInput}
+                  onChange={e => setNewServiceTypeInput(e.target.value)}
+                  placeholder="Nome do serviço..."
+                  className="rounded-xl"
+                  onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustomServiceType(newServiceTypeInput))}
+                  autoFocus
+                />
+                <Button type="button" size="sm" onClick={() => addCustomServiceType(newServiceTypeInput)}>Adicionar</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setAddingServiceType(false); setNewServiceTypeInput(""); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </FormItem>
+        )}
+      />
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-background pb-24 page-transition">
@@ -336,50 +592,39 @@ export default function CalendarPage() {
         ) : selectedDateAppointments.length > 0 ? (
           <div className="space-y-3">
             {selectedDateAppointments.map((apt, index) => (
-              <Link key={apt.id} href={`/clients/${apt.clientId}`} data-testid={`link-calendar-appointment-${apt.id}`}>
-                <div 
-                  className="mobile-card flex items-center gap-4"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <div className={cn(
-                    "w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 font-bold",
-                    apt.type === "Garden" ? "bg-gradient-to-br from-green-100 to-green-50 text-green-700" :
-                    apt.type === "Pool" ? "bg-gradient-to-br from-blue-100 to-blue-50 text-blue-700" :
-                    apt.type === "Jacuzzi" ? "bg-gradient-to-br from-cyan-100 to-cyan-50 text-cyan-700" :
-                    "bg-gradient-to-br from-muted to-muted/50 text-muted-foreground"
-                  )}>
-                    <span className="text-lg leading-none">{format(new Date(apt.date), "HH")}</span>
-                    <span className="text-[10px] leading-none mt-0.5">{format(new Date(apt.date), "mm")}</span>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-foreground truncate">{apt.client.name}</h3>
-                    {apt.client.address && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1 truncate">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{apt.client.address}</span>
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className={cn(
-                        "badge-pill",
-                        apt.type === "Garden" ? "bg-green-100 text-green-700" :
-                        apt.type === "Pool" ? "bg-blue-100 text-blue-700" :
-                        apt.type === "Jacuzzi" ? "bg-cyan-100 text-cyan-700" :
-                        "bg-muted text-muted-foreground"
-                      )}>
-                        {apt.type === 'Garden' ? 'Jardim' : apt.type === 'Pool' ? 'Piscina' : apt.type === 'Jacuzzi' ? 'Jacuzzi' : apt.type}
-                      </span>
-                      {apt.isCompleted && (
-                        <span className="badge-pill bg-green-100 text-green-700">
-                          <CheckCircle2 className="w-3 h-3" /> Feito
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground/50 shrink-0" />
+              <div
+                key={apt.id}
+                className="mobile-card flex items-center gap-4 cursor-pointer"
+                style={{ animationDelay: `${index * 0.05}s` }}
+                onClick={() => handleOpenDetail(apt)}
+                data-testid={`card-calendar-appointment-${apt.id}`}
+              >
+                <div className={cn("w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 font-bold", zoneGradient(apt.type))}>
+                  <span className="text-lg leading-none">{format(new Date(apt.date), "HH")}</span>
+                  <span className="text-[10px] leading-none mt-0.5">{format(new Date(apt.date), "mm")}</span>
                 </div>
-              </Link>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-foreground truncate">{apt.client.name}</h3>
+                  {apt.client.address && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1 truncate">
+                      <MapPin className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{apt.client.address}</span>
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <span className={cn("badge-pill", zoneColor(apt.type))}>{zoneLabel(apt.type)}</span>
+                    {(apt as any).serviceType && (
+                      <span className="badge-pill bg-primary/10 text-primary">{(apt as any).serviceType}</span>
+                    )}
+                    {apt.isCompleted && (
+                      <span className="badge-pill bg-green-100 text-green-700">
+                        <CheckCircle2 className="w-3 h-3" /> Feito
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground/50 shrink-0" />
+              </div>
             ))}
           </div>
         ) : (
@@ -535,78 +780,8 @@ export default function CalendarPage() {
             <DialogTitle>Novo Agendamento</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="clientId"
-                render={({ field }) => {
-                  const clientPendingTasks = field.value ? 
-                    allPendingTasks?.filter(t => t.clientId === field.value) : [];
-                  const urgentTasks = clientPendingTasks?.filter(t => t.priority === 'urgent' || t.priority === 'high') || [];
-                  
-                  return (
-                    <FormItem>
-                      <FormLabel>Cliente</FormLabel>
-                      <Select 
-                        onValueChange={(v) => field.onChange(Number(v))} 
-                        value={field.value ? field.value.toString() : ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="rounded-xl" data-testid="select-appointment-client">
-                            <SelectValue placeholder="Selecione um cliente" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {clients?.map((client) => {
-                            const hasPendingTasks = allPendingTasks?.some(t => t.clientId === client.id);
-                            return (
-                              <SelectItem key={client.id} value={client.id.toString()}>
-                                <span className="flex items-center gap-2">
-                                  {client.name}
-                                  {hasPendingTasks && (
-                                    <ClipboardList className="w-3 h-3 text-destructive" />
-                                  )}
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                      
-                      {clientPendingTasks && clientPendingTasks.length > 0 && (
-                        <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20" data-testid="alert-pending-tasks">
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-destructive">
-                                {clientPendingTasks.length} tarefa{clientPendingTasks.length !== 1 ? 's' : ''} pendente{clientPendingTasks.length !== 1 ? 's' : ''}
-                              </p>
-                              <ul className="mt-1 space-y-1">
-                                {clientPendingTasks.slice(0, 3).map(task => (
-                                  <li key={task.id} className="text-xs text-destructive flex items-center gap-1">
-                                    <span className="w-1 h-1 rounded-full bg-destructive" />
-                                    <span className="truncate">{task.description}</span>
-                                    {(task.priority === 'urgent' || task.priority === 'high') && (
-                                      <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-red-100 text-red-600">
-                                        {task.priority === 'urgent' ? 'Urgente' : 'Alta'}
-                                      </Badge>
-                                    )}
-                                  </li>
-                                ))}
-                                {clientPendingTasks.length > 3 && (
-                                  <li className="text-xs text-destructive">
-                                    +{clientPendingTasks.length - 3} mais...
-                                  </li>
-                                )}
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </FormItem>
-                  );
-                }}
-              />
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              {renderFormFields()}
 
               <FormField
                 control={form.control}
@@ -617,29 +792,16 @@ export default function CalendarPage() {
                     ? (appointments?.filter(apt => isSameDay(new Date(apt.date), selectedDate)) ?? [])
                     : [];
                   const overlappingAppointments = selectedDate && !isNaN(selectedDate.getTime())
-                    ? sameDayAppointments.filter(apt =>
-                        new Date(apt.date).getHours() === selectedDate.getHours()
-                      )
+                    ? sameDayAppointments.filter(apt => new Date(apt.date).getHours() === selectedDate.getHours())
                     : [];
-
-                  const occupiedHours = new Set(
-                    sameDayAppointments.map(apt => new Date(apt.date).getHours())
-                  );
+                  const occupiedHours = new Set(sameDayAppointments.map(apt => new Date(apt.date).getHours()));
                   const pivotHour = selectedDate ? selectedDate.getHours() : 9;
                   const suggestedFreeHours = overlappingAppointments.length > 0 && selectedDate
                     ? suggestSameDayHours(selectedDate, occupiedHours, pivotHour, workingHourSlots)
                     : [];
-
-                  const suggestedNextDaySlots =
-                    overlappingAppointments.length > 0 &&
-                    suggestedFreeHours.length === 0 &&
-                    selectedDate
-                      ? suggestNextDaySlots(
-                          selectedDate,
-                          (appointments ?? []).map(apt => new Date(apt.date)),
-                          { workingHours: workingHourSlots },
-                        )
-                      : [];
+                  const suggestedNextDaySlots = overlappingAppointments.length > 0 && suggestedFreeHours.length === 0 && selectedDate
+                    ? suggestNextDaySlots(selectedDate, (appointments ?? []).map(apt => new Date(apt.date)), { workingHours: workingHourSlots })
+                    : [];
 
                   return (
                     <FormItem>
@@ -653,132 +815,53 @@ export default function CalendarPage() {
                           data-testid="input-appointment-datetime"
                         />
                       </FormControl>
-
                       {overlappingAppointments.length > 0 && (
-                        <div
-                          className="mt-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800"
-                          data-testid="alert-overlapping-appointment"
-                        >
+                        <div className="mt-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800" data-testid="alert-overlapping-appointment">
                           <div className="flex items-start gap-2">
                             <AlertTriangle className="w-4 h-4 text-yellow-700 dark:text-yellow-400 mt-0.5 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                                {overlappingAppointments.length === 1
-                                  ? "Já existe um agendamento nesta hora"
-                                  : `Já existem ${overlappingAppointments.length} agendamentos nesta hora`}
+                                {overlappingAppointments.length === 1 ? "Já existe um agendamento nesta hora" : `Já existem ${overlappingAppointments.length} agendamentos nesta hora`}
                               </p>
                               <ul className="mt-1 space-y-0.5">
                                 {overlappingAppointments.slice(0, 3).map(apt => (
-                                  <li
-                                    key={apt.id}
-                                    className="text-xs text-yellow-700 dark:text-yellow-400 truncate"
-                                  >
+                                  <li key={apt.id} className="text-xs text-yellow-700 dark:text-yellow-400 truncate">
                                     {format(new Date(apt.date), "HH:mm")} — {apt.client.name}
                                   </li>
                                 ))}
-                                {overlappingAppointments.length > 3 && (
-                                  <li className="text-xs text-yellow-700 dark:text-yellow-400">
-                                    +{overlappingAppointments.length - 3} mais...
-                                  </li>
-                                )}
+                                {overlappingAppointments.length > 3 && <li className="text-xs text-yellow-700 dark:text-yellow-400">+{overlappingAppointments.length - 3} mais...</li>}
                               </ul>
-
                               {suggestedFreeHours.length > 0 && (
                                 <div className="mt-2 pt-2 border-t border-yellow-200 dark:border-yellow-800">
-                                  <p className="text-xs text-yellow-800 dark:text-yellow-300 mb-1.5">
-                                    Horas livres neste dia:
-                                  </p>
-                                  <div
-                                    className="flex flex-wrap gap-1.5"
-                                    data-testid="suggested-free-hours"
-                                  >
+                                  <p className="text-xs text-yellow-800 dark:text-yellow-300 mb-1.5">Horas livres neste dia:</p>
+                                  <div className="flex flex-wrap gap-1.5" data-testid="suggested-free-hours">
                                     {suggestedFreeHours.map(h => (
-                                      <button
-                                        key={h}
-                                        type="button"
-                                        onClick={() => {
-                                          if (!selectedDate) return;
-                                          const newDate = new Date(selectedDate);
-                                          newDate.setHours(h, 0, 0, 0);
-                                          field.onChange(newDate);
-                                        }}
-                                        className="px-2.5 py-1 rounded-md text-xs font-medium bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800 transition-colors"
-                                        data-testid={`button-suggest-hour-${h}`}
-                                      >
-                                        {`${String(h).padStart(2, "0")}:00`}
-                                      </button>
+                                      <button key={h} type="button" onClick={() => { if (!selectedDate) return; const d = new Date(selectedDate); d.setHours(h,0,0,0); field.onChange(d); }} className="px-2.5 py-1 rounded-md text-xs font-medium bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800 transition-colors" data-testid={`button-suggest-hour-${h}`}>{`${String(h).padStart(2,"0")}:00`}</button>
                                     ))}
                                   </div>
                                 </div>
                               )}
-
                               {suggestedFreeHours.length === 0 && suggestedNextDaySlots.length > 0 && (
                                 <div className="mt-2 pt-2 border-t border-yellow-200 dark:border-yellow-800">
-                                  <p className="text-xs text-yellow-800 dark:text-yellow-300 mb-1.5">
-                                    Sem horas livres neste dia. Tenta:
-                                  </p>
-                                  <div
-                                    className="flex flex-wrap gap-1.5"
-                                    data-testid="suggested-next-day-slots"
-                                  >
+                                  <p className="text-xs text-yellow-800 dark:text-yellow-300 mb-1.5">Sem horas livres neste dia. Tenta:</p>
+                                  <div className="flex flex-wrap gap-1.5" data-testid="suggested-next-day-slots">
                                     {suggestedNextDaySlots.map(slot => {
                                       const dayKey = format(slot.date, "yyyy-MM-dd");
-                                      const dayFreeHours = getFreeHoursForDay(
-                                        slot.date,
-                                        (appointments ?? []).map(apt => new Date(apt.date)),
-                                        workingHourSlots,
-                                      );
-                                      const otherFreeHours = dayFreeHours.filter(
-                                        h => h !== slot.date.getHours(),
-                                      );
+                                      const dayFreeHours = getFreeHoursForDay(slot.date, (appointments ?? []).map(apt => new Date(apt.date)), workingHourSlots);
+                                      const otherFreeHours = dayFreeHours.filter(h => h !== slot.date.getHours());
                                       return (
                                         <div key={slot.key} className="inline-flex rounded-md overflow-hidden">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              field.onChange(new Date(slot.date));
-                                            }}
-                                            className="px-2.5 py-1 text-xs font-medium bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800 transition-colors capitalize"
-                                            data-testid={`button-suggest-next-day-${slot.key}`}
-                                          >
-                                            {slot.label}
-                                          </button>
+                                          <button type="button" onClick={() => field.onChange(new Date(slot.date))} className="px-2.5 py-1 text-xs font-medium bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800 transition-colors capitalize" data-testid={`button-suggest-next-day-${slot.key}`}>{slot.label}</button>
                                           {otherFreeHours.length > 0 && (
                                             <Popover>
                                               <PopoverTrigger asChild>
-                                                <button
-                                                  type="button"
-                                                  aria-label={`Ver mais horas livres em ${slot.label}`}
-                                                  className="px-2 py-1 text-xs font-medium bg-yellow-300 text-yellow-900 hover:bg-yellow-400 dark:bg-yellow-800 dark:text-yellow-100 dark:hover:bg-yellow-700 transition-colors border-l border-yellow-400 dark:border-yellow-700 inline-flex items-center gap-0.5"
-                                                  data-testid={`button-more-hours-${dayKey}`}
-                                                >
-                                                  <span>ver mais (+{otherFreeHours.length})</span>
-                                                  <ChevronDown className="w-3 h-3" />
-                                                </button>
+                                                <button type="button" aria-label={`Ver mais horas livres em ${slot.label}`} className="px-2 py-1 text-xs font-medium bg-yellow-300 text-yellow-900 hover:bg-yellow-400 dark:bg-yellow-800 dark:text-yellow-100 dark:hover:bg-yellow-700 transition-colors border-l border-yellow-400 dark:border-yellow-700 inline-flex items-center gap-0.5" data-testid={`button-more-hours-${dayKey}`}><span>ver mais (+{otherFreeHours.length})</span><ChevronDown className="w-3 h-3" /></button>
                                               </PopoverTrigger>
-                                              <PopoverContent
-                                                align="start"
-                                                className="w-auto p-2"
-                                                data-testid={`popover-more-hours-${dayKey}`}
-                                              >
-                                                <p className="text-xs text-muted-foreground mb-1.5 capitalize">
-                                                  {format(slot.date, "EEEE, d 'de' MMMM", { locale: pt })}
-                                                </p>
+                                              <PopoverContent align="start" className="w-auto p-2" data-testid={`popover-more-hours-${dayKey}`}>
+                                                <p className="text-xs text-muted-foreground mb-1.5 capitalize">{format(slot.date, "EEEE, d 'de' MMMM", { locale: pt })}</p>
                                                 <div className="flex flex-wrap gap-1 max-w-[16rem]">
                                                   {otherFreeHours.map(h => (
-                                                    <button
-                                                      key={h}
-                                                      type="button"
-                                                      onClick={() => {
-                                                        const newDate = new Date(slot.date);
-                                                        newDate.setHours(h, 0, 0, 0);
-                                                        field.onChange(newDate);
-                                                      }}
-                                                      className="px-2 py-1 rounded text-xs font-medium bg-muted hover:bg-accent hover-elevate active-elevate-2 transition-colors"
-                                                      data-testid={`button-more-hour-${dayKey}-${h}`}
-                                                    >
-                                                      {`${String(h).padStart(2, "0")}:00`}
-                                                    </button>
+                                                    <button key={h} type="button" onClick={() => { const d = new Date(slot.date); d.setHours(h,0,0,0); field.onChange(d); }} className="px-2 py-1 rounded text-xs font-medium bg-muted hover:bg-accent hover-elevate active-elevate-2 transition-colors" data-testid={`button-more-hour-${dayKey}-${h}`}>{`${String(h).padStart(2,"0")}:00`}</button>
                                                   ))}
                                                 </div>
                                               </PopoverContent>
@@ -801,56 +884,123 @@ export default function CalendarPage() {
 
               <FormField
                 control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Serviço</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="rounded-xl" data-testid="select-appointment-type">
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Garden">Jardim</SelectItem>
-                        <SelectItem value="Pool">Piscina</SelectItem>
-                        <SelectItem value="Jacuzzi">Jacuzzi</SelectItem>
-                        <SelectItem value="General">Geral</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Notas (Opcional)</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Instruções especiais..." 
-                        className="rounded-xl" 
-                        {...field} 
-                        value={field.value || ""}
-                        data-testid="textarea-appointment-notes"
-                      />
+                      <Textarea placeholder="Instruções especiais..." className="rounded-xl" {...field} value={field.value || ""} data-testid="textarea-appointment-notes" />
                     </FormControl>
                   </FormItem>
                 )}
               />
-              
-              <Button 
-                type="submit" 
-                className="w-full btn-primary" 
-                disabled={createApt.isPending || !form.watch("clientId")}
-                data-testid="button-submit-appointment"
-              >
+
+              <Button type="submit" className="w-full btn-primary" disabled={createApt.isPending || !form.watch("clientId")} data-testid="button-submit-appointment">
                 {createApt.isPending ? "A agendar..." : "Agendar"}
               </Button>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Appointment Detail / Edit Dialog */}
+      <Dialog open={detailOpen} onOpenChange={(open) => { setDetailOpen(open); if (!open) setEditMode(false); }}>
+        <DialogContent className="rounded-2xl sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editMode ? "Editar Agendamento" : "Agendamento"}</DialogTitle>
+          </DialogHeader>
+
+          {!editMode && selectedApt ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className={cn("w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 font-bold", zoneGradient(selectedApt.type))}>
+                  <span className="text-base leading-none">{format(new Date(selectedApt.date), "HH")}</span>
+                  <span className="text-[10px] leading-none mt-0.5">{format(new Date(selectedApt.date), "mm")}</span>
+                </div>
+                <div>
+                  <p className="font-bold text-foreground">{selectedApt.client.name}</p>
+                  <p className="text-sm text-muted-foreground">{format(new Date(selectedApt.date), "d 'de' MMMM yyyy, HH:mm", { locale: pt })}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <span className={cn("badge-pill", zoneColor(selectedApt.type))}>{zoneLabel(selectedApt.type)}</span>
+                {(selectedApt as any).serviceType && (
+                  <span className="badge-pill bg-primary/10 text-primary">{(selectedApt as any).serviceType}</span>
+                )}
+                {selectedApt.isCompleted && (
+                  <span className="badge-pill bg-green-100 text-green-700"><CheckCircle2 className="w-3 h-3" /> Feito</span>
+                )}
+              </div>
+
+              {selectedApt.notes && (
+                <div className="rounded-xl bg-muted/40 p-3 text-sm text-muted-foreground">{selectedApt.notes}</div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <Button className="flex-1" variant="outline" onClick={handleEditMode}>
+                  <Pencil className="w-4 h-4 mr-2" /> Editar
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="flex-1">
+                      <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="rounded-2xl">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Eliminar agendamento?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. O agendamento de {selectedApt.client.name} será removido.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Eliminar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          ) : editMode ? (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                {renderFormFields()}
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data e Hora</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" className="rounded-xl" value={field.value ? format(new Date(field.value), "yyyy-MM-dd'T'HH:mm") : ""} onChange={(e) => field.onChange(new Date(e.target.value))} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notas (Opcional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Instruções especiais..." className="rounded-xl" {...field} value={field.value || ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setEditMode(false)}>Cancelar</Button>
+                  <Button type="submit" className="flex-1 btn-primary" disabled={updateApt.isPending}>
+                    {updateApt.isPending ? "A guardar..." : "Guardar"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          ) : null}
         </DialogContent>
       </Dialog>
 

@@ -111,6 +111,11 @@ app.use((req, res, next) => {
   `);
 
   await pool.query(`
+    ALTER TABLE appointments
+    ADD COLUMN IF NOT EXISTS service_type TEXT
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS push_send_events (
       id SERIAL PRIMARY KEY,
       at TIMESTAMP NOT NULL DEFAULT NOW(),

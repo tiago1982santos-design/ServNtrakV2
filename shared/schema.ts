@@ -94,7 +94,8 @@ export const appointments = pgTable("appointments", {
   userId: text("user_id").notNull(),
   clientId: integer("client_id").notNull(),
   date: timestamp("date").notNull(),
-  type: text("type").notNull(), // 'Garden', 'Pool', 'Jacuzzi', 'General'
+  type: text("type").notNull(), // zone: 'Garden', 'Pool', 'Jacuzzi', 'General', or custom
+  serviceType: text("service_type"), // type of service performed (free text)
   notes: text("notes"),
   isCompleted: boolean("is_completed").default(false),
   pushNotifiedAt: timestamp("push_notified_at"),
