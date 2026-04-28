@@ -419,10 +419,10 @@ export async function setupAuth(app: Express) {
   });
 
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"], state: true }));
+    app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"], state: "true" }));
     app.get(
       "/api/auth/google/callback",
-      passport.authenticate("google", { failureRedirect: "/?auth_error=google_failed", state: true }),
+      passport.authenticate("google", { failureRedirect: "/?auth_error=google_failed", state: "true" }),
       (_req, res) => {
         res.redirect("/");
       }

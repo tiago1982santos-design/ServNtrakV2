@@ -245,6 +245,16 @@ export function CreateClientWizard() {
                     </FormItem>
                   )}
                 />
+                <MapPicker
+                  latitude={form.watch("latitude")}
+                  longitude={form.watch("longitude")}
+                  onChange={(lat, lng) => {
+                    form.setValue("latitude", lat ?? undefined);
+                    form.setValue("longitude", lng ?? undefined);
+                  }}
+                  onAddressChange={(addr) => form.setValue("address", addr)}
+                  triggerLabel="Escolher morada no mapa"
+                />
               </>
             )}
 

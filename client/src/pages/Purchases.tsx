@@ -20,7 +20,7 @@ import { pt } from "date-fns/locale";
 import {
   Plus, ShoppingCart, Store as StoreIcon, Tag, Loader2, ChevronRight,
   Trash2, Edit2, MapPin, Phone, Mail, Building2, Package, Scan, Camera,
-  Search, X
+  Search, X, Eye
 } from "lucide-react";
 import { DocumentScanDialog } from "@/components/DocumentScanDialog";
 import { PurchaseDetails } from "@/components/PurchaseDetails";
@@ -28,6 +28,7 @@ import { ItemPurchaseHistory } from "@/components/ItemPurchaseHistory";
 import type { PurchaseCategory, Store, PurchaseWithDetails, Client } from "@shared/schema";
 import { User } from "lucide-react";
 import { BackButton } from "@/components/BackButton";
+import { DataTable, type ColumnDef, type SortDir } from "@/components/ui/data-table";
 
 interface InvoiceSummary {
   // purchaseDate accepts either Date (from DB) or ISO string
@@ -48,6 +49,11 @@ export default function Purchases() {
   const [selectedInvoice, setSelectedInvoice] = useState<string | null>(null);
   const [showItemHistory, setShowItemHistory] = useState(false);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<string>("purchaseDate");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [selectedStoreFilter, setSelectedStoreFilter] = useState<string>("Todas");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
   const { toast } = useToast();
 
   const { data: categories, isLoading: categoriesLoading } = useQuery<PurchaseCategory[]>({
@@ -70,6 +76,125 @@ export default function Purchases() {
     queryKey: ['/api/purchases'],
   });
 
+  // Filter and sort purchases for DataTable
+  const filteredPurchases = allPurchases?.filter(purchase => {
+    const matchesCategory = selectedCategory === "Todas" || purchase.category.name === selectedCategory;
+    const matchesStore = selectedStoreFilter === "Todas" || purchase.store.name === selectedStoreFilter;
+    const matchesSearch = !search.trim() || 
+      purchase.productName.toLowerCase().includes(search.toLowerCase()) ||
+      purchase.store.name.toLowerCase().includes(search.toLowerCase());
+    return matchesCategory && matchesStore && matchesSearch;
+  }) || [];
+
+  const sortedPurchases = [...filteredPurchases].sort((a, b) => {
+    let aVal: any, bVal: any;
+    if (sortKey === "purchaseDate") {
+      aVal = new Date(a.purchaseDate).getTime();
+      bVal = new Date(b.purchaseDate).getTime();
+    } else if (sortKey === "finalTotal") {
+      aVal = a.finalTotal;
+      bVal = b.finalTotal;
+    } else if (sortKey === "category") {
+      aVal = a.category.name;
+      bVal = b.category.name;
+    } else {
+      return 0;
+    }
+    if (sortDir === "asc") {
+      return aVal > bVal ? 1 : -1;
+    } else {
+      return aVal < bVal ? 1 : -1;
+    }
+  });
+
+  const paginatedPurchases = sortedPurchases.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleSort = (key: string, dir: SortDir) => {
+    setSortKey(key);
+    setSortDir(dir);
+    setPage(1); // Reset to first page on sort
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const columns: ColumnDef<PurchaseWithDetails>[] = [
+    {
+      key: "purchaseDate",
+      header: "Data",
+      sortable: true,
+      cell: (purchase) => format(new Date(purchase.purchaseDate), "dd/MM/yyyy", { locale: pt }),
+      mobileLabel: "Data",
+      className: "font-medium md:font-normal",
+    },
+    {
+      key: "productName",
+      header: "Artigo/Descrição",
+      sortable: false,
+      cell: (purchase) => purchase.productName,
+      mobileLabel: "Artigo",
+    },
+    {
+      key: "category",
+      header: "Categoria",
+      sortable: true,
+      cell: (purchase) => purchase.category.name,
+      mobileLabel: "Categoria",
+      className: "text-muted-foreground text-sm md:text-foreground md:text-sm",
+    },
+    {
+      key: "store",
+      header: "Loja",
+      sortable: false,
+      cell: (purchase) => purchase.store.name,
+      mobileLabel: "Loja",
+      className: "text-muted-foreground text-sm md:text-foreground md:text-sm",
+    },
+    {
+      key: "finalTotal",
+      header: "Valor (€)",
+      sortable: true,
+      cell: (purchase) => `${purchase.finalTotal.toFixed(2)}€`,
+      mobileLabel: "Valor",
+      className: "font-medium md:font-normal text-right",
+    },
+    {
+      key: "actions",
+      header: "Ações",
+      sortable: false,
+      isAction: true,
+      cell: (purchase) => (
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              // For individual purchase, perhaps open a dialog with details
+              // Since PurchaseDetails expects invoiceNumber, maybe adapt or create new
+              // For now, just log or show toast
+              toast({ title: `Ver compra: ${purchase.productName}` });
+            }}
+          >
+            <Eye className="w-4 h-4" />
+            Ver
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              toast({ title: `Editar não implementado: ${purchase.productName}` });
+            }}
+          >
+            <Edit2 className="w-4 h-4" />
+            Editar
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  // Keep the invoices logic for backward compatibility (if needed elsewhere)
   const invoices: InvoiceSummary[] = [];
   if (allPurchases) {
     const grouped = new Map<string | null, PurchaseWithDetails[]>();
@@ -201,6 +326,32 @@ export default function Purchases() {
               ))}
             </div>
 
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <button
+                onClick={() => setSelectedStoreFilter("Todas")}
+                className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+                  selectedStoreFilter === "Todas"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground"
+                }`}
+              >
+                Todas as Lojas
+              </button>
+              {stores?.map((store) => (
+                <button
+                  key={store.id}
+                  onClick={() => setSelectedStoreFilter(store.name)}
+                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+                    selectedStoreFilter === store.name
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  {store.name}
+                </button>
+              ))}
+            </div>
+
             <DocumentScanDialog
               open={documentDialogOpen}
               onOpenChange={setDocumentDialogOpen}
@@ -212,39 +363,24 @@ export default function Purchases() {
               <div className="flex justify-center py-12">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
               </div>
-            ) : invoices.length === 0 ? (
+            ) : paginatedPurchases.length === 0 ? (
               <Card className="p-8 text-center">
                 <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="font-medium text-foreground">Sem faturas registadas</p>
-                <p className="text-sm text-muted-foreground mt-1">Digitalize ou adicione uma fatura</p>
+                <p className="font-medium text-foreground">Sem compras registadas</p>
+                <p className="text-sm text-muted-foreground mt-1">Digitalize ou adicione uma compra</p>
               </Card>
-            ) : (
-              <div className="space-y-3">
-                {invoices.map((invoice) => (
-                  <Card
-                    key={invoice.invoiceNumber || `${invoice.purchaseDate}-${invoice.storeName}`}
-                    className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setSelectedInvoice(invoice.invoiceNumber)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold">
-                          {invoice.invoiceNumber || "Sem número"}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">{invoice.storeName}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(invoice.purchaseDate), "dd/MM/yyyy", { locale: pt })}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-lg text-primary">
-                          {invoice.finalTotal.toFixed(2)}€
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              ) : (
+              <DataTable
+                data={paginatedPurchases}
+                columns={columns}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+                page={page}
+                pageSize={pageSize}
+                totalCount={sortedPurchases.length}
+                onPageChange={handlePageChange}
+              />
             )}
 
             <div className="mt-6 space-y-2">

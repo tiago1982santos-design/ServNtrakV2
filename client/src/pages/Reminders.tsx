@@ -13,11 +13,12 @@ import { z } from "zod";
 import { insertReminderSchema } from "@shared/schema";
 import { format, isPast, isToday, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Loader2, Plus, Bell, Clock, Trash2, CheckCircle2, AlertCircle, Leaf, Waves, ThermometerSun, Wrench, Phone, Eye } from "lucide-react";
+import { Loader2, Plus, Bell, Clock, Trash2, CheckCircle2, AlertCircle, Leaf, Waves, ThermometerSun, Wrench, Phone, Eye, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/BackButton";
 import { useLocation } from "wouter";
+import { DataTable, ColumnDef, SortDir } from "@/components/ui/data-table";
 
 const frequencyLabels: Record<string, string> = {
   weekly: "Semanal",
@@ -53,6 +54,12 @@ function getNextDueDate(frequency: string, fromDate: Date = new Date()): Date {
 }
 
 export default function Reminders() {
+  const [activeTab, setActiveTab] = useState("todos");
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<string>("nextDue");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
   const { data: reminders, isLoading } = useReminders();
   const { data: clients } = useClients();
   const deleteReminder = useDeleteReminder();
@@ -62,6 +69,118 @@ export default function Reminders() {
   const overdueReminders = reminders?.filter(r => r.isActive && isPast(new Date(r.nextDue)) && !isToday(new Date(r.nextDue))) || [];
   const todayReminders = reminders?.filter(r => r.isActive && isToday(new Date(r.nextDue))) || [];
   const upcomingReminders = reminders?.filter(r => r.isActive && !isPast(new Date(r.nextDue)) && !isToday(new Date(r.nextDue))) || [];
+
+  // Filter reminders for DataTable
+  const filteredReminders = reminders?.filter(reminder => {
+    const matchesTab = activeTab === "todos" || 
+      (activeTab === "ativos" && reminder.isActive) || 
+      (activeTab === "inativos" && !reminder.isActive);
+    const matchesSearch = !search.trim() || 
+      reminder.client?.name.toLowerCase().includes(search.toLowerCase()) ||
+      reminder.title.toLowerCase().includes(search.toLowerCase());
+    return matchesTab && matchesSearch;
+  }) || [];
+
+  const sortedReminders = [...filteredReminders].sort((a, b) => {
+    let aVal: any, bVal: any;
+    if (sortKey === "nextDue") {
+      aVal = new Date(a.nextDue).getTime();
+      bVal = new Date(b.nextDue).getTime();
+    } else if (sortKey === "client") {
+      aVal = a.client?.name || "";
+      bVal = b.client?.name || "";
+    } else {
+      return 0;
+    }
+    if (sortDir === "asc") {
+      return aVal > bVal ? 1 : -1;
+    } else {
+      return aVal < bVal ? 1 : -1;
+    }
+  });
+
+  const paginatedReminders = sortedReminders.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleSort = (key: string, dir: SortDir) => {
+    setSortKey(key);
+    setSortDir(dir);
+    setPage(1); // Reset to first page on sort
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const columns: ColumnDef<any>[] = [
+    {
+      key: "client",
+      header: "Cliente",
+      sortable: true,
+      cell: (reminder) => reminder.client?.name || "Cliente não encontrado",
+      mobileLabel: "Cliente",
+      className: "font-medium md:font-normal",
+    },
+    {
+      key: "title",
+      header: "Descrição",
+      sortable: false,
+      cell: (reminder) => reminder.title,
+      mobileLabel: "Descrição",
+    },
+    {
+      key: "frequency",
+      header: "Frequência",
+      sortable: false,
+      cell: (reminder) => frequencyLabels[reminder.frequency] || reminder.frequency,
+      mobileLabel: "Frequência",
+      className: "text-muted-foreground text-sm md:text-foreground md:text-sm",
+    },
+    {
+      key: "nextDue",
+      header: "Próximo Aviso",
+      sortable: true,
+      cell: (reminder) => format(new Date(reminder.nextDue), "dd/MM/yyyy", { locale: pt }),
+      mobileLabel: "Próximo Aviso",
+      className: "text-muted-foreground text-sm md:text-foreground md:text-sm",
+    },
+    {
+      key: "isActive",
+      header: "Ativo",
+      sortable: false,
+      cell: (reminder) => (
+        <Badge variant={reminder.isActive ? "default" : "secondary"}>
+          {reminder.isActive ? "Ativo" : "Inativo"}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Ações",
+      sortable: false,
+      isAction: true,
+      cell: (reminder) => (
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleComplete(reminder)}
+            disabled={!reminder.isActive}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Feito
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => deleteReminder.mutate(reminder.id)}
+            className="text-red-500 hover:text-red-700"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   const onDemandClients = clients?.filter(c => 
     c.gardenVisitFrequency === "on_demand" || 
@@ -159,7 +278,96 @@ export default function Reminders() {
               </section>
             )}
 
-            {overdueReminders.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Lembretes de Manutenção</h2>
+                <AddReminderDialog />
+              </div>
+
+              <div className="relative mb-3">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  type="search"
+                  inputMode="search"
+                  placeholder="Procurar por cliente ou descrição…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 pr-10"
+                  aria-label="Pesquisar lembretes"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted transition-colors"
+                    aria-label="Limpar pesquisa"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+                <button
+                  onClick={() => setActiveTab("todos")}
+                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+                    activeTab === "todos"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => setActiveTab("ativos")}
+                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+                    activeTab === "ativos"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  Ativos
+                </button>
+                <button
+                  onClick={() => setActiveTab("inativos")}
+                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+                    activeTab === "inativos"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  Inativos
+                </button>
+              </div>
+
+              {paginatedReminders.length === 0 ? (
+                <div className="bg-card rounded-2xl p-8 text-center border border-border/50">
+                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Bell className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-foreground font-medium">Sem lembretes</p>
+                  <p className="text-sm text-muted-foreground mt-1">Adicione lembretes para manutenções periódicas</p>
+                </div>
+              ) : (
+                <DataTable
+                  data={paginatedReminders}
+                  columns={columns}
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                  page={page}
+                  pageSize={pageSize}
+                  totalCount={sortedReminders.length}
+                  onPageChange={handlePageChange}
+                />
+              )}
+            </section>
+
+            {/* Keep the old sections for backward compatibility if needed */}
+            {false && overdueReminders.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <AlertCircle className="w-4 h-4 text-red-500" />
@@ -179,7 +387,7 @@ export default function Reminders() {
               </section>
             )}
 
-            {todayReminders.length > 0 && (
+            {false && todayReminders.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <Bell className="w-4 h-4 text-primary" />
@@ -199,7 +407,7 @@ export default function Reminders() {
               </section>
             )}
 
-            {upcomingReminders.length > 0 && (
+            {false && upcomingReminders.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="w-4 h-4 text-muted-foreground" />
@@ -217,16 +425,6 @@ export default function Reminders() {
                   ))}
                 </div>
               </section>
-            )}
-
-            {reminders?.length === 0 && (
-              <div className="bg-card rounded-2xl p-8 text-center border border-border/50">
-                <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Bell className="w-6 h-6 text-muted-foreground" />
-                </div>
-                <p className="text-foreground font-medium">Sem lembretes</p>
-                <p className="text-sm text-muted-foreground mt-1">Adicione lembretes para manutenções periódicas</p>
-              </div>
             )}
           </>
         )}

@@ -34,6 +34,8 @@ interface MapPickerProps {
   latitude?: number | null;
   longitude?: number | null;
   onChange: (lat: number | null, lng: number | null) => void;
+  onAddressChange?: (address: string) => void;
+  triggerLabel?: string;
 }
 
 interface NominatimResult {
@@ -70,13 +72,14 @@ function FlyToLocation({ location }: { location: { lat: number; lng: number } | 
   return null;
 }
 
-export function MapPicker({ latitude, longitude, onChange }: MapPickerProps) {
+export function MapPicker({ latitude, longitude, onChange, onAddressChange, triggerLabel }: MapPickerProps) {
   const [open, setOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapType, setMapType] = useState<"street" | "satellite">("street");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<NominatimResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number } | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -92,9 +95,30 @@ export function MapPicker({ latitude, longitude, onChange }: MapPickerProps) {
     setShowResults(false);
   };
 
-  const handleConfirm = () => {
-    if (currentMarker) {
-      onChange(currentMarker.lat, currentMarker.lng);
+  const handleConfirm = async () => {
+    if (!currentMarker) return;
+    onChange(currentMarker.lat, currentMarker.lng);
+    if (onAddressChange) {
+      setIsGeocoding(true);
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentMarker.lat}&lon=${currentMarker.lng}`,
+          { headers: { "Accept-Language": "pt" } }
+        );
+        const data = await res.json();
+        const a = data.address ?? {};
+        const road = a.road || a.pedestrian || a.footway || a.path || "";
+        const num = a.house_number ? ` ${a.house_number}` : "";
+        const postcode = a.postcode ? `${a.postcode} ` : "";
+        const locality = a.city || a.town || a.village || a.municipality || a.county || "";
+        const street = road + num;
+        const formatted = [street, `${postcode}${locality}`.trim()].filter(Boolean).join(", ");
+        onAddressChange(formatted || data.display_name?.split(",").slice(0, 3).join(",").trim() || "");
+      } catch {
+        // silently ignore geocoding failure
+      } finally {
+        setIsGeocoding(false);
+      }
     }
     setOpen(false);
   };
@@ -199,7 +223,9 @@ export function MapPicker({ latitude, longitude, onChange }: MapPickerProps) {
           data-testid="button-open-map-picker"
         >
           <MapPin className="w-4 h-4 mr-2 text-primary" />
-          {hasLocation ? (
+          {triggerLabel ? (
+            <span className="text-muted-foreground">{triggerLabel}</span>
+          ) : hasLocation ? (
             <span className="truncate">
               {latitude!.toFixed(5)}, {longitude!.toFixed(5)}
             </span>
@@ -309,13 +335,17 @@ export function MapPicker({ latitude, longitude, onChange }: MapPickerProps) {
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={!currentMarker}
+            disabled={!currentMarker || isGeocoding}
             className="flex-1 btn-primary"
             data-testid="button-confirm-location"
           >
-            {currentMarker
-              ? `Confirmar (${currentMarker.lat.toFixed(4)}, ${currentMarker.lng.toFixed(4)})`
-              : "Toque no mapa para selecionar"}
+            {isGeocoding ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />A obter morada...</>
+            ) : currentMarker ? (
+              `Confirmar (${currentMarker.lat.toFixed(4)}, ${currentMarker.lng.toFixed(4)})`
+            ) : (
+              "Toque no mapa para selecionar"
+            )}
           </Button>
         </div>
       </DialogContent>

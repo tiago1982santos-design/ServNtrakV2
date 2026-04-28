@@ -32,6 +32,7 @@ import { insertServiceLogSchema, insertAppointmentSchema, insertClientSchema, ty
 import { createServiceLogWithEntriesInput } from "@shared/routes";
 import { getClientVisitSchedule, getSeason, getSeasonLabel, getTotalMonthlyVisits } from "@shared/scheduling";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MapPicker } from "@/components/MapPicker";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
@@ -1537,6 +1538,16 @@ function EditClientDialog({ client }: { client: Client }) {
                   </FormControl>
                 </FormItem>
               )}
+            />
+            <MapPicker
+              latitude={form.watch("latitude")}
+              longitude={form.watch("longitude")}
+              onChange={(lat, lng) => {
+                form.setValue("latitude", lat ?? undefined);
+                form.setValue("longitude", lng ?? undefined);
+              }}
+              onAddressChange={(addr) => form.setValue("address", addr)}
+              triggerLabel="Escolher morada no mapa"
             />
 
             <div className="space-y-3">
