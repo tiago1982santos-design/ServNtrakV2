@@ -591,19 +591,19 @@ export const quoteItemsRelations = relations(quoteItems, ({ one }) => ({
 // === BASE SCHEMAS ===
 
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, userId: true, createdAt: true });
-export const insertAppointmentSchema = createInsertSchema(appointments).omit({ id: true, userId: true, createdAt: true });
-export const insertServiceLogSchema = createInsertSchema(serviceLogs).omit({ id: true, userId: true, createdAt: true });
-export const insertReminderSchema = createInsertSchema(reminders).omit({ id: true, userId: true, createdAt: true });
+const dateCoerce = z.union([z.date(), z.string().transform((s) => new Date(s))]);
+
+export const insertAppointmentSchema = createInsertSchema(appointments).omit({ id: true, userId: true, createdAt: true }).extend({ date: dateCoerce });
+export const insertServiceLogSchema = createInsertSchema(serviceLogs).omit({ id: true, userId: true, createdAt: true }).extend({ date: dateCoerce });
+export const insertReminderSchema = createInsertSchema(reminders).omit({ id: true, userId: true, createdAt: true }).extend({ nextDue: dateCoerce });
 export const insertQuickPhotoSchema = createInsertSchema(quickPhotos).omit({ id: true, userId: true, createdAt: true });
 export const insertServiceLogLaborEntrySchema = createInsertSchema(serviceLogLaborEntries).omit({ id: true, createdAt: true });
 export const insertServiceLogMaterialEntrySchema = createInsertSchema(serviceLogMaterialEntries).omit({ id: true, createdAt: true });
 export const insertPurchaseCategorySchema = createInsertSchema(purchaseCategories).omit({ id: true, userId: true, createdAt: true });
 export const insertStoreSchema = createInsertSchema(stores).omit({ id: true, userId: true, createdAt: true });
-export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, userId: true, createdAt: true }).extend({
-  purchaseDate: z.union([z.date(), z.string().transform((s) => new Date(s))]),
-});
-export const insertClientPaymentSchema = createInsertSchema(clientPayments).omit({ id: true, userId: true, createdAt: true });
-export const insertServiceVisitSchema = createInsertSchema(serviceVisits).omit({ id: true, userId: true, createdAt: true, completedAt: true });
+export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, userId: true, createdAt: true }).extend({ purchaseDate: dateCoerce });
+export const insertClientPaymentSchema = createInsertSchema(clientPayments).omit({ id: true, userId: true, createdAt: true }).extend({ paidAt: dateCoerce.nullish() });
+export const insertServiceVisitSchema = createInsertSchema(serviceVisits).omit({ id: true, userId: true, createdAt: true, completedAt: true }).extend({ visitDate: dateCoerce });
 export const insertServiceVisitServiceSchema = createInsertSchema(serviceVisitServices).omit({ id: true, createdAt: true });
 export const insertFinancialConfigSchema = createInsertSchema(financialConfig).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 export const insertMonthlyDistributionSchema = createInsertSchema(monthlyDistributions).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
@@ -612,24 +612,22 @@ export const insertPendingTaskSchema = createInsertSchema(pendingTasks).omit({ i
 
 export const insertSuggestedWorkSchema = createInsertSchema(suggestedWorks).omit({ id: true, userId: true, createdAt: true, acceptedAt: true, rejectedAt: true, completedAt: true });
 
-export const insertExpenseNoteSchema = createInsertSchema(expenseNotes).omit({
-  id: true,
-  userId: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const insertExpenseNoteSchema = createInsertSchema(expenseNotes)
+  .omit({ id: true, userId: true, createdAt: true, updatedAt: true })
+  .extend({
+    issueDate: dateCoerce.nullish(),
+  });
 
-export const insertExpenseNoteItemSchema = createInsertSchema(expenseNoteItems).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertExpenseNoteItemSchema = createInsertSchema(expenseNoteItems)
+  .omit({ id: true, createdAt: true })
+  .refine((d) => d.sourceType !== "edited" || (d.editReason != null && d.editReason.trim() !== ""), {
+    message: "O motivo de edição é obrigatório quando sourceType é 'edited'",
+    path: ["editReason"],
+  });
 
-export const insertQuoteSchema = createInsertSchema(quotes).omit({
-  id: true,
-  userId: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const insertQuoteSchema = createInsertSchema(quotes)
+  .omit({ id: true, userId: true, createdAt: true, updatedAt: true })
+  .extend({ validUntil: dateCoerce.nullish() });
 
 export const insertQuoteItemSchema = createInsertSchema(quoteItems).omit({
   id: true,
