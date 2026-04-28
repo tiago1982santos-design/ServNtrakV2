@@ -28,7 +28,8 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(node -e \"const {createInsertSchema} = require\\('drizzle-zod'\\); const {pgTable, serial, text, timestamp, integer} = require\\('drizzle-orm/pg-core'\\); const t = pgTable\\('t', {id: serial\\('id'\\).primaryKey\\(\\), date: timestamp\\('date'\\).notNull\\(\\)}\\); const s = createInsertSchema\\(t\\); console.log\\(JSON.stringify\\(s.shape.date._def, null, 2\\)\\)\")"
     ]
   }
 }

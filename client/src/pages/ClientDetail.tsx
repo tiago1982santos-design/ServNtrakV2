@@ -21,6 +21,9 @@ import { SiWhatsapp, SiFacebook } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1105,14 +1108,28 @@ function AddServiceLogDialog({ clientId }: { clientId: number }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Data</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      className="rounded-xl"
-                      value={field.value ? format(new Date(field.value), "yyyy-MM-dd") : ""}
-                      onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : new Date())}
-                    />
-                  </FormControl>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn("w-full rounded-xl justify-start text-left font-normal", !field.value && "text-muted-foreground")}
+                        >
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {field.value ? format(new Date(field.value), "dd/MM/yyyy", { locale: pt }) : "Selecionar data"}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarPicker
+                        mode="single"
+                        selected={field.value ? new Date(field.value) : undefined}
+                        onSelect={(date) => field.onChange(date ?? new Date())}
+                        locale={pt}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </FormItem>
               )}
             />
