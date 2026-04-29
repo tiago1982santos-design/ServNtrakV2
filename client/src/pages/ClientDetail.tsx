@@ -1,17 +1,14 @@
-import { useState, useRef, useMemo } from "react";
+import { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useClient, useUpdateClient } from "@/hooks/use-clients";
-import { useServiceLogs, useCreateServiceLog } from "@/hooks/use-service-logs";
+import { useClient } from "@/hooks/use-clients";
+import { useServiceLogs } from "@/hooks/use-service-logs";
 import { useQuickPhotos, useDeleteQuickPhoto } from "@/hooks/use-quick-photos";
-import { useAppointments, useCreateAppointment, useUpdateAppointment } from "@/hooks/use-appointments";
-import { useClientServiceStats, useCreateServiceVisit } from "@/hooks/use-service-visits";
-import { useUpload } from "@/hooks/use-upload";
+import { useAppointments } from "@/hooks/use-appointments";
+import { useClientServiceStats } from "@/hooks/use-service-visits";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Image as ImageIcon, Pencil, Euro, Clock, Flower2, Sparkles, FolderPlus, Users, Timer, Check, MessageCircle, Banknote, Building2, Smartphone, CalendarDays, AlertTriangle, ChevronUp, Wrench, ClipboardList, Trash2, Lightbulb, ThumbsUp, ThumbsDown, PhoneCall, FileText } from "lucide-react";
+import { Loader2, ArrowLeft, Phone, MapPin, Leaf, Waves, ThermometerSun, Plus, Calendar, CheckCircle2, Camera, X, Euro, Clock, Flower2, Sparkles, FolderPlus, Users, Timer, Check, MessageCircle, Banknote, Building2, Smartphone, CalendarDays, AlertTriangle, ChevronUp, Wrench, ClipboardList, Trash2, Lightbulb, ThumbsUp, ThumbsDown, PhoneCall, FileText } from "lucide-react";
 import { generateServiceNote } from "@/lib/generateServiceNote";
-import { apiRequest } from "@/lib/queryClient";
 import type { ServiceLogWithEntries } from "@shared/schema";
-import { DurationInput } from "@/components/DurationInput";
 import { formatDuration } from "@/lib/utils";
 import { CreatePendingTaskDialog } from "@/components/CreatePendingTaskDialog";
 import { CreateSuggestedWorkDialog } from "@/components/CreateSuggestedWorkDialog";
@@ -20,28 +17,16 @@ import type { PendingTaskWithClient, SuggestedWorkWithClient } from "@shared/sch
 import { SiWhatsapp, SiFacebook } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarPicker } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { insertServiceLogSchema, insertAppointmentSchema, insertClientSchema, type Client, type ServiceLog, type Appointment, type QuickPhoto, type Employee } from "@shared/schema";
-import { createServiceLogWithEntriesInput } from "@shared/routes";
-import { getClientVisitSchedule, getSeason, getSeasonLabel, getTotalMonthlyVisits } from "@shared/scheduling";
-import { Checkbox } from "@/components/ui/checkbox";
-import { MapPicker } from "@/components/MapPicker";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
+import { getClientVisitSchedule, getSeason, getSeasonLabel, getTotalMonthlyVisits } from "@shared/scheduling";
+import { AddServiceLogDialog } from "@/components/client-detail/AddServiceLogDialog";
+import { AddAppointmentDialog } from "@/components/client-detail/AddAppointmentDialog";
+import { EditClientDialog } from "@/components/client-detail/EditClientDialog";
+import { CompleteVisitDialog } from "@/components/client-detail/CompleteVisitDialog";
+import { ClientTimeline } from "@/components/client-detail/ClientTimeline";
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -54,7 +39,7 @@ export default function ClientDetail() {
   const { data: quickPhotos } = useQuickPhotos(id);
   const { data: serviceStats } = useClientServiceStats(clientId);
   const deleteQuickPhoto = useDeleteQuickPhoto();
-  
+
   const [showPendingTaskDialog, setShowPendingTaskDialog] = useState(false);
   const [showSuggestedWorkDialog, setShowSuggestedWorkDialog] = useState(false);
   const [generatingNoteId, setGeneratingNoteId] = useState<number | null>(null);
@@ -74,7 +59,7 @@ export default function ClientDetail() {
       setGeneratingNoteId(null);
     }
   };
-  
+
   const { data: pendingTasks } = useQuery<PendingTaskWithClient[]>({
     queryKey: ["/api/pending-tasks", { clientId: id }],
     queryFn: async () => {
@@ -83,7 +68,7 @@ export default function ClientDetail() {
       return response.json();
     },
   });
-  
+
   const deletePendingTask = useMutation({
     mutationFn: async (taskId: number) => {
       const response = await fetch(`/api/pending-tasks/${taskId}`, {
@@ -97,7 +82,7 @@ export default function ClientDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks/count"] });
     },
   });
-  
+
   const completePendingTask = useMutation({
     mutationFn: async (taskId: number) => {
       const response = await fetch(`/api/pending-tasks/${taskId}/complete`, {
@@ -122,7 +107,7 @@ export default function ClientDetail() {
       return response.json();
     },
   });
-  
+
   const updateSuggestedWork = useMutation({
     mutationFn: async ({ workId, isAccepted, isRejected, isCompleted }: { workId: number; isAccepted?: boolean; isRejected?: boolean; isCompleted?: boolean }) => {
       const body: Record<string, any> = {};
@@ -151,7 +136,7 @@ export default function ClientDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/suggested-works"] });
     },
   });
-  
+
   const deleteSuggestedWork = useMutation({
     mutationFn: async (workId: number) => {
       const response = await fetch(`/api/suggested-works/${workId}`, {
@@ -173,7 +158,7 @@ export default function ClientDetail() {
       {/* Header */}
       <div className="bg-primary text-primary-foreground pt-8 pb-16 px-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
-        
+
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-6">
             <Link href="/clients" className="inline-flex items-center text-primary-foreground/80 hover:text-white">
@@ -181,7 +166,7 @@ export default function ClientDetail() {
             </Link>
             <EditClientDialog client={client} />
           </div>
-          
+
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-display font-bold">{client.name}</h1>
             {(client.gardenVisitFrequency === "on_demand" || client.poolVisitFrequency === "on_demand" || client.jacuzziVisitFrequency === "on_demand") && (
@@ -191,7 +176,7 @@ export default function ClientDetail() {
               </Badge>
             )}
           </div>
-          
+
           <div className="flex flex-col gap-2 mt-4 text-primary-foreground/90">
             {client.phone && (
               <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-sm hover:underline">
@@ -397,7 +382,7 @@ export default function ClientDetail() {
             Registar
           </Button>
         </div>
-        
+
         {pendingTasks && pendingTasks.length > 0 ? (
           <div className="space-y-3">
             {pendingTasks.map((task) => {
@@ -411,7 +396,7 @@ export default function ClientDetail() {
                 urgent: 'bg-red-100 text-red-600',
               };
               const priorityLabels = { low: 'Baixa', normal: 'Normal', high: 'Alta', urgent: 'Urgente' };
-              
+
               return (
                 <div key={task.id} className="bg-card border border-border/50 rounded-xl p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-2">
@@ -432,9 +417,9 @@ export default function ClientDetail() {
                       {format(new Date(task.createdAt!), "d MMM", { locale: pt })}
                     </span>
                   </div>
-                  
+
                   <p className="text-sm text-foreground mb-3">{task.description}</p>
-                  
+
                   {task.photos && task.photos.length > 0 && (
                     <div className="flex gap-2 mb-3 overflow-x-auto">
                       {task.photos.map((photo, idx) => (
@@ -447,7 +432,7 @@ export default function ClientDetail() {
                       ))}
                     </div>
                   )}
-                  
+
                   <div className="flex justify-end gap-2">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -473,7 +458,7 @@ export default function ClientDetail() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                    
+
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="sm" className="gap-1 btn-primary" data-testid={`button-complete-task-${task.id}`}>
@@ -514,7 +499,7 @@ export default function ClientDetail() {
           </div>
         )}
       </div>
-      
+
       <CreatePendingTaskDialog
         open={showPendingTaskDialog}
         onOpenChange={setShowPendingTaskDialog}
@@ -545,7 +530,7 @@ export default function ClientDetail() {
             Sugerir
           </Button>
         </div>
-        
+
         {suggestedWorks && suggestedWorks.filter(w => !w.isAccepted && !w.isRejected).length > 0 ? (
           <div className="space-y-3">
             {suggestedWorks.filter(w => !w.isAccepted && !w.isRejected).map((work) => {
@@ -562,7 +547,7 @@ export default function ClientDetail() {
                 'Jacuzzi': 'text-cyan-600',
                 'Geral': 'text-gray-500',
               };
-              
+
               return (
                 <div key={work.id} className="bg-card border border-border/50 rounded-xl p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-2">
@@ -574,18 +559,18 @@ export default function ClientDetail() {
                       {format(new Date(work.createdAt!), "d MMM", { locale: pt })}
                     </span>
                   </div>
-                  
+
                   <h4 className="font-semibold text-sm mb-1">{work.title}</h4>
                   {work.description && (
                     <p className="text-sm text-muted-foreground mb-2">{work.description}</p>
                   )}
-                  
+
                   {work.notes && (
                     <div className="bg-muted/50 rounded-lg p-2 mb-3">
                       <p className="text-xs text-muted-foreground italic">{work.notes}</p>
                     </div>
                   )}
-                  
+
                   {(work.estimatedCost || work.estimatedDurationMinutes) && (
                     <div className="flex items-center gap-4 mb-3">
                       {work.estimatedCost && (
@@ -606,7 +591,7 @@ export default function ClientDetail() {
                       )}
                     </div>
                   )}
-                  
+
                   {work.photos && work.photos.length > 0 && (
                     <div className="flex gap-2 mb-3 overflow-x-auto">
                       {work.photos.map((photo, idx) => (
@@ -619,7 +604,7 @@ export default function ClientDetail() {
                       ))}
                     </div>
                   )}
-                  
+
                   <div className="flex justify-end gap-2">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -645,7 +630,7 @@ export default function ClientDetail() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                    
+
                     <Button
                       size="sm"
                       variant="outline"
@@ -656,7 +641,7 @@ export default function ClientDetail() {
                       <ThumbsDown className="w-4 h-4" />
                       Recusar
                     </Button>
-                    
+
                     <Button
                       size="sm"
                       className="gap-1 bg-green-600 hover:bg-green-700"
@@ -679,7 +664,7 @@ export default function ClientDetail() {
           </div>
         )}
       </div>
-      
+
       <CreateSuggestedWorkDialog
         open={showSuggestedWorkDialog}
         onOpenChange={setShowSuggestedWorkDialog}
@@ -752,14 +737,14 @@ export default function ClientDetail() {
                 <h3 className="font-bold text-lg mb-4">Capturas Rápidas</h3>
                 {(() => {
                   const grouped = quickPhotos.reduce((acc, photo) => {
-                    const category = photo.serviceType === "Outros" && photo.customCategory 
-                      ? photo.customCategory 
+                    const category = photo.serviceType === "Outros" && photo.customCategory
+                      ? photo.customCategory
                       : photo.serviceType || "Geral";
                     if (!acc[category]) acc[category] = [];
                     acc[category].push(photo);
                     return acc;
                   }, {} as Record<string, typeof quickPhotos>);
-                  
+
                   const categoryIcons: Record<string, typeof Flower2> = {
                     "Jardim": Flower2,
                     "Piscina": Waves,
@@ -767,7 +752,7 @@ export default function ClientDetail() {
                     "Outros": FolderPlus,
                     "Geral": Camera,
                   };
-                  
+
                   const categoryOrder = ["Jardim", "Piscina", "Jacuzzi"];
                   const sortedCategories = [
                     ...categoryOrder.filter(c => grouped[c]),
@@ -775,7 +760,7 @@ export default function ClientDetail() {
                     ...(grouped["Outros"] ? ["Outros"] : []),
                     ...(grouped["Geral"] ? ["Geral"] : []),
                   ];
-                  
+
                   return sortedCategories.map((category) => {
                     const Icon = categoryIcons[category] || FolderPlus;
                     return (
@@ -827,7 +812,7 @@ export default function ClientDetail() {
               <h3 className="font-bold text-lg">Agendamentos</h3>
               <AddAppointmentDialog clientId={clientId} />
             </div>
-            
+
             {appointments?.filter(a => !a.isCompleted).length === 0 ? (
               <p className="text-muted-foreground text-center py-8 text-sm">Sem agendamentos futuros.</p>
             ) : (
@@ -841,8 +826,8 @@ export default function ClientDetail() {
                     <h4 className="font-semibold text-foreground">Serviço de {apt.type === 'Garden' ? 'Jardim' : apt.type === 'Pool' ? 'Piscina' : apt.type}</h4>
                     <p className="text-sm text-muted-foreground">{format(new Date(apt.date), "HH:mm")}</p>
                   </div>
-                  <CompleteVisitDialog 
-                    clientId={clientId} 
+                  <CompleteVisitDialog
+                    clientId={clientId}
                     appointmentId={apt.id}
                     appointmentType={apt.type}
                     estimatedDuration={client.serviceDurationMinutes || 60}
@@ -853,1980 +838,6 @@ export default function ClientDetail() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
-}
-
-type LaborEntry = { employeeId?: number; workerName: string; hours: number; hourlyRate: number; hourlyPayRate?: number; cost: number };
-type MaterialEntry = { materialName: string; quantity: number; unitPrice: number; cost: number };
-
-const serviceLogFormSchema = insertServiceLogSchema.extend({
-  type: z.string().min(1, "Tipo obrigatório"),
-  description: z.string().min(1, "Descrição obrigatória"),
-  billingType: z.enum(["monthly", "extra"]).default("monthly"),
-  date: z.union([z.date(), z.string().transform((s) => new Date(s))]),
-});
-
-function AddServiceLogDialog({ clientId }: { clientId: number }) {
-  const [open, setOpen] = useState(false);
-  const [photosBefore, setPhotosBefore] = useState<string[]>([]);
-  const [photosAfter, setPhotosAfter] = useState<string[]>([]);
-  const [laborEntries, setLaborEntries] = useState<LaborEntry[]>([]);
-  const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([]);
-  const [isIncludedInMonthly, setIsIncludedInMonthly] = useState(true);
-  const [isCustomType, setIsCustomType] = useState(false);
-  const [creatingEmployeeForIdx, setCreatingEmployeeForIdx] = useState<number | null>(null);
-  const [newEmpName, setNewEmpName] = useState("");
-  const [newEmpChargeRate, setNewEmpChargeRate] = useState("");
-  const [newEmpPayRate, setNewEmpPayRate] = useState("");
-  const beforeInputRef = useRef<HTMLInputElement>(null);
-  const afterInputRef = useRef<HTMLInputElement>(null);
-  const createLog = useCreateServiceLog();
-  const { uploadFile, isUploading } = useUpload();
-  const queryClient = useQueryClient();
-
-  const createEmployee = useMutation({
-    mutationFn: async (data: { name: string; hourlyChargeRate: number; hourlyPayRate: number }) => {
-      const res = await apiRequest("POST", "/api/employees", data);
-      return res.json() as Promise<Employee>;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
-    },
-  });
-
-  const { data: employees } = useQuery<Employee[]>({
-    queryKey: ['/api/employees'],
-  });
-
-  const form = useForm<z.infer<typeof serviceLogFormSchema>>({
-    resolver: zodResolver(serviceLogFormSchema),
-    defaultValues: {
-      clientId,
-      type: "Garden",
-      description: "",
-      date: new Date(),
-      billingType: "monthly",
-    }
-  });
-
-  const billingTypeWatch = form.watch("billingType");
-
-  const laborSubtotal = laborEntries.reduce((sum, e) => sum + e.cost, 0);
-  const materialsSubtotal = materialEntries.reduce((sum, e) => sum + e.cost, 0);
-  const total = laborSubtotal + materialsSubtotal;
-
-  const activeEmployees = employees?.filter(e => e.isActive) || [];
-
-  const addLaborEntry = () => {
-    setLaborEntries([...laborEntries, { employeeId: undefined, workerName: "", hours: 0, hourlyRate: 0, hourlyPayRate: 0, cost: 0 }]);
-  };
-
-  const selectEmployee = (index: number, employeeId: string) => {
-    if (employeeId === "criar_novo") {
-      setCreatingEmployeeForIdx(index);
-      return;
-    }
-    const updated = [...laborEntries];
-    if (employeeId === "manual") {
-      updated[index].employeeId = undefined;
-      updated[index].workerName = "";
-      updated[index].hourlyRate = 0;
-      updated[index].hourlyPayRate = 0;
-    } else {
-      const emp = employees?.find(e => e.id === parseInt(employeeId));
-      if (emp) {
-        updated[index].employeeId = emp.id;
-        updated[index].workerName = emp.name;
-        updated[index].hourlyRate = Number(emp.hourlyChargeRate) || 0;
-        updated[index].hourlyPayRate = Number(emp.hourlyPayRate) || 0;
-      }
-    }
-    updated[index].cost = updated[index].hours * updated[index].hourlyRate;
-    setLaborEntries(updated);
-  };
-
-  const handleCreateEmployee = async (idx: number) => {
-    if (!newEmpName.trim()) return;
-    try {
-      const emp = await createEmployee.mutateAsync({
-        name: newEmpName.trim(),
-        hourlyChargeRate: parseFloat(newEmpChargeRate) || 0,
-        hourlyPayRate: parseFloat(newEmpPayRate) || 0,
-      });
-      const updated = [...laborEntries];
-      updated[idx].employeeId = emp.id;
-      updated[idx].workerName = emp.name;
-      updated[idx].hourlyRate = Number(emp.hourlyChargeRate) || 0;
-      updated[idx].hourlyPayRate = Number(emp.hourlyPayRate) || 0;
-      updated[idx].cost = updated[idx].hours * updated[idx].hourlyRate;
-      setLaborEntries(updated);
-      setCreatingEmployeeForIdx(null);
-      setNewEmpName("");
-      setNewEmpChargeRate("");
-      setNewEmpPayRate("");
-    } catch (e) {}
-  };
-
-  const updateLaborEntry = (index: number, field: keyof LaborEntry, value: string | number) => {
-    const updated = [...laborEntries];
-    if (field === "workerName") {
-      updated[index].workerName = value as string;
-    } else if (field === "employeeId") {
-      updated[index].employeeId = value ? Number(value) : undefined;
-    } else {
-      updated[index][field] = Number(value) || 0;
-    }
-    updated[index].cost = updated[index].hours * updated[index].hourlyRate;
-    setLaborEntries(updated);
-  };
-
-  const removeLaborEntry = (index: number) => {
-    setLaborEntries(laborEntries.filter((_, i) => i !== index));
-  };
-
-  const addMaterialEntry = () => {
-    setMaterialEntries([...materialEntries, { materialName: "", quantity: 0, unitPrice: 0, cost: 0 }]);
-  };
-
-  const updateMaterialEntry = (index: number, field: keyof MaterialEntry, value: string | number) => {
-    const updated = [...materialEntries];
-    if (field === "materialName") {
-      updated[index].materialName = value as string;
-    } else {
-      updated[index][field] = Number(value) || 0;
-    }
-    updated[index].cost = updated[index].quantity * updated[index].unitPrice;
-    setMaterialEntries(updated);
-  };
-
-  const removeMaterialEntry = (index: number) => {
-    setMaterialEntries(materialEntries.filter((_, i) => i !== index));
-  };
-
-  const handlePhotoUpload = async (file: File, type: "before" | "after") => {
-    const result = await uploadFile(file);
-    if (result) {
-      if (type === "before") {
-        setPhotosBefore(prev => [...prev, result.objectPath]);
-      } else {
-        setPhotosAfter(prev => [...prev, result.objectPath]);
-      }
-    }
-  };
-
-  const onSubmit = async (values: z.infer<typeof serviceLogFormSchema>) => {
-    try {
-      const included = values.billingType === "monthly" ? isIncludedInMonthly : false;
-      await createLog.mutateAsync({
-        ...values,
-        isIncludedInMonthly: included,
-        photosBefore,
-        photosAfter,
-        laborEntries: laborEntries.filter(e => e.workerName && e.hours > 0),
-        materialEntries: materialEntries.filter(e => e.materialName && e.quantity > 0),
-      });
-      setOpen(false);
-      form.reset();
-      setPhotosBefore([]);
-      setPhotosAfter([]);
-      setLaborEntries([]);
-      setMaterialEntries([]);
-      setIsIncludedInMonthly(true);
-      setIsCustomType(false);
-      setCreatingEmployeeForIdx(null);
-      setNewEmpName("");
-      setNewEmpChargeRate("");
-      setNewEmpPayRate("");
-    } catch (e) {}
-  };
-
-  const removePhoto = (type: "before" | "after", index: number) => {
-    if (type === "before") {
-      setPhotosBefore(prev => prev.filter((_, i) => i !== index));
-    } else {
-      setPhotosAfter(prev => prev.filter((_, i) => i !== index));
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="h-8 gap-1 rounded-lg" data-testid="button-add-service-log">
-          <Plus className="w-3 h-3" /> Registar Trabalho
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="rounded-2xl sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Registar Serviço</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data do Serviço</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      className="rounded-xl"
-                      value={field.value ? format(new Date(field.value), "yyyy-MM-dd") : ""}
-                      onChange={(e) => field.onChange(new Date(e.target.value + "T12:00:00"))}
-                      data-testid="input-service-date"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Serviço</FormLabel>
-                  <Select
-                    value={isCustomType ? "outro" : field.value}
-                    onValueChange={(val) => {
-                      if (val === "outro") {
-                        setIsCustomType(true);
-                        field.onChange("");
-                      } else {
-                        setIsCustomType(false);
-                        field.onChange(val);
-                      }
-                    }}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="rounded-xl" data-testid="select-service-type">
-                        <SelectValue placeholder="Selecione o tipo">
-                          {isCustomType && field.value ? field.value : undefined}
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Garden">Jardim</SelectItem>
-                      <SelectItem value="Pool">Piscina</SelectItem>
-                      <SelectItem value="Jacuzzi">Jacuzzi</SelectItem>
-                      <SelectItem value="General">Geral</SelectItem>
-                      <SelectItem value="outro">+ Outro tipo...</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {isCustomType && (
-                    <Input
-                      placeholder="Escreva o tipo de serviço..."
-                      value={field.value}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      className="mt-2 rounded-xl"
-                      autoFocus
-                    />
-                  )}
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full rounded-xl justify-start text-left font-normal", !field.value && "text-muted-foreground")}
-                        >
-                          <CalendarDays className="mr-2 h-4 w-4" />
-                          {field.value ? format(new Date(field.value), "dd/MM/yyyy", { locale: pt }) : "Selecionar data"}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarPicker
-                        mode="single"
-                        selected={field.value ? new Date(field.value) : undefined}
-                        onSelect={(date) => field.onChange(date ?? new Date())}
-                        locale={pt}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="O que fez hoje?"
-                      className="rounded-xl"
-                      data-testid="input-service-description"
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="billingType"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Tipo de Faturação</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      className="grid grid-cols-2 gap-3"
-                    >
-                      <div className={`flex items-center space-x-2 rounded-xl border p-3 cursor-pointer transition-colors ${field.value === 'monthly' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
-                        <RadioGroupItem value="monthly" id="billing-monthly" />
-                        <Label htmlFor="billing-monthly" className="flex items-center gap-2 cursor-pointer">
-                          <Calendar className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium">Mensal</span>
-                        </Label>
-                      </div>
-                      <div className={`flex items-center space-x-2 rounded-xl border p-3 cursor-pointer transition-colors ${field.value === 'extra' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
-                        <RadioGroupItem value="extra" id="billing-extra" />
-                        <Label htmlFor="billing-extra" className="flex items-center gap-2 cursor-pointer">
-                          <Euro className="w-4 h-4 text-primary" />
-                          <span className="text-sm font-medium">Extra</span>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {billingTypeWatch === "monthly" && (
-              <div className="flex items-start gap-3 p-3 rounded-xl border bg-green-50/50 border-green-200">
-                <Checkbox
-                  id="includedInMonthly"
-                  checked={isIncludedInMonthly}
-                  onCheckedChange={(v) => setIsIncludedInMonthly(v === true)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <Label htmlFor="includedInMonthly" className="text-sm font-medium text-green-800 cursor-pointer">
-                    Incluído no valor da mensalidade
-                  </Label>
-                  <p className="text-xs text-green-700 mt-0.5">
-                    {isIncludedInMonthly
-                      ? "Horas e valores são opcionais — ficam apenas para registo interno."
-                      : "As horas e valores serão contabilizados para este cliente."}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3 p-3 rounded-xl border bg-blue-50/50">
-              <div className="flex items-center justify-between">
-                <FormLabel className="flex items-center gap-2 text-blue-700">
-                  <Clock className="w-4 h-4" />
-                  Mão de Obra
-                  {billingTypeWatch === "monthly" && isIncludedInMonthly && (
-                    <span className="text-[10px] font-normal text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">apenas registo</span>
-                  )}
-                </FormLabel>
-                <Button type="button" size="sm" variant="outline" onClick={addLaborEntry} className="h-7 text-xs">
-                  <Plus className="w-3 h-3 mr-1" /> Adicionar
-                </Button>
-              </div>
-              {laborEntries.length > 0 && (
-                <div className="space-y-3">
-                  {laborEntries.map((entry, idx) => (
-                    <div key={idx} className="p-2 rounded-lg bg-white/50 border space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={entry.employeeId?.toString() || "manual"}
-                          onValueChange={(val) => selectEmployee(idx, val)}
-                        >
-                          <SelectTrigger className="flex-1 h-8 text-xs rounded-lg" data-testid={`select-employee-${idx}`}>
-                            <SelectValue placeholder="Selecionar trabalhador" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="manual">Outro (escrever nome)</SelectItem>
-                            {activeEmployees.map((emp) => (
-                              <SelectItem key={emp.id} value={emp.id.toString()}>
-                                {emp.name} ({Number(emp.hourlyChargeRate).toFixed(0)}€/h)
-                              </SelectItem>
-                            ))}
-                            <SelectItem value="criar_novo">+ Criar funcionário...</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" size="icon" variant="ghost" onClick={() => removeLaborEntry(idx)} className="h-6 w-6 shrink-0">
-                          <X className="w-3 h-3 text-red-500" />
-                        </Button>
-                      </div>
-                      {creatingEmployeeForIdx === idx && (
-                        <div className="p-2 rounded-lg bg-green-50 border border-green-200 space-y-2">
-                          <p className="text-xs font-medium text-green-700">Novo Funcionário</p>
-                          <Input
-                            placeholder="Nome *"
-                            value={newEmpName}
-                            onChange={(e) => setNewEmpName(e.target.value)}
-                            className="h-8 text-xs rounded-lg"
-                            autoFocus
-                          />
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="text-[10px] text-muted-foreground">€/hora cobrado</label>
-                              <Input
-                                type="number"
-                                placeholder="0"
-                                value={newEmpChargeRate}
-                                onChange={(e) => setNewEmpChargeRate(e.target.value)}
-                                className="h-8 text-xs rounded-lg"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[10px] text-muted-foreground">€/hora pago</label>
-                              <Input
-                                type="number"
-                                placeholder="0"
-                                value={newEmpPayRate}
-                                onChange={(e) => setNewEmpPayRate(e.target.value)}
-                                className="h-8 text-xs rounded-lg"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="h-7 text-xs flex-1"
-                              onClick={() => handleCreateEmployee(idx)}
-                              disabled={!newEmpName.trim() || createEmployee.isPending}
-                            >
-                              {createEmployee.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Criar e Selecionar"}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-xs"
-                              onClick={() => setCreatingEmployeeForIdx(null)}
-                            >
-                              Cancelar
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                      {!entry.employeeId && creatingEmployeeForIdx !== idx && (
-                        <Input
-                          placeholder="Nome do trabalhador"
-                          value={entry.workerName}
-                          onChange={(e) => updateLaborEntry(idx, "workerName", e.target.value)}
-                          className="h-8 text-xs rounded-lg"
-                          data-testid={`input-worker-name-${idx}`}
-                        />
-                      )}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10px] text-muted-foreground">Horas</label>
-                          <Input
-                            type="number"
-                            step="0.5"
-                            placeholder="0"
-                            value={entry.hours || ""}
-                            onChange={(e) => updateLaborEntry(idx, "hours", e.target.value)}
-                            className="h-8 text-xs rounded-lg"
-                            data-testid={`input-hours-${idx}`}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-muted-foreground">€/hora</label>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            value={entry.hourlyRate || ""}
-                            onChange={(e) => updateLaborEntry(idx, "hourlyRate", e.target.value)}
-                            className="h-8 text-xs rounded-lg"
-                            data-testid={`input-rate-${idx}`}
-                            disabled={!!entry.employeeId}
-                          />
-                        </div>
-                        <div className="flex flex-col justify-end">
-                          <label className="text-[10px] text-muted-foreground">Total</label>
-                          <div className="h-8 flex items-center justify-end text-sm font-semibold text-blue-700">
-                            {entry.cost.toFixed(2)}€
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="text-right text-sm font-bold text-blue-700 pt-1 border-t">
-                    Subtotal: {laborSubtotal.toFixed(2)}€
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3 p-3 rounded-xl border bg-muted/30">
-              <div className="flex items-center justify-between">
-                <FormLabel className="flex items-center gap-2 text-muted-foreground">
-                  <FolderPlus className="w-4 h-4" />
-                  Materiais
-                  {billingTypeWatch === "monthly" && isIncludedInMonthly && (
-                    <span className="text-[10px] font-normal text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">apenas registo</span>
-                  )}
-                </FormLabel>
-                <Button type="button" size="sm" variant="outline" onClick={addMaterialEntry} className="h-7 text-xs">
-                  <Plus className="w-3 h-3 mr-1" /> Adicionar
-                </Button>
-              </div>
-              {materialEntries.length > 0 && (
-                <div className="space-y-2">
-                  {materialEntries.map((entry, idx) => (
-                    <div key={idx} className="grid grid-cols-12 gap-1 items-center">
-                      <Input
-                        placeholder="Material"
-                        value={entry.materialName}
-                        onChange={(e) => updateMaterialEntry(idx, "materialName", e.target.value)}
-                        className="col-span-4 h-8 text-xs rounded-lg"
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Qtd"
-                        value={entry.quantity || ""}
-                        onChange={(e) => updateMaterialEntry(idx, "quantity", e.target.value)}
-                        className="col-span-2 h-8 text-xs rounded-lg"
-                      />
-                      <Input
-                        type="number"
-                        placeholder="€/un"
-                        value={entry.unitPrice || ""}
-                        onChange={(e) => updateMaterialEntry(idx, "unitPrice", e.target.value)}
-                        className="col-span-2 h-8 text-xs rounded-lg"
-                      />
-                      <div className="col-span-3 text-xs font-medium text-right">
-                        {entry.cost.toFixed(2)}€
-                      </div>
-                      <Button type="button" size="icon" variant="ghost" onClick={() => removeMaterialEntry(idx)} className="col-span-1 h-6 w-6">
-                        <X className="w-3 h-3 text-red-500" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="text-right text-sm font-bold text-foreground pt-1 border-t">
-                    Subtotal: {materialsSubtotal.toFixed(2)}€
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {(laborEntries.length > 0 || materialEntries.length > 0) && (
-              <div className={`p-3 rounded-xl border ${billingTypeWatch === "monthly" && isIncludedInMonthly ? "bg-green-50 border-green-200" : "bg-primary/10 border-primary/20"}`}>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className={`font-bold ${billingTypeWatch === "monthly" && isIncludedInMonthly ? "text-green-700" : "text-primary"}`}>TOTAL</span>
-                    {billingTypeWatch === "monthly" && isIncludedInMonthly && (
-                      <p className="text-[10px] text-green-600 mt-0.5">apenas registo — não contabilizado</p>
-                    )}
-                  </div>
-                  <span className={`text-lg font-bold ${billingTypeWatch === "monthly" && isIncludedInMonthly ? "text-green-700" : "text-primary"}`}>{total.toFixed(2)}€</span>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <FormLabel>Fotos Antes</FormLabel>
-              <div className="flex flex-wrap gap-2">
-                {photosBefore.map((path, idx) => (
-                  <div key={idx} className="relative w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                    <button 
-                      type="button" 
-                      onClick={() => removePhoto("before", idx)}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
-                      data-testid={`button-remove-before-photo-${idx}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => beforeInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary transition-colors disabled:opacity-50"
-                  data-testid="button-upload-before-photo"
-                >
-                  {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5 text-muted-foreground" />}
-                </button>
-                <input
-                  ref={beforeInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handlePhotoUpload(e.target.files[0], "before")}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <FormLabel>Fotos Depois</FormLabel>
-              <div className="flex flex-wrap gap-2">
-                {photosAfter.map((path, idx) => (
-                  <div key={idx} className="relative w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                    <button 
-                      type="button" 
-                      onClick={() => removePhoto("after", idx)}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
-                      data-testid={`button-remove-after-photo-${idx}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => afterInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary transition-colors disabled:opacity-50"
-                  data-testid="button-upload-after-photo"
-                >
-                  {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5 text-muted-foreground" />}
-                </button>
-                <input
-                  ref={afterInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handlePhotoUpload(e.target.files[0], "after")}
-                />
-              </div>
-            </div>
-            
-            <Button type="submit" className="w-full btn-primary" disabled={createLog.isPending || isUploading}>
-              {createLog.isPending ? "A guardar..." : "Guardar Registo"}
-            </Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function AddAppointmentDialog({ clientId }: { clientId: number }) {
-  const [open, setOpen] = useState(false);
-  const createApt = useCreateAppointment();
-  
-  const form = useForm<z.infer<typeof insertAppointmentSchema>>({
-    resolver: zodResolver(insertAppointmentSchema),
-    defaultValues: {
-      clientId,
-      type: "Garden",
-      notes: "",
-      date: new Date(),
-    }
-  });
-
-  const onSubmit = async (values: z.infer<typeof insertAppointmentSchema>) => {
-    try {
-      await createApt.mutateAsync(values);
-      setOpen(false);
-      form.reset();
-    } catch (e) {}
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="h-8 gap-1 rounded-lg">
-          <Plus className="w-3 h-3" /> Adicionar
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="rounded-2xl sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Agendar Serviço</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-             <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data e Hora</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="datetime-local" 
-                      className="rounded-xl" 
-                      // Simple workaround for datetime-local needing ISO string without seconds/Z
-                      onChange={(e) => field.onChange(new Date(e.target.value))}
-                      // value={field.value ? format(field.value, "yyyy-MM-dd'T'HH:mm") : ""}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Serviço</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Garden">Jardim</SelectItem>
-                      <SelectItem value="Pool">Piscina</SelectItem>
-                      <SelectItem value="Jacuzzi">Jacuzzi</SelectItem>
-                      <SelectItem value="General">Geral</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notas (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Instruções especiais..." 
-                      className="rounded-xl" 
-                      {...field} 
-                      value={field.value || ""}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <Button type="submit" className="w-full btn-primary" disabled={createApt.isPending}>
-              {createApt.isPending ? "A agendar..." : "Agendar"}
-            </Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function EditClientDialog({ client }: { client: Client }) {
-  const [open, setOpen] = useState(false);
-  const updateClient = useUpdateClient();
-  
-  const form = useForm<z.infer<typeof insertClientSchema>>({
-    resolver: zodResolver(insertClientSchema),
-    defaultValues: {
-      name: client.name,
-      phone: client.phone || "",
-      whatsapp: client.whatsapp || "",
-      facebookMessenger: client.facebookMessenger || "",
-      address: client.address || "",
-      latitude: client.latitude || undefined,
-      longitude: client.longitude || undefined,
-      hasGarden: client.hasGarden ?? false,
-      hasPool: client.hasPool ?? false,
-      hasJacuzzi: client.hasJacuzzi ?? false,
-      gardenVisitFrequency: client.gardenVisitFrequency || "seasonal",
-      poolVisitFrequency: client.poolVisitFrequency || "seasonal",
-      jacuzziVisitFrequency: client.jacuzziVisitFrequency || "seasonal",
-      billingType: client.billingType || "monthly",
-      monthlyRate: client.monthlyRate || undefined,
-      hourlyRate: client.hourlyRate || undefined,
-      perVisitRate: client.perVisitRate || undefined,
-      paymentMethod: client.paymentMethod || undefined,
-      scheduledTransferDay: client.scheduledTransferDay || undefined,
-      poolLength: client.poolLength || undefined,
-      poolWidth: client.poolWidth || undefined,
-      poolMinDepth: client.poolMinDepth || undefined,
-      poolMaxDepth: client.poolMaxDepth || undefined,
-      jacuzziLength: client.jacuzziLength || undefined,
-      jacuzziWidth: client.jacuzziWidth || undefined,
-      jacuzziDepth: client.jacuzziDepth || undefined,
-      serviceDurationMinutes: client.serviceDurationMinutes ?? 60,
-    }
-  });
-
-  const billingType = form.watch("billingType");
-  const hasGarden = form.watch("hasGarden");
-  const hasPool = form.watch("hasPool");
-  const hasJacuzzi = form.watch("hasJacuzzi");
-
-  const onSubmit = async (values: z.infer<typeof insertClientSchema>) => {
-    try {
-      await updateClient.mutateAsync({ 
-        id: client.id, 
-        ...values,
-        latitude: values.latitude ?? client.latitude,
-        longitude: values.longitude ?? client.longitude,
-      });
-      setOpen(false);
-    } catch (e) {}
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="icon" variant="ghost" className="text-primary-foreground/80 hover:text-white hover:bg-white/10" data-testid="button-edit-client" aria-label="Editar cliente">
-          <Pencil className="w-4 h-4" aria-hidden="true" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="rounded-2xl sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Editar Cliente</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome do cliente" className="rounded-xl" data-testid="input-client-name" {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Telefone" className="rounded-xl" data-testid="input-client-phone" {...field} value={field.value || ""} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="whatsapp"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>WhatsApp (se diferente do telefone)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="WhatsApp" className="rounded-xl" data-testid="input-client-whatsapp" {...field} value={field.value || ""} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="facebookMessenger"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Facebook Messenger (username)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Messenger" className="rounded-xl" data-testid="input-client-messenger" {...field} value={field.value || ""} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Morada</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Rua, número, localidade..." className="rounded-xl" data-testid="input-client-address" {...field} value={field.value || ""} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <MapPicker
-              latitude={form.watch("latitude")}
-              longitude={form.watch("longitude")}
-              onChange={(lat, lng) => {
-                form.setValue("latitude", lat ?? undefined);
-                form.setValue("longitude", lng ?? undefined);
-              }}
-              onAddressChange={(addr) => form.setValue("address", addr)}
-              triggerLabel="Escolher morada no mapa"
-            />
-
-            <div className="space-y-3">
-              <FormLabel>Serviços</FormLabel>
-              <div className="flex flex-wrap gap-4">
-                <FormField
-                  control={form.control}
-                  name="hasGarden"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2">
-                      <FormControl>
-                        <Checkbox 
-                          checked={field.value ?? false} 
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-has-garden"
-                        />
-                      </FormControl>
-                      <FormLabel className="!mt-0 flex items-center gap-1 text-sm font-normal">
-                        <Leaf className="w-4 h-4 text-green-600" /> Jardim
-                      </FormLabel>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="hasPool"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2">
-                      <FormControl>
-                        <Checkbox 
-                          checked={field.value ?? false} 
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-has-pool"
-                        />
-                      </FormControl>
-                      <FormLabel className="!mt-0 flex items-center gap-1 text-sm font-normal">
-                        <Waves className="w-4 h-4 text-blue-600" /> Piscina
-                      </FormLabel>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="hasJacuzzi"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2">
-                      <FormControl>
-                        <Checkbox 
-                          checked={field.value ?? false} 
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-has-jacuzzi"
-                        />
-                      </FormControl>
-                      <FormLabel className="!mt-0 flex items-center gap-1 text-sm font-normal">
-                        <ThermometerSun className="w-4 h-4 text-muted-foreground" /> Jacuzzi
-                      </FormLabel>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {hasGarden && (
-              <div className="space-y-3 p-3 rounded-xl border bg-green-50/50">
-                <FormLabel className="flex items-center gap-2 text-green-700">
-                  <Leaf className="w-4 h-4" />
-                  Frequência de Visitas (Jardim)
-                </FormLabel>
-                <FormField
-                  control={form.control}
-                  name="gardenVisitFrequency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value || "seasonal"}
-                          className="grid grid-cols-1 gap-2"
-                        >
-                          <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'seasonal' ? 'border-green-500 bg-green-100/50' : 'bg-background/50'}`}>
-                            <RadioGroupItem value="seasonal" id="edit-seasonal" className="mt-0.5" />
-                            <Label htmlFor="edit-seasonal" className="flex flex-col cursor-pointer">
-                              <span className="text-sm font-medium">Sazonal (padrão)</span>
-                              <span className="text-xs text-muted-foreground">Época alta: 2x/mês | Época baixa: 1x/mês</span>
-                            </Label>
-                          </div>
-                          <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'once_monthly' ? 'border-green-500 bg-green-100/50' : 'bg-background/50'}`}>
-                            <RadioGroupItem value="once_monthly" id="edit-garden_once_monthly" className="mt-0.5" />
-                            <Label htmlFor="edit-garden_once_monthly" className="flex flex-col cursor-pointer">
-                              <span className="text-sm font-medium">Acordo Especial</span>
-                              <span className="text-xs text-muted-foreground">1 visita por mês durante todo o ano</span>
-                            </Label>
-                          </div>
-                          <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'on_demand' ? 'border-green-500 bg-green-100/50' : 'bg-background/50'}`}>
-                            <RadioGroupItem value="on_demand" id="edit-garden_on_demand" className="mt-0.5" />
-                            <Label htmlFor="edit-garden_on_demand" className="flex flex-col cursor-pointer">
-                              <span className="text-sm font-medium">Quando Necessário</span>
-                              <span className="text-xs text-muted-foreground">Sem acordo fixo - serviço a pedido</span>
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            {hasPool && (
-              <div className="space-y-3 p-3 rounded-xl border bg-blue-50/50">
-                <FormLabel className="flex items-center gap-2 text-blue-700">
-                  <Waves className="w-4 h-4" />
-                  Dimensões da Piscina (metros)
-                </FormLabel>
-                <div className="grid grid-cols-2 gap-2">
-                  <FormField
-                    control={form.control}
-                    name="poolLength"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Comp.</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.1"
-                            placeholder="10.0" 
-                            className="rounded-xl"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="poolWidth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Larg.</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.1"
-                            placeholder="5.0" 
-                            className="rounded-xl"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <FormField
-                    control={form.control}
-                    name="poolMinDepth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Prof. Mín.</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.1"
-                            placeholder="1.0" 
-                            className="rounded-xl"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="poolMaxDepth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Prof. Máx.</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.1"
-                            placeholder="2.0" 
-                            className="rounded-xl"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                {form.watch("poolLength") && form.watch("poolWidth") && form.watch("poolMinDepth") && form.watch("poolMaxDepth") && (
-                  <div className="text-sm text-blue-700 font-medium">
-                    Volume: {((form.watch("poolLength") || 0) * (form.watch("poolWidth") || 0) * ((form.watch("poolMinDepth") || 0) + (form.watch("poolMaxDepth") || 0)) / 2).toFixed(1)} m³
-                  </div>
-                )}
-                
-                <div className="pt-3 border-t border-blue-200">
-                  <FormLabel className="flex items-center gap-2 text-blue-700 mb-2">
-                    <CalendarDays className="w-4 h-4" />
-                    Frequência de Visitas
-                  </FormLabel>
-                  <FormField
-                    control={form.control}
-                    name="poolVisitFrequency"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value || "seasonal"}
-                            className="grid grid-cols-1 gap-2"
-                          >
-                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'seasonal' ? 'border-blue-500 bg-blue-100/50' : 'bg-background/50'}`}>
-                              <RadioGroupItem value="seasonal" id="edit-pool_seasonal" className="mt-0.5" />
-                              <Label htmlFor="edit-pool_seasonal" className="flex flex-col cursor-pointer">
-                                <span className="text-sm font-medium">Sazonal (padrão)</span>
-                                <span className="text-xs text-muted-foreground">Época alta: 1x/semana | Época baixa: 2x/mês</span>
-                              </Label>
-                            </div>
-                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'once_monthly' ? 'border-blue-500 bg-blue-100/50' : 'bg-background/50'}`}>
-                              <RadioGroupItem value="once_monthly" id="edit-pool_once_monthly" className="mt-0.5" />
-                              <Label htmlFor="edit-pool_once_monthly" className="flex flex-col cursor-pointer">
-                                <span className="text-sm font-medium">Acordo Especial</span>
-                                <span className="text-xs text-muted-foreground">1 visita por mês durante todo o ano</span>
-                              </Label>
-                            </div>
-                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'on_demand' ? 'border-blue-500 bg-blue-100/50' : 'bg-background/50'}`}>
-                              <RadioGroupItem value="on_demand" id="edit-pool_on_demand" className="mt-0.5" />
-                              <Label htmlFor="edit-pool_on_demand" className="flex flex-col cursor-pointer">
-                                <span className="text-sm font-medium">Quando Necessário</span>
-                                <span className="text-xs text-muted-foreground">Sem acordo fixo - serviço a pedido</span>
-                              </Label>
-                            </div>
-                          </RadioGroup>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            )}
-
-            {hasJacuzzi && (
-              <div className="space-y-3 p-3 rounded-xl border bg-muted/30">
-                <FormLabel className="flex items-center gap-2 text-muted-foreground">
-                  <ThermometerSun className="w-4 h-4" />
-                  Dimensões do Jacuzzi (metros)
-                </FormLabel>
-                <div className="grid grid-cols-3 gap-2">
-                  <FormField
-                    control={form.control}
-                    name="jacuzziLength"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Comp.</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.1"
-                            placeholder="2.0" 
-                            className="rounded-xl"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="jacuzziWidth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Larg.</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.1"
-                            placeholder="2.0" 
-                            className="rounded-xl"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="jacuzziDepth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Prof.</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.1"
-                            placeholder="0.8" 
-                            className="rounded-xl"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                {form.watch("jacuzziLength") && form.watch("jacuzziWidth") && form.watch("jacuzziDepth") && (
-                  <div className="text-sm text-muted-foreground font-medium">
-                    Volume: {((form.watch("jacuzziLength") || 0) * (form.watch("jacuzziWidth") || 0) * (form.watch("jacuzziDepth") || 0)).toFixed(1)} m³
-                  </div>
-                )}
-                
-                <div className="pt-3 border-t border-border">
-                  <FormLabel className="flex items-center gap-2 text-muted-foreground mb-2">
-                    <CalendarDays className="w-4 h-4" />
-                    Frequência de Visitas
-                  </FormLabel>
-                  <FormField
-                    control={form.control}
-                    name="jacuzziVisitFrequency"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value || "seasonal"}
-                            className="grid grid-cols-1 gap-2"
-                          >
-                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'seasonal' ? 'border-primary bg-primary/10' : 'bg-background/50'}`}>
-                              <RadioGroupItem value="seasonal" id="edit-jacuzzi_seasonal" className="mt-0.5" />
-                              <Label htmlFor="edit-jacuzzi_seasonal" className="flex flex-col cursor-pointer">
-                                <span className="text-sm font-medium">Sazonal (padrão)</span>
-                                <span className="text-xs text-muted-foreground">Época alta: 1x/semana | Época baixa: 2x/mês</span>
-                              </Label>
-                            </div>
-                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'once_monthly' ? 'border-primary bg-primary/10' : 'bg-background/50'}`}>
-                              <RadioGroupItem value="once_monthly" id="edit-jacuzzi_once_monthly" className="mt-0.5" />
-                              <Label htmlFor="edit-jacuzzi_once_monthly" className="flex flex-col cursor-pointer">
-                                <span className="text-sm font-medium">Acordo Especial</span>
-                                <span className="text-xs text-muted-foreground">1 visita por mês durante todo o ano</span>
-                              </Label>
-                            </div>
-                            <div className={`flex items-start space-x-3 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'on_demand' ? 'border-primary bg-primary/10' : 'bg-background/50'}`}>
-                              <RadioGroupItem value="on_demand" id="edit-jacuzzi_on_demand" className="mt-0.5" />
-                              <Label htmlFor="edit-jacuzzi_on_demand" className="flex flex-col cursor-pointer">
-                                <span className="text-sm font-medium">Quando Necessário</span>
-                                <span className="text-xs text-muted-foreground">Sem acordo fixo - serviço a pedido</span>
-                              </Label>
-                            </div>
-                          </RadioGroup>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3 p-3 rounded-xl border bg-muted/30">
-              <FormLabel className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" />
-                Duração Estimada do Serviço
-              </FormLabel>
-              <FormField
-                control={form.control}
-                name="serviceDurationMinutes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <DurationInput
-                        value={field.value ?? 60}
-                        onChange={field.onChange}
-                        data-testid="input-edit-service-duration"
-                      />
-                    </FormControl>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Tempo médio para realizar todos os serviços
-                    </p>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <FormLabel>Tipo de Faturação</FormLabel>
-              <FormField
-                control={form.control}
-                name="billingType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value || "monthly"}
-                        className="grid grid-cols-3 gap-3"
-                      >
-                        <div className={`flex items-center space-x-2 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'monthly' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
-                          <RadioGroupItem value="monthly" id="edit-monthly" />
-                          <Label htmlFor="edit-monthly" className="flex items-center gap-2 cursor-pointer">
-                            <Euro className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium">Mensal</span>
-                          </Label>
-                        </div>
-                        <div className={`flex items-center space-x-2 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'hourly' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
-                          <RadioGroupItem value="hourly" id="edit-hourly" />
-                          <Label htmlFor="edit-hourly" className="flex items-center gap-2 cursor-pointer">
-                            <Clock className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium">À Hora</span>
-                          </Label>
-                        </div>
-                        <div className={`flex items-center space-x-2 rounded-xl border p-3 shadow-sm cursor-pointer transition-colors ${field.value === 'per_visit' ? 'border-primary bg-primary/5' : 'bg-background/50'}`}>
-                          <RadioGroupItem value="per_visit" id="edit-per_visit" />
-                          <Label htmlFor="edit-per_visit" className="flex items-center gap-2 cursor-pointer">
-                            <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Por Visita</span>
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              {billingType === "monthly" && (
-                <FormField
-                  control={form.control}
-                  name="monthlyRate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor Mensal (€)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01"
-                          placeholder="0.00" 
-                          className="rounded-xl"
-                          data-testid="input-edit-monthly-rate"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )}
-              
-              {billingType === "hourly" && (
-                <FormField
-                  control={form.control}
-                  name="hourlyRate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor por Hora (€)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01"
-                          placeholder="0.00" 
-                          className="rounded-xl"
-                          data-testid="input-edit-hourly-rate"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )}
-              
-              {billingType === "per_visit" && (
-                <FormField
-                  control={form.control}
-                  name="perVisitRate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor por Visita (€)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01"
-                          placeholder="0.00" 
-                          className="rounded-xl"
-                          data-testid="input-edit-per-visit-rate"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )}
-            </div>
-
-            <div className="space-y-3 p-3 rounded-xl border bg-muted/30">
-              <FormLabel className="flex items-center gap-2">
-                <Banknote className="w-4 h-4 text-primary" />
-                Método de Pagamento
-              </FormLabel>
-              <FormField
-                control={form.control}
-                name="paymentMethod"
-                render={({ field }) => (
-                  <FormItem>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger className="rounded-xl" data-testid="select-edit-payment-method">
-                          <SelectValue placeholder="Selecione o método" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="cash">
-                          <div className="flex items-center gap-2">
-                            <Banknote className="w-4 h-4 text-green-600" />
-                            Dinheiro
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="bank_transfer">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="w-4 h-4 text-blue-600" />
-                            Transferência Bancária
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="mbway">
-                          <div className="flex items-center gap-2">
-                            <Smartphone className="w-4 h-4 text-red-500" />
-                            MBway
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              
-              {form.watch("paymentMethod") === "bank_transfer" && (
-                <FormField
-                  control={form.control}
-                  name="scheduledTransferDay"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2 text-sm">
-                        <CalendarDays className="w-4 h-4" />
-                        Dia da Transferência Agendada
-                      </FormLabel>
-                      <FormControl>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">Dia</span>
-                          <Input 
-                            type="number" 
-                            min="1"
-                            max="31"
-                            placeholder="15" 
-                            className="rounded-xl w-20"
-                            data-testid="input-edit-scheduled-transfer-day"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                          />
-                          <span className="text-sm text-muted-foreground">de cada mês</span>
-                        </div>
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        Opcional - indica quando o cliente costuma fazer a transferência
-                      </p>
-                    </FormItem>
-                  )}
-                />
-              )}
-            </div>
-            
-            <Button type="submit" className="w-full btn-primary" disabled={updateClient.isPending}>
-              {updateClient.isPending ? "A guardar..." : "Guardar Alterações"}
-            </Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-const completeVisitFormSchema = z.object({
-  durationHours: z.number().min(0, "Mínimo 0 horas").max(10, "Máximo 10 horas"),
-  durationMinutes: z.number().min(0, "Mínimo 0 minutos").max(59, "Máximo 59 minutos"),
-  workerCount: z.number().min(1, "Mínimo 1 trabalhador").max(10, "Máximo 10 trabalhadores"),
-  notes: z.string().optional(),
-  includeGarden: z.boolean().default(false),
-  includePool: z.boolean().default(false),
-  includeJacuzzi: z.boolean().default(false),
-});
-
-function CompleteVisitDialog({ 
-  clientId, 
-  appointmentId, 
-  appointmentType,
-  estimatedDuration 
-}: { 
-  clientId: number; 
-  appointmentId: number;
-  appointmentType: string;
-  estimatedDuration: number;
-}) {
-  const [open, setOpen] = useState(false);
-  const createServiceVisit = useCreateServiceVisit();
-  const updateAppointment = useUpdateAppointment();
-  const { data: client } = useClient(clientId);
-
-  const form = useForm<z.infer<typeof completeVisitFormSchema>>({
-    resolver: zodResolver(completeVisitFormSchema),
-    defaultValues: {
-      durationHours: Math.floor(estimatedDuration / 60),
-      durationMinutes: estimatedDuration % 60,
-      workerCount: 1,
-      notes: "",
-      includeGarden: appointmentType === "Garden",
-      includePool: appointmentType === "Pool",
-      includeJacuzzi: appointmentType === "Jacuzzi",
-    },
-  });
-
-  async function onSubmit(values: z.infer<typeof completeVisitFormSchema>) {
-    try {
-      const services: { serviceType: string; wasPlanned: boolean }[] = [];
-      if (values.includeGarden) services.push({ serviceType: "Garden", wasPlanned: appointmentType === "Garden" });
-      if (values.includePool) services.push({ serviceType: "Pool", wasPlanned: appointmentType === "Pool" });
-      if (values.includeJacuzzi) services.push({ serviceType: "Jacuzzi", wasPlanned: appointmentType === "Jacuzzi" });
-
-      if (services.length === 0) {
-        services.push({ serviceType: appointmentType, wasPlanned: true });
-      }
-
-      const totalMinutes = (values.durationHours * 60) + values.durationMinutes;
-
-      await createServiceVisit.mutateAsync({
-        visit: {
-          clientId,
-          visitDate: new Date(),
-          actualDurationMinutes: totalMinutes,
-          workerCount: values.workerCount,
-          notes: values.notes,
-        },
-        services,
-      });
-
-      await updateAppointment.mutateAsync({
-        id: appointmentId,
-        isCompleted: true,
-      });
-
-      setOpen(false);
-      form.reset();
-    } catch (error) {
-      // Error handled by hook
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="icon" variant="ghost" className="shrink-0" data-testid={`button-complete-visit-${appointmentId}`} aria-label="Concluir visita">
-          <Check className="w-5 h-5 text-green-600" aria-hidden="true" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-display text-primary">Confirmar Visita</DialogTitle>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <Timer className="w-4 h-4" /> Duração Real
-              </FormLabel>
-              <div className="flex items-center gap-2">
-                <FormField
-                  control={form.control}
-                  name="durationHours"
-                  render={({ field }) => (
-                    <FormControl>
-                      <div className="flex items-center gap-1">
-                        <Input 
-                          type="number" 
-                          min="0"
-                          max="10"
-                          className="rounded-xl w-16 text-center"
-                          data-testid="input-duration-hours"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                        <span className="text-sm font-medium">h</span>
-                      </div>
-                    </FormControl>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="durationMinutes"
-                  render={({ field }) => (
-                    <FormControl>
-                      <div className="flex items-center gap-1">
-                        <Input 
-                          type="number" 
-                          min="0"
-                          max="59"
-                          step="5"
-                          className="rounded-xl w-16 text-center"
-                          data-testid="input-duration-minutes"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                        <span className="text-sm font-medium">min</span>
-                      </div>
-                    </FormControl>
-                  )}
-                />
-              </div>
-            </FormItem>
-
-            <FormField
-              control={form.control}
-              name="workerCount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Users className="w-4 h-4" /> Nº de Trabalhadores
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="1"
-                      max="10"
-                      className="rounded-xl w-24"
-                      data-testid="input-worker-count"
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <div className="space-y-2">
-              <FormLabel>Serviços Realizados</FormLabel>
-              <div className="flex flex-wrap gap-3">
-                {client?.hasGarden && (
-                  <FormField
-                    control={form.control}
-                    name="includeGarden"
-                    render={({ field }) => (
-                      <label className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-colors ${field.value ? 'bg-green-50 border-green-300' : 'bg-background'}`}>
-                        <Checkbox 
-                          checked={field.value} 
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-include-garden"
-                        />
-                        <Leaf className="w-4 h-4 text-green-600" />
-                        <span className="text-sm">Jardim</span>
-                      </label>
-                    )}
-                  />
-                )}
-                {client?.hasPool && (
-                  <FormField
-                    control={form.control}
-                    name="includePool"
-                    render={({ field }) => (
-                      <label className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-colors ${field.value ? 'bg-blue-50 border-blue-300' : 'bg-background'}`}>
-                        <Checkbox 
-                          checked={field.value} 
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-include-pool"
-                        />
-                        <Waves className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm">Piscina</span>
-                      </label>
-                    )}
-                  />
-                )}
-                {client?.hasJacuzzi && (
-                  <FormField
-                    control={form.control}
-                    name="includeJacuzzi"
-                    render={({ field }) => (
-                      <label className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-colors ${field.value ? 'bg-muted/30 border-border' : 'bg-background'}`}>
-                        <Checkbox 
-                          checked={field.value} 
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-include-jacuzzi"
-                        />
-                        <ThermometerSun className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">Jacuzzi</span>
-                      </label>
-                    )}
-                  />
-                )}
-              </div>
-            </div>
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notas (opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Observações sobre a visita..."
-                      className="rounded-xl resize-none"
-                      data-testid="input-visit-notes"
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <Button 
-              type="submit" 
-              className="w-full btn-primary" 
-              disabled={createServiceVisit.isPending}
-              data-testid="button-submit-visit"
-            >
-              {createServiceVisit.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  A registar...
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Confirmar Visita
-                </>
-              )}
-            </Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-interface TimelineEvent {
-  id: string;
-  date: Date;
-  type: "service" | "appointment" | "photo";
-  title: string;
-  description?: string;
-  serviceType?: string;
-  photos?: string[];
-  isCompleted?: boolean;
-}
-
-function ClientTimeline({ 
-  logs, 
-  appointments, 
-  quickPhotos 
-}: { 
-  logs: ServiceLog[]; 
-  appointments: Appointment[];
-  quickPhotos: QuickPhoto[];
-}) {
-  const events = useMemo(() => {
-    const allEvents: TimelineEvent[] = [];
-
-    logs.forEach((log) => {
-      const photos = [
-        ...(log.photosBefore || []),
-        ...(log.photosAfter || []),
-      ];
-      allEvents.push({
-        id: `log-${log.id}`,
-        date: new Date(log.date),
-        type: "service",
-        title: log.type === "Garden" ? "Serviço de Jardim" : 
-               log.type === "Pool" ? "Serviço de Piscina" : 
-               log.type === "Jacuzzi" ? "Serviço de Jacuzzi" : "Serviço Geral",
-        description: log.description || undefined,
-        serviceType: log.type,
-        photos: photos.length > 0 ? photos : undefined,
-        isCompleted: true,
-      });
-    });
-
-    appointments.forEach((apt) => {
-      allEvents.push({
-        id: `apt-${apt.id}`,
-        date: new Date(apt.date),
-        type: "appointment",
-        title: apt.type === "Garden" ? "Agendamento Jardim" : 
-               apt.type === "Pool" ? "Agendamento Piscina" : 
-               apt.type === "Jacuzzi" ? "Agendamento Jacuzzi" : "Agendamento",
-        description: apt.notes || undefined,
-        serviceType: apt.type,
-        isCompleted: apt.isCompleted || false,
-      });
-    });
-
-    quickPhotos.forEach((photo) => {
-      allEvents.push({
-        id: `photo-${photo.id}`,
-        date: new Date(photo.createdAt!),
-        type: "photo",
-        title: "Captura Rápida",
-        description: photo.notes || undefined,
-        serviceType: photo.serviceType || "Geral",
-        photos: [photo.photoUrl],
-      });
-    });
-
-    return allEvents.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [logs, appointments, quickPhotos]);
-
-  const eventsByMonth = useMemo(() => {
-    const grouped: Record<string, TimelineEvent[]> = {};
-    events.forEach((event) => {
-      const monthKey = format(event.date, "yyyy-MM");
-      if (!grouped[monthKey]) {
-        grouped[monthKey] = [];
-      }
-      grouped[monthKey].push(event);
-    });
-    return Object.entries(grouped)
-      .sort(([a], [b]) => b.localeCompare(a));
-  }, [events]);
-
-  const getEventIcon = (event: TimelineEvent) => {
-    switch (event.type) {
-      case "service":
-        return <CheckCircle2 className="w-4 h-4" />;
-      case "appointment":
-        return event.isCompleted 
-          ? <CheckCircle2 className="w-4 h-4" /> 
-          : <Calendar className="w-4 h-4" />;
-      case "photo":
-        return <Camera className="w-4 h-4" />;
-      default:
-        return <Calendar className="w-4 h-4" />;
-    }
-  };
-
-  const getEventColor = (event: TimelineEvent) => {
-    if (event.type === "photo") return "bg-pink-500";
-    switch (event.serviceType) {
-      case "Garden": return "bg-green-500";
-      case "Pool": return "bg-blue-500";
-      case "Jacuzzi": return "bg-muted-foreground";
-      default: return "bg-gray-500";
-    }
-  };
-
-  const getEventBadgeClass = (event: TimelineEvent) => {
-    if (event.type === "photo") return "bg-pink-100 text-pink-700 border-pink-200";
-    switch (event.serviceType) {
-      case "Garden": return "bg-green-100 text-green-700 border-green-200";
-      case "Pool": return "bg-blue-100 text-blue-700 border-blue-200";
-      case "Jacuzzi": return "bg-muted text-muted-foreground border-border";
-      default: return "bg-gray-100 text-gray-700 border-gray-200";
-    }
-  };
-
-  if (events.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-        <p className="text-muted-foreground">Ainda sem histórico para este cliente.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <h3 className="font-bold text-lg">Timeline do Cliente</h3>
-      
-      {eventsByMonth.map(([monthKey, monthEvents]) => {
-        const [year, month] = monthKey.split("-");
-        const monthDate = new Date(parseInt(year), parseInt(month) - 1);
-        const monthLabel = format(monthDate, "MMMM yyyy", { locale: pt });
-
-        return (
-          <div key={monthKey} className="relative">
-            <div className="sticky top-0 z-10 bg-background py-2">
-              <Badge variant="outline" className="text-xs font-semibold capitalize">
-                {monthLabel}
-              </Badge>
-            </div>
-
-            <div className="relative ml-4 border-l-2 border-muted pl-6 space-y-4 pb-4">
-              {monthEvents.map((event, idx) => (
-                <div 
-                  key={event.id} 
-                  className="relative"
-                  data-testid={`timeline-event-${event.id}`}
-                >
-                  <div className={`absolute -left-[31px] w-4 h-4 rounded-full ${getEventColor(event)} flex items-center justify-center text-white`}>
-                    <span className="w-2 h-2 bg-white rounded-full" />
-                  </div>
-
-                  <div className="bg-card border border-border/50 rounded-xl p-3 shadow-sm">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${getEventBadgeClass(event)}`}>
-                          {getEventIcon(event)}
-                        </div>
-                        <span className="font-medium text-sm">{event.title}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                        {format(event.date, "d MMM, HH:mm", { locale: pt })}
-                      </span>
-                    </div>
-
-                    {event.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {event.description}
-                      </p>
-                    )}
-
-                    {event.photos && event.photos.length > 0 && (
-                      <div className="flex gap-1 mt-2 overflow-x-auto">
-                        {event.photos.slice(0, 4).map((photo, photoIdx) => (
-                          <img
-                            key={photoIdx}
-                            src={photo}
-                            alt={`Foto ${photoIdx + 1}`}
-                            className="w-12 h-12 object-cover rounded-lg shrink-0"
-                          />
-                        ))}
-                        {event.photos.length > 4 && (
-                          <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center shrink-0">
-                            <span className="text-xs text-muted-foreground">+{event.photos.length - 4}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {event.type === "appointment" && !event.isCompleted && (
-                      <Badge variant="outline" className="mt-2 text-[10px] bg-muted text-muted-foreground border-border">
-                        Pendente
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
