@@ -32,6 +32,7 @@ export const materialEntryInputSchema = z.object({
 
 // Extended service log input with entries
 export const createServiceLogWithEntriesInput = insertServiceLogSchema.extend({
+  date: z.union([z.date(), z.string().transform((s) => new Date(s))]),
   laborEntries: z.array(laborEntryInputSchema).default([]),
   materialEntries: z.array(materialEntryInputSchema).default([]),
 });
