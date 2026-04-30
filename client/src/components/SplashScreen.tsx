@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useMemo } from "react";
-import logoImage from "@assets/IMG_20191011_125612_639_1767910263605.JPEG";
+import logoImage from "@assets/logo.png";
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -51,11 +51,11 @@ export function SplashScreen({ onFinish, userName }: SplashScreenProps) {
             transition={{ duration: 0.5 }}
             className="flex flex-col items-center gap-4"
           >
-            <div className="w-[185px] h-[185px] rounded-full overflow-hidden bg-white flex items-center justify-center">
-              <img 
-                src={logoImage} 
-                alt="ServNtrak Logo" 
-                className="w-full h-full object-cover"
+            <div className="flex flex-col items-center justify-center">
+              <img
+                src={logoImage}
+                alt="ServNtrak Logo"
+                className="w-64 h-auto object-contain"
               />
             </div>
             <motion.div
@@ -64,7 +64,6 @@ export function SplashScreen({ onFinish, userName }: SplashScreenProps) {
               transition={{ delay: 0.3 }}
               className="text-center"
             >
-              <h1 className="text-2xl font-display font-bold text-primary">ServNtrak</h1>
               <p className="text-sm text-muted-foreground mt-1">Gestão de Serviços e Tarefas</p>
               <motion.p
                 initial={{ opacity: 0 }}
