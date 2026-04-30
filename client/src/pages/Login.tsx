@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import logoImage from "@assets/Logo_ServNtrak_V.png";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Leaf, Waves, ThermometerSun, Eye, EyeOff, Loader2, Mail, Lock, User, ArrowLeft, Fingerprint, Smartphone } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, User, ArrowLeft, Fingerprint, Smartphone } from "lucide-react";
 import { SiGoogle, SiApple, SiFacebook } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { startAuthentication } from "@simplewebauthn/browser";
@@ -264,21 +265,9 @@ export default function Login() {
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-secondary/20 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
 
       <div className="relative z-10 w-full max-w-sm">
-        <div className="flex justify-center gap-2 mb-6">
-          <div className="w-11 h-11 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center text-green-700 dark:text-green-400 shadow-sm rotate-[-6deg]">
-            <Leaf className="w-5 h-5" />
-          </div>
-          <div className="w-11 h-11 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-700 dark:text-blue-400 shadow-sm z-10 -mt-2">
-            <Waves className="w-5 h-5" />
-          </div>
-          <div className="w-11 h-11 bg-primary/10 dark:bg-primary/20 rounded-2xl flex items-center justify-center text-primary shadow-sm rotate-[6deg]">
-            <ThermometerSun className="w-5 h-5" />
-          </div>
+        <div className="flex justify-center mb-4">
+          <img src={logoImage} alt="ServNtrak Logo" className="w-64 h-auto object-contain" />
         </div>
-
-        <h1 className="text-3xl font-display font-bold text-foreground mb-1 text-center" data-testid="text-app-title">
-          ServNtrak
-        </h1>
         <p className="text-muted-foreground mb-6 text-center text-sm">
           Gestão de serviços de manutenção
         </p>
