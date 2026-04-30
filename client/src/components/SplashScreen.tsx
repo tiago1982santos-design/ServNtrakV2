@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useMemo } from "react";
-import logoImage from "@assets/logo.png";
+import logoImage from "@assets/Logo_ServNtrak_V.png";
 
 interface SplashScreenProps {
   onFinish: () => void;
