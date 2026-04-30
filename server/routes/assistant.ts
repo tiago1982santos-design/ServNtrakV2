@@ -329,4 +329,54 @@ Responde APENAS com um JSON válido (sem markdown) neste formato:
       res.status(500).json({ message: "Erro ao guardar agendamento" });
     }
   });
+
+  app.post("/api/ai/extract-client", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+
+      const dbUser = await authStorage.getUser(userId);
+      if (!dbUser?.isEmailVerified) {
+        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
+      }
+
+      const rateCheck = checkAssistantRateLimit(userId);
+      if (!rateCheck.allowed) {
+        res.setHeader("Retry-After", String(rateCheck.retryAfterSeconds));
+        return res.status(429).json({ message: `Limite de mensagens atingido. Tente novamente em ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minuto(s).` });
+      }
+
+      const { text } = req.body;
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ message: "Texto é obrigatório" });
+      }
+
+      const aiResponse = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 256,
+        system: `És um assistente de extração de dados de contacto. Extrai nome, telefone, indicativo de país (DDI) e email de texto ditado por voz.
+Preserva nomes próprios exatamente como foram ditos (não traduzas).
+Responde APENAS com JSON válido (sem markdown):
+{ "name": string, "phone": string | null, "countryCode": string | null, "email": string | null }
+- "countryCode": indicativo internacional (ex: "+351", "+44", "+33"). Se não mencionado, usa null.
+- "phone": apenas o número local sem indicativo (ex: "912345678"). Se não mencionado, null.
+- Se o número for dado completo com indicativo, separa-os. Se não conseguires separar, coloca o número completo em "phone" e null em "countryCode".`,
+        messages: [{ role: "user", content: text }],
+      });
+
+      const raw = aiResponse.content[0].type === "text" ? aiResponse.content[0].text : "{}";
+      let extracted: { name: string; phone: string | null; countryCode: string | null; email: string | null };
+
+      try {
+        extracted = JSON.parse(raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+      } catch {
+        return res.status(422).json({ message: "Não foi possível extrair os dados do cliente" });
+      }
+
+      return res.json(extracted);
+
+    } catch (err: any) {
+      console.error("Extract client error:", err);
+      res.status(500).json({ message: "Erro ao extrair dados do cliente" });
+    }
+  });
 }

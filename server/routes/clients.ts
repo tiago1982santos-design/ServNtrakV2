@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireAuth } from "./middleware";
 import { storage } from "../storage";
 import { api } from "@shared/routes";
+import { db } from "../db";
+import { clients } from "@shared/schema";
 
 export function registerClientsRoutes(app: Express): void {
   app.get(api.clients.list.path, requireAuth, async (req, res) => {
@@ -67,5 +69,29 @@ export function registerClientsRoutes(app: Express): void {
     const userId = req.user!.id;
     const data = await storage.getClientsProfitability(userId);
     res.json(data);
+  });
+
+  app.post("/api/clients/quick-add", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { name, phone, countryCode, email } = req.body;
+
+      if (!name || typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({ message: "O nome é obrigatório" });
+      }
+
+      const [created] = await db.insert(clients).values({
+        userId,
+        name: name.trim(),
+        phone: phone?.trim() || null,
+        countryCode: countryCode?.trim() || "+351",
+        email: email?.trim() || null,
+      }).returning();
+
+      res.status(201).json(created);
+    } catch (err: any) {
+      console.error("Quick-add client error:", err);
+      res.status(500).json({ message: "Erro ao criar cliente" });
+    }
   });
 }

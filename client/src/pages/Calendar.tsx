@@ -27,6 +27,8 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkingHours } from "@/hooks/use-working-hours";
 import { computeWorkingHours } from "@/lib/working-hours";
+import { SmartPicker } from "@/components/SmartPicker";
+import { QuickAddForm } from "@/components/QuickAddForm";
 import type { PendingTaskWithClient, AppointmentPreview } from "@shared/schema";
 
 const appointmentFormSchema = z.object({
@@ -72,6 +74,7 @@ export default function CalendarPage() {
   const [previewYear, setPreviewYear] = useState(new Date().getFullYear());
   const [previewList, setPreviewList] = useState<AppointmentPreview[]>([]);
   const [removedIndexes, setRemovedIndexes] = useState<Set<number>>(new Set());
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const generatePreviewMutation = useMutation({
     mutationFn: async ({ year, month }: { year: number; month: number }) => {
@@ -318,26 +321,17 @@ export default function CalendarPage() {
           return (
             <FormItem>
               <FormLabel>Cliente</FormLabel>
-              <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? field.value.toString() : ""}>
-                <FormControl>
-                  <SelectTrigger className="rounded-xl" data-testid="select-appointment-client">
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {sortedClients.map((client) => {
-                    const hasPendingTasks = allPendingTasks?.some(t => t.clientId === client.id);
-                    return (
-                      <SelectItem key={client.id} value={client.id.toString()}>
-                        <span className="flex items-center gap-2">
-                          {client.name}
-                          {hasPendingTasks && <ClipboardList className="w-3 h-3 text-destructive" />}
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <SmartPicker
+                  options={sortedClients.map(c => ({ label: c.name, value: c.id.toString() }))}
+                  value={field.value ? field.value.toString() : ""}
+                  onChange={(v) => field.onChange(Number(v))}
+                  onAddNew={() => setShowQuickAdd(true)}
+                  placeholder="Selecione um cliente"
+                  searchPlaceholder="Pesquisar cliente..."
+                  emptyText="Nenhum cliente encontrado."
+                />
+              </FormControl>
               {clientPendingTasks && clientPendingTasks.length > 0 && (
                 <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
                   <div className="flex items-start gap-2">
@@ -1005,6 +999,21 @@ export default function CalendarPage() {
               </form>
             </Form>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showQuickAdd} onOpenChange={setShowQuickAdd}>
+        <DialogContent className="rounded-2xl sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+          </DialogHeader>
+          <QuickAddForm
+            onSuccess={(client) => {
+              form.setValue("clientId", client.id);
+              setShowQuickAdd(false);
+            }}
+            onCancel={() => setShowQuickAdd(false)}
+          />
         </DialogContent>
       </Dialog>
 
