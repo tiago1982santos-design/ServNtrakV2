@@ -4,78 +4,76 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-display: 'Inter', system-ui, sans-serif;
-  --font-body: 'Inter', system-ui, sans-serif;
+  :root {                                                                                                                                             --font-display: 'Inter', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;                                                                                                                                                              
+    --background: 210 25% 97%;
+    --foreground: 220 20% 15%;
 
-  --background: 210 25% 97%;
-  --foreground: 220 20% 15%;
-  
-  --primary: 152 55% 28%;
-  --primary-foreground: 0 0% 100%;
-  
-  --secondary: 152 35% 92%;
-  --secondary-foreground: 152 55% 25%;
-  
-  --accent: 200 75% 50%;
-  --accent-foreground: 0 0% 100%;
-  
-  --muted: 220 15% 94%;
-  --muted-foreground: 220 15% 40%;
-  
-  --card: 0 0% 100%;
-  --card-foreground: 220 20% 15%;
-  
-  --popover: 0 0% 100%;
-  --popover-foreground: 220 20% 15%;
-  
-  --border: 220 15% 90%;
-  --input: 220 15% 90%;
-  
-  --destructive: 0 75% 55%;
-  --destructive-foreground: 0 0% 98%;
-  
-  --ring: 152 55% 35%;
-  --radius: 1rem;
+    --primary: 123 43% 49%;
+    --primary-foreground: 0 0% 100%;
 
-  --gradient-primary: linear-gradient(135deg, hsl(152 55% 28%) 0%, hsl(160 50% 22%) 100%);
-  --gradient-accent: linear-gradient(135deg, hsl(200 75% 50%) 0%, hsl(210 80% 45%) 100%);
-  --gradient-warm: linear-gradient(135deg, hsl(35 90% 55%) 0%, hsl(25 85% 50%) 100%);
-  --gradient-success: linear-gradient(135deg, hsl(145 60% 40%) 0%, hsl(155 55% 35%) 100%);
-}
+    --secondary: 174 30% 90%;
+    --secondary-foreground: 174 100% 20%;
+
+    --accent: 174 100% 29%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 220 15% 94%;
+    --muted-foreground: 0 0% 46%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 15%;
+
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+
+    --ring: 123 43% 49%;
+    --radius: 1rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(123 43% 49%) 0%, hsl(123 43% 38%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(174 100% 29%) 0%, hsl(174 100% 22%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(21 100% 45%) 0%, hsl(21 100% 36%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(123 43% 49%) 0%, hsl(174 100% 29%) 100%);
+  }
 
 .dark {
-  --background: 220 25% 8%;
-  --foreground: 210 20% 95%;
-  
-  --primary: 152 50% 45%;
-  --primary-foreground: 0 0% 100%;
-  
-  --secondary: 152 25% 18%;
-  --secondary-foreground: 152 40% 80%;
-  
-  --accent: 200 70% 55%;
-  --accent-foreground: 0 0% 100%;
-  
-  --muted: 220 20% 15%;
-  --muted-foreground: 220 15% 60%;
-  
-  --card: 220 20% 12%;
-  --card-foreground: 210 20% 95%;
-  
-  --popover: 220 20% 12%;
-  --popover-foreground: 210 20% 95%;
-  
-  --border: 220 15% 20%;
-  --input: 220 15% 20%;
-  
-  --destructive: 0 70% 50%;
-  --destructive-foreground: 0 0% 98%;
-  
-  --ring: 152 50% 45%;
+    --background: 220 25% 8%;
+    --foreground: 210 20% 95%;
 
-  --gradient-primary: linear-gradient(135deg, hsl(152 50% 35%) 0%, hsl(160 45% 28%) 100%);
-}
+    --primary: 123 43% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 174 30% 18%;
+    --secondary-foreground: 174 60% 75%;
+
+    --accent: 174 100% 38%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 220 20% 15%;
+    --muted-foreground: 0 0% 60%;
+
+    --card: 220 20% 12%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 220 20% 12%;
+    --popover-foreground: 210 20% 95%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --ring: 123 43% 55%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(123 43% 42%) 0%, hsl(174 100% 25%) 100%);
+  }
 
 @layer base {
   * {
