@@ -1,0 +1,332 @@
+import type { Express } from "express";
+import Anthropic from "@anthropic-ai/sdk";
+import { requireAuth } from "./middleware";
+import { storage } from "../storage";
+import { authStorage } from "../replit_integrations/auth/storage";
+import { checkAssistantRateLimit } from "../aiRateLimiter";
+import { db } from "../db";
+import { shoppingList } from "@shared/schema";
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  baseURL: process.env.ANTHROPIC_BASE_URL,
+});
+
+const CLASSIFY_SYSTEM = `És um assistente de gestão de negócio para a Peralta Gardens (jardinagem e manutenção de piscinas/jacuzzis).
+Recebes texto ditado por voz pelo técnico. Classifica a intenção em exatamente um de:
+- AGENDAMENTO: marcar, reagendar ou cancelar uma visita/serviço
+- COMPRA: comprar, encomendar ou obter um produto/material
+- NOTA: registar trabalho feito, observação, pendência ou qualquer outra nota
+
+Responde APENAS com JSON válido (sem markdown), com este formato:
+{
+  "type": "AGENDAMENTO" | "COMPRA" | "NOTA",
+  "summary": "<resumo limpo do que foi dito, corrigindo erros de reconhecimento de voz>",
+  "data": {
+    // Para AGENDAMENTO:
+    "clientName": "<nome do cliente se mencionado>",
+    "date": "<data: YYYY-MM-DD se absoluta, ou uma das palavras-chave: hoje|amanhã|depois-de-amanhã|segunda|terça|quarta|quinta|sexta|sábado|domingo|semana-que-vem; null se não mencionada>",
+    "time": "<hora em HH:MM se mencionada, null caso contrário>",
+    "tasks": ["<tarefa 1>", "<tarefa 2>"],
+    "serviceType": "<tipo de serviço principal: Jardim | Piscina | Jacuzzi | Geral>",
+    "notes": "<notas adicionais>",
+    // Para COMPRA:
+    "item": "<nome do produto/material>",
+    "quantity": "<quantidade e unidade se mencionadas>",
+    "urgency": "low" | "normal" | "high",
+    "notes": "<notas adicionais>",
+    // Para NOTA:
+    "description": "<descrição completa da nota/trabalho/pendência>",
+    "serviceType": "<tipo de serviço: Jardim | Piscina | Jacuzzi | Geral>",
+    "clientName": "<nome do cliente se mencionado>"
+  }
+}
+
+Regras para AGENDAMENTO:
+- "tasks" deve listar cada tarefa/serviço distinto mencionado (ex: ["Tratar piscina", "Cortar relva"]). Se só uma tarefa, coloca um array com um elemento.
+- Para datas relativas usa as palavras-chave em português indicadas acima (não converta para YYYY-MM-DD).
+- Se o técnico mencionar "dia 5", "dia 12", etc., usa o formato "dia-N" (ex: "dia-5").
+- Se não houver data, usa null.`;
+
+function resolveDate(raw: string | null | undefined, timeStr: string | null | undefined): Date {
+  const now = new Date();
+  const base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  let resolved: Date;
+
+  if (!raw) {
+    resolved = base;
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    resolved = new Date(raw + "T00:00:00");
+  } else if (/^dia-(\d{1,2})$/.test(raw)) {
+    const day = parseInt(raw.replace("dia-", ""), 10);
+    resolved = new Date(base.getFullYear(), base.getMonth(), day);
+    if (resolved <= base) resolved.setMonth(resolved.getMonth() + 1);
+  } else {
+    const keyword = raw.toLowerCase().trim();
+    const dow: Record<string, number> = {
+      "domingo": 0, "segunda": 1, "terça": 2, "quarta": 3,
+      "quinta": 4, "sexta": 5, "sábado": 6,
+    };
+    if (keyword === "hoje") {
+      resolved = base;
+    } else if (keyword === "amanhã") {
+      resolved = new Date(base); resolved.setDate(base.getDate() + 1);
+    } else if (keyword === "depois-de-amanhã") {
+      resolved = new Date(base); resolved.setDate(base.getDate() + 2);
+    } else if (keyword === "semana-que-vem") {
+      resolved = new Date(base);
+      const daysUntilMonday = ((1 - base.getDay() + 7) % 7) || 7;
+      resolved.setDate(base.getDate() + daysUntilMonday);
+    } else if (dow[keyword] !== undefined) {
+      const target = dow[keyword];
+      let diff = target - base.getDay();
+      if (diff <= 0) diff += 7;
+      resolved = new Date(base); resolved.setDate(base.getDate() + diff);
+    } else {
+      resolved = base;
+    }
+  }
+
+  if (timeStr && /^\d{2}:\d{2}$/.test(timeStr)) {
+    const [h, m] = timeStr.split(":").map(Number);
+    resolved.setHours(h, m, 0, 0);
+  }
+
+  return resolved;
+}
+
+export function registerAssistantRoutes(app: Express): void {
+  app.post("/api/assistant/voice", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+
+      const dbUser = await authStorage.getUser(userId);
+      if (!dbUser?.isEmailVerified) {
+        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
+      }
+
+      const rateCheck = checkAssistantRateLimit(userId);
+      if (!rateCheck.allowed) {
+        res.setHeader("Retry-After", String(rateCheck.retryAfterSeconds));
+        return res.status(429).json({ message: `Limite de mensagens atingido. Tente novamente em ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minuto(s).` });
+      }
+
+      const { text } = req.body;
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ message: "Texto é obrigatório" });
+      }
+      if (text.length > 4000) {
+        return res.status(400).json({ message: "O texto não pode exceder 4000 caracteres" });
+      }
+
+      const aiResponse = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 512,
+        system: CLASSIFY_SYSTEM,
+        messages: [{ role: "user", content: text }],
+      });
+
+      const raw = aiResponse.content[0].type === "text" ? aiResponse.content[0].text : "{}";
+      let classified: { type: string; summary: string; data: Record<string, any> };
+
+      try {
+        classified = JSON.parse(raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+      } catch {
+        return res.status(422).json({ message: "Não foi possível classificar o relato" });
+      }
+
+      const { type, summary, data } = classified;
+
+      if (type === "COMPRA") {
+        await db.insert(shoppingList).values({
+          userId,
+          item: data.item || summary,
+          quantity: data.quantity ?? null,
+          urgency: (data.urgency as string) || "normal",
+          status: "pendente",
+          notes: data.notes ?? null,
+          clientId: null,
+        });
+        return res.json({ type, summary, message: "Item adicionado à lista de compras" });
+      }
+
+      if (type === "AGENDAMENTO") {
+        const clients = await storage.getClients(userId);
+        let clientId: number | null = null;
+        let clientName: string | null = null;
+
+        if (data.clientName) {
+          const normalise = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+          const match = clients.find(c => normalise(c.name).includes(normalise(data.clientName)));
+          if (match) { clientId = match.id; clientName = match.name; }
+        }
+
+        const appointmentDate = resolveDate(data.date, data.time);
+        const tasks: string[] = Array.isArray(data.tasks) && data.tasks.length > 0
+          ? data.tasks
+          : [data.notes || summary];
+
+        if (clientId) {
+          const created = await Promise.all(
+            tasks.map((task: string) =>
+              storage.createAppointment({
+                userId,
+                clientId: clientId!,
+                date: appointmentDate,
+                type: data.serviceType || "Geral",
+                serviceType: data.serviceType || null,
+                notes: task,
+                isCompleted: false,
+              })
+            )
+          );
+          return res.json({
+            type,
+            summary,
+            message: `${created.length} agendamento(s) criado(s) para ${clientName}`,
+            appointments: created.map(a => ({
+              id: a.id,
+              date: a.date,
+              type: a.type,
+              notes: a.notes,
+            })),
+          });
+        }
+        return res.json({ type, summary, message: "Agendamento registado como nota (cliente não identificado)", partial: true });
+      }
+
+      if (type === "NOTA") {
+        const clients = await storage.getClients(userId);
+        let clientId: number | null = null;
+
+        if (data.clientName) {
+          const normalise = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+          const match = clients.find(c => normalise(c.name).includes(normalise(data.clientName)));
+          if (match) clientId = match.id;
+        }
+
+        if (clientId) {
+          await storage.createPendingTask({
+            clientId,
+            description: data.description || summary,
+            serviceType: data.serviceType || "Geral",
+            priority: "normal",
+            isCompleted: false,
+            userId,
+          });
+          return res.json({ type, summary, message: "Nota guardada como tarefa pendente" });
+        }
+        return res.json({ type, summary, message: "Nota registada (cliente não identificado)" });
+      }
+
+      return res.json({ type, summary, message: "Relato processado" });
+
+    } catch (err: any) {
+      console.error("Assistant voice error:", err);
+      res.status(500).json({ message: "Erro ao processar relato" });
+    }
+  });
+
+  app.post("/api/ai/process-schedule", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+
+      const dbUser = await authStorage.getUser(userId);
+      if (!dbUser?.isEmailVerified) {
+        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
+      }
+
+      const rateCheck = checkAssistantRateLimit(userId);
+      if (!rateCheck.allowed) {
+        res.setHeader("Retry-After", String(rateCheck.retryAfterSeconds));
+        return res.status(429).json({ message: `Limite de mensagens atingido. Tente novamente em ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minuto(s).` });
+      }
+
+      const { text } = req.body;
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ message: "Texto é obrigatório" });
+      }
+      if (text.length > 4000) {
+        return res.status(400).json({ message: "O texto não pode exceder 4000 caracteres" });
+      }
+
+      const promptAgendamento = `És o assistente da Peralta Gardens. O teu trabalho é extrair dados de agendamento.
+Data atual: ${new Date().toISOString()}
+Extrai:
+1. Cliente (Nome) — preserva o nome próprio exatamente como foi dito, independentemente da língua (inglês, francês, etc.). Não traduzas nem corrijas nomes de pessoas.
+2. Local (Se mencionado)
+3. Data (Formata como YYYY-MM-DD)
+4. Tarefas (Lista separada) — usa sempre Português Europeu para descrever as tarefas de manutenção.
+Responde APENAS com um JSON válido (sem markdown) neste formato:
+{ "cliente": string, "local": string, "data": string, "tarefas": string[] }`;
+
+      const aiResponse = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 512,
+        system: promptAgendamento,
+        messages: [{ role: "user", content: text }],
+      });
+
+      const raw = aiResponse.content[0].type === "text" ? aiResponse.content[0].text : "{}";
+      let draft: { cliente: string; local: string; data: string; tarefas: string[] };
+
+      try {
+        draft = JSON.parse(raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+      } catch {
+        return res.status(422).json({ message: "Não foi possível extrair os dados do agendamento" });
+      }
+
+      return res.json(draft);
+
+    } catch (err: any) {
+      console.error("Process schedule error:", err);
+      res.status(500).json({ message: "Erro ao processar agendamento" });
+    }
+  });
+
+  app.post("/api/ai/confirm-schedule", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+
+      const { cliente, local, data, tarefas, serviceType, time } = req.body;
+
+      if (!cliente || !data || !Array.isArray(tarefas) || tarefas.length === 0) {
+        return res.status(400).json({ message: "Dados incompletos: cliente, data e tarefas são obrigatórios" });
+      }
+
+      const clients = await storage.getClients(userId);
+      const normalise = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+      const match = clients.find(c => normalise(c.name).includes(normalise(cliente)));
+
+      if (!match) {
+        return res.status(404).json({ message: `Cliente "${cliente}" não encontrado` });
+      }
+
+      const appointmentDate = resolveDate(data, time ?? null);
+
+      const created = await Promise.all(
+        tarefas.map((task: string) =>
+          storage.createAppointment({
+            userId,
+            clientId: match.id,
+            date: appointmentDate,
+            type: serviceType || "Geral",
+            serviceType: serviceType || null,
+            notes: task,
+            isCompleted: false,
+          })
+        )
+      );
+
+      return res.json({
+        message: `${created.length} agendamento(s) criado(s) para ${match.name}`,
+        appointments: created.map(a => ({ id: a.id, date: a.date, type: a.type, notes: a.notes })),
+      });
+
+    } catch (err: any) {
+      console.error("Confirm schedule error:", err);
+      res.status(500).json({ message: "Erro ao guardar agendamento" });
+    }
+  });
+}

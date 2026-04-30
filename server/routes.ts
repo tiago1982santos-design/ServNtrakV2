@@ -20,6 +20,7 @@ import { registerPushRoutes } from "./routes/push";
 import { registerExpenseNotesRoutes } from "./routes/expenseNotes";
 import { registerQuotesRoutes } from "./routes/quotes";
 import { registerUserPreferencesRoutes } from "./routes/userPreferences";
+import { registerAssistantRoutes } from "./routes/assistant";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -46,6 +47,7 @@ export async function registerRoutes(
   registerExpenseNotesRoutes(app);
   registerQuotesRoutes(app);
   registerUserPreferencesRoutes(app);
+  registerAssistantRoutes(app);
 
   return httpServer;
 }

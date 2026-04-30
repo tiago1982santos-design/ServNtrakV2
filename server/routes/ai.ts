@@ -8,6 +8,7 @@ import { checkScanDocumentRateLimit, checkAssistantRateLimit } from "../aiRateLi
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
+  baseURL: process.env.ANTHROPIC_BASE_URL,
 });
 
 const extractedPurchaseSchema = z.object({
@@ -196,6 +197,47 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     } catch (err: any) {
       console.error("Assistente Claude error:", err);
       res.status(500).json({ message: "Erro no assistente" });
+    }
+  });
+
+  app.post("/api/ai/process-voice", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+
+      const dbUser = await authStorage.getUser(userId);
+      if (!dbUser?.isEmailVerified) {
+        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
+      }
+
+      const rateCheck = checkAssistantRateLimit(userId);
+      if (!rateCheck.allowed) {
+        res.setHeader("Retry-After", String(rateCheck.retryAfterSeconds));
+        return res.status(429).json({ message: `Limite de mensagens atingido. Tente novamente em ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minuto(s).` });
+      }
+
+      const { text } = req.body;
+
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ message: "Texto é obrigatório" });
+      }
+
+      if (text.length > 4000) {
+        return res.status(400).json({ message: "O texto não pode exceder 4000 caracteres" });
+      }
+
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: "És um assistente especializado em organizar relatórios de manutenção para a Peralta Gardens, uma empresa de jardinagem e manutenção de piscinas e jacuzzis em Lourinhã, Portugal. Recebeste um relato ditado por voz pelo técnico. Organiza o texto num relatório de serviço claro e estruturado, corrigindo erros de reconhecimento de voz e mantendo toda a informação técnica relevante. Responde em português.",
+        messages: [{ role: "user", content: text }],
+      });
+
+      const summary = response.content[0].type === "text" ? response.content[0].text : "";
+      res.json({ summary });
+
+    } catch (err: any) {
+      console.error("Process voice error:", err);
+      res.status(500).json({ message: "Erro ao processar relato de voz" });
     }
   });
 }

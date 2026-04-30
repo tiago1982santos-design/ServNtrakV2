@@ -4,6 +4,7 @@ import { useUnpaidExtraServices } from "@/hooks/use-service-logs";
 import { useDetailedWeather, getWeatherInfo } from "@/hooks/use-weather";
 import { useGeofencing, type VisitaConcluida, type ClienteComLocalizacao } from "@/hooks/useGeofencing";
 import { format, isToday, startOfDay, differenceInMinutes } from "date-fns";
+import { pt } from "date-fns/locale";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import {
@@ -13,15 +14,24 @@ import {
   Droplets, Leaf, CheckCircle2, Camera,
   FileText, BarChart2, Loader2, CalendarClock, ShoppingBag, Users, ClipboardList, Tag,
   Locate, LocateOff, Clock, X, Check, Pencil,
-  Plus, Navigation, AlertCircle, Map, UserPlus, CreditCard, TrendingUp, Download, Bell,
+  Plus, Navigation, AlertCircle, Map, UserPlus, CreditCard, TrendingUp, Download, Bell, Mic,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { DocumentScanDialog } from "@/components/DocumentScanDialog";
+import VoiceToText from "@/components/VoiceToText";
 import { PushHealthBanner } from "@/components/PushHealthBanner";
 import { cn } from "@/lib/utils";
 import type { PurchaseCategory, Store } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const SERVICE_COLORS: Record<string, string> = {
   Garden:  "bg-green-100 text-green-700 border-green-200",
@@ -261,6 +271,12 @@ export default function Home() {
   const [ajustarVisita, setAjustarVisita] = useState<VisitaConcluida | null>(null);
   const [ajustarMinutos, setAjustarMinutos] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
+  const [showVoiceReport, setShowVoiceReport] = useState(false);
+  const [voiceSummary, setVoiceSummary] = useState<string | null>(null);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const [draft, setDraft] = useState<{ cliente: string; local: string; data: string; tarefas: string[] } | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const { data: categories = [] } = useQuery<PurchaseCategory[]>({ queryKey: ['/api/purchase-categories'] });
   const { data: stores = [] } = useQuery<Store[]>({ queryKey: ['/api/stores'] });
 
@@ -363,6 +379,30 @@ export default function Home() {
     }
     geo.confirmarVisita(visita);
   }, [geo]);
+
+  const handleVoiceSubmit = useCallback(async (text: string) => {
+    setVoiceLoading(true);
+    setVoiceSummary(null);
+    try {
+      const res = await fetch("/api/ai/process-schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDraft(data);
+        setShowModal(true);
+      } else {
+        setVoiceSummary(`Erro: ${data.message ?? "Não foi possível processar o agendamento."}`);
+      }
+    } catch {
+      setVoiceSummary("Erro de ligação ao servidor.");
+    } finally {
+      setVoiceLoading(false);
+    }
+  }, []);
 
   const getAptStatus = (apt: typeof todayAppointments[number]) => {
     if (apt.isCompleted) return "completed";
@@ -715,6 +755,7 @@ export default function Home() {
           <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Mais</h3>
           {([
             { onClick: () => setScanOpen(true), Icon: Camera,      label: "Digitalizar Fatura",  desc: "Tirar foto e registar compra automaticamente", iconBg: "bg-rose-100/70 text-rose-700" },
+            { onClick: () => { setShowVoiceReport(v => !v); setVoiceSummary(null); }, Icon: Mic, label: "Relatório de Voz", desc: "Ditar relatório de serviço por voz", iconBg: "bg-green-100/70 text-green-700" },
             { href: "/pending-tasks", Icon: ClipboardList, label: "Tarefas Pendentes",   desc: "Ver todas as tarefas por fazer",               iconBg: "bg-primary/10 text-primary" },
             { href: "/employees",     Icon: Users,         label: "Funcionários",         desc: "Gerir equipa e salários",                      iconBg: "bg-muted text-muted-foreground" },
             { href: "/purchases",     Icon: ShoppingBag,   label: "Compras e Despesas",   desc: "Gerir materiais e gastos",                     iconBg: "bg-green-100/70 text-green-700" },
@@ -784,6 +825,112 @@ export default function Home() {
       </main>
 
       <DocumentScanDialog open={scanOpen} onOpenChange={setScanOpen} categories={categories} stores={stores} />
+
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Confirmar Agendamento?</DialogTitle>
+          </DialogHeader>
+          {draft && (
+            <div className="space-y-3 py-2 text-sm">
+              <div className="flex gap-2 items-center">
+                <span className="font-bold text-muted-foreground w-20 shrink-0">Cliente:</span>
+                <input
+                  className="flex-1 border border-slate-200 rounded-lg px-2 py-1 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  value={draft.cliente}
+                  onChange={e => setDraft(prev => prev ? { ...prev, cliente: e.target.value } : prev)}
+                />
+              </div>
+              {draft.local && (
+                <div className="flex gap-2">
+                  <span className="font-bold text-muted-foreground w-20 shrink-0">Local:</span>
+                  <span className="text-slate-900">{draft.local}</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <span className="font-bold text-muted-foreground w-20 shrink-0">Data:</span>
+                <span className="text-slate-900">
+                  {draft.data ? (() => {
+                    try { return format(new Date(draft.data + "T00:00:00"), "d 'de' MMMM", { locale: pt }); }
+                    catch { return draft.data; }
+                  })() : "—"}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <span className="font-bold text-muted-foreground w-20 shrink-0">Tarefas:</span>
+                <ul className="list-disc list-inside space-y-0.5 text-slate-900">
+                  {draft.tarefas.map((t: string, i: number) => <li key={i}>{t}</li>)}
+                </ul>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setShowModal(false)} disabled={confirmLoading}>
+              Corrigir
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={confirmLoading}
+              onClick={async () => {
+                if (!draft) return;
+                setConfirmLoading(true);
+                try {
+                  const res = await fetch("/api/ai/confirm-schedule", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify(draft),
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
+                    setShowModal(false);
+                    setShowVoiceReport(false);
+                    setDraft(null);
+                    setVoiceSummary(data.message ?? "Agendamento guardado.");
+                  } else {
+                    setShowModal(false);
+                    setVoiceSummary(`Erro: ${data.message ?? "Não foi possível guardar."}`);
+                  }
+                } catch {
+                  setShowModal(false);
+                  setVoiceSummary("Erro de ligação ao servidor.");
+                } finally {
+                  setConfirmLoading(false);
+                }
+              }}
+            >
+              {confirmLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar e Gravar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {showVoiceReport && (
+        <div className="fixed inset-0 z-40 bg-black/40 flex items-end" onClick={() => setShowVoiceReport(false)}>
+          <div className="w-full bg-background rounded-t-3xl p-5 space-y-4 shadow-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-bold text-slate-900">Relatório de Voz</h2>
+              <button onClick={() => setShowVoiceReport(false)} className="p-1 text-slate-400 hover:text-slate-600" data-testid="button-close-voice-report">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <VoiceToText onFinalText={handleVoiceSubmit} />
+            {voiceLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                A processar relato…
+              </div>
+            )}
+            {voiceSummary && !voiceLoading && (
+              <div className="bg-muted rounded-2xl p-4 space-y-1">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Relatório organizado</p>
+                <p className="text-sm text-slate-800 whitespace-pre-wrap">{voiceSummary}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <BottomNav />
 
       <style dangerouslySetInnerHTML={{__html: `

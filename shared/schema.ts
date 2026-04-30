@@ -334,6 +334,23 @@ export const expenseNoteEdits = pgTable("expense_note_edits", {
   reason: text("reason").notNull(),
 });
 
+// Shopping list items - created via voice assistant COMPRA intent
+export const shoppingList = pgTable("shopping_list", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  clientId: integer("client_id"),
+  item: text("item").notNull(),
+  quantity: text("quantity"),
+  urgency: text("urgency").default("normal"), // 'low', 'normal', 'high'
+  status: text("status").notNull().default("pendente"), // 'pendente', 'comprado'
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertShoppingListSchema = createInsertSchema(shoppingList).omit({ id: true, userId: true, createdAt: true });
+export type ShoppingListItem = typeof shoppingList.$inferSelect;
+export type InsertShoppingListItem = z.infer<typeof insertShoppingListSchema>;
+
 // Quotes (Orçamentos)
 export const quotes = pgTable("quotes", {
   id: serial("id").primaryKey(),
