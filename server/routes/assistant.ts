@@ -16,10 +16,11 @@ Recebes texto ditado por voz pelo técnico. Classifica a intenção em exatament
 - AGENDAMENTO: marcar, reagendar ou cancelar uma visita/serviço
 - COMPRA: comprar, encomendar ou obter um produto/material
 - NOTA: registar trabalho feito, observação, pendência ou qualquer outra nota
+- LEMBRETE: criar um lembrete recorrente para um cliente (ex: "lembrar de tratar a piscina do João todos os meses")
 
 Responde APENAS com JSON válido (sem markdown), com este formato:
 {
-  "type": "AGENDAMENTO" | "COMPRA" | "NOTA",
+  "type": "AGENDAMENTO" | "COMPRA" | "NOTA" | "LEMBRETE",
   "summary": "<resumo limpo do que foi dito, corrigindo erros de reconhecimento de voz>",
   "data": {
     // Para AGENDAMENTO:
@@ -37,7 +38,13 @@ Responde APENAS com JSON válido (sem markdown), com este formato:
     // Para NOTA:
     "description": "<descrição completa da nota/trabalho/pendência>",
     "serviceType": "<tipo de serviço: Jardim | Piscina | Jacuzzi | Geral>",
-    "clientName": "<nome do cliente se mencionado>"
+    "clientName": "<nome do cliente se mencionado>",
+    // Para LEMBRETE:
+    "clientName": "<nome do cliente>",
+    "title": "<título/descrição do lembrete>",
+    "serviceType": "<tipo de serviço: Jardim | Piscina | Jacuzzi | Geral>",
+    "frequency": "<frequência: weekly | biweekly | monthly | quarterly | yearly>",
+    "nextDue": "<data da próxima ocorrência: YYYY-MM-DD, ou palavra-chave: hoje|amanhã|depois-de-amanhã|segunda|terça|quarta|quinta|sexta|sábado|domingo; null se não mencionada>"
   }
 }
 
@@ -45,7 +52,11 @@ Regras para AGENDAMENTO:
 - "tasks" deve listar cada tarefa/serviço distinto mencionado (ex: ["Tratar piscina", "Cortar relva"]). Se só uma tarefa, coloca um array com um elemento.
 - Para datas relativas usa as palavras-chave em português indicadas acima (não converta para YYYY-MM-DD).
 - Se o técnico mencionar "dia 5", "dia 12", etc., usa o formato "dia-N" (ex: "dia-5").
-- Se não houver data, usa null.`;
+- Se não houver data, usa null.
+
+Regras para LEMBRETE:
+- "frequency": interpreta palavras como "semanal"→weekly, "quinzenal"→biweekly, "mensal"→monthly, "trimestral"→quarterly, "anual"→yearly. Se não mencionada, usa "monthly".
+- "nextDue": se não mencionada, usa null (será assumido hoje no servidor).`;
 
 function resolveDate(raw: string | null | undefined, timeStr: string | null | undefined): Date {
   const now = new Date();
@@ -212,6 +223,48 @@ export function registerAssistantRoutes(app: Express): void {
           return res.json({ type, summary, message: "Nota guardada como tarefa pendente" });
         }
         return res.json({ type, summary, message: "Nota registada (cliente não identificado)" });
+      }
+
+      if (type === "LEMBRETE") {
+        const clients = await storage.getClients(userId);
+        let clientId: number | null = null;
+        let clientName: string | null = null;
+
+        if (data.clientName) {
+          const normalise = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+          const match = clients.find(c => normalise(c.name).includes(normalise(data.clientName)));
+          if (match) { clientId = match.id; clientName = match.name; }
+        }
+
+        if (!clientId) {
+          return res.json({ type, summary, message: "Lembrete registado como nota (cliente não identificado)", partial: true });
+        }
+
+        const frequencyMap: Record<string, string> = {
+          weekly: "weekly", biweekly: "biweekly", monthly: "monthly",
+          quarterly: "quarterly", yearly: "yearly",
+        };
+        const frequency = frequencyMap[data.frequency] ?? "monthly";
+
+        const serviceTypeMap: Record<string, string> = {
+          "Jardim": "Garden", "Piscina": "Pool", "Jacuzzi": "Jacuzzi", "Geral": "General",
+          "Garden": "Garden", "Pool": "Pool", "General": "General",
+        };
+        const reminderType = serviceTypeMap[data.serviceType] ?? "General";
+
+        const nextDue = resolveDate(data.nextDue ?? null, null);
+
+        await storage.createReminder({
+          userId,
+          clientId,
+          title: data.title || summary,
+          type: reminderType,
+          frequency,
+          nextDue,
+          isActive: true,
+        });
+
+        return res.json({ type, summary, message: `Lembrete criado para ${clientName}` });
       }
 
       return res.json({ type, summary, message: "Relato processado" });
