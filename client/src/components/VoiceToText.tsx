@@ -1,24 +1,75 @@
-import React from 'react';
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Mic, MicOff, Send } from "lucide-react";
+import { useState, useRef } from "react"
+import { Mic, MicOff, Send, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 
 interface VoiceToTextProps {
-  onFinalText: (text: string) => void;
+  onFinalText: (text: string) => void
+}
+
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SpeechRecognition: any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    webkitSpeechRecognition: any
+  }
 }
 
 export default function VoiceToText({ onFinalText }: VoiceToTextProps) {
-  const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
+  const [transcript, setTranscript] = useState("")
+  const [listening, setListening] = useState(false)
+  const [sending, setSending] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
 
-  if (!browserSupportsSpeechRecognition) {
-    return <p className="text-destructive">O seu browser não suporta comandos de voz.</p>;
+  const SR = typeof window !== "undefined"
+    ? (window.SpeechRecognition || window.webkitSpeechRecognition)
+    : null
+
+  if (!SR) {
+    return <p className="text-destructive text-sm">O seu browser não suporta reconhecimento de voz.</p>
   }
 
-  const handleSendToAI = () => {
-    onFinalText(transcript);
-    resetTranscript();
-  };
+  const toggleListening = () => {
+    if (listening) {
+      recognitionRef.current?.stop()
+      return
+    }
+
+    const recognition = new SR()
+    recognitionRef.current = recognition
+    recognition.lang = "pt-PT"
+    recognition.continuous = true
+    recognition.interimResults = false
+
+    recognition.onstart = () => setListening(true)
+    recognition.onend = () => setListening(false)
+    recognition.onerror = () => setListening(false)
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let result = ""
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          result += event.results[i][0].transcript + " "
+        }
+      }
+      if (result) setTranscript(prev => (prev + result).trim())
+    }
+
+    recognition.start()
+  }
+
+  const handleSend = async () => {
+    if (!transcript.trim()) return
+    setSending(true)
+    try {
+      await onFinalText(transcript.trim())
+      setTranscript("")
+    } finally {
+      setSending(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-3 p-4 border rounded-lg bg-background shadow-sm">
@@ -27,31 +78,32 @@ export default function VoiceToText({ onFinalText }: VoiceToTextProps) {
         <Button
           type="button"
           variant={listening ? "destructive" : "default"}
-          onClick={() => {
-            if (listening) SpeechRecognition.stopListening();
-            else SpeechRecognition.startListening({ language: 'pt-PT', continuous: true });
-          }}
+          onClick={toggleListening}
+          className="gap-1.5"
         >
-          {listening ? <MicOff className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
-          {listening ? "Parar" : "Ouvir"}
+          {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          {listening ? "Parar" : "Falar"}
         </Button>
       </div>
 
       <Textarea
         value={transcript}
-        readOnly
+        onChange={e => setTranscript(e.target.value)}
         placeholder="O que ditar aparecerá aqui..."
         className="bg-muted min-h-[100px]"
       />
 
       <Button
         type="button"
-        disabled={!transcript || listening}
-        onClick={handleSendToAI}
+        disabled={!transcript.trim() || listening || sending}
+        onClick={handleSend}
         className="w-full"
       >
-        <Send className="mr-2 h-4 w-4" /> Enviar para Assistente IA
+        {sending
+          ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          : <Send className="mr-2 h-4 w-4" />}
+        Enviar para Assistente IA
       </Button>
     </div>
-  );
+  )
 }
