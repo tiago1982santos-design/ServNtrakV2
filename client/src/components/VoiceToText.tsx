@@ -1,5 +1,5 @@
 import { useState, useRef } from "react"
-import { Mic, MicOff, Send, Loader2 } from "lucide-react"
+import { Mic, MicOff, Send, Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -93,17 +93,30 @@ export default function VoiceToText({ onFinalText }: VoiceToTextProps) {
         className="bg-muted min-h-[100px]"
       />
 
-      <Button
-        type="button"
-        disabled={!transcript.trim() || listening || sending}
-        onClick={handleSend}
-        className="w-full"
-      >
-        {sending
-          ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          : <Send className="mr-2 h-4 w-4" />}
-        Enviar para Assistente IA
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!transcript.trim() || sending}
+          onClick={() => setTranscript("")}
+          className="gap-1.5"
+        >
+          <Trash2 className="h-4 w-4" />
+          Limpar
+        </Button>
+
+        <Button
+          type="button"
+          disabled={!transcript.trim() || listening || sending}
+          onClick={handleSend}
+          className="flex-1"
+        >
+          {sending
+            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            : <Send className="mr-2 h-4 w-4" />}
+          Enviar para Assistente IA
+        </Button>
+      </div>
     </div>
   )
 }

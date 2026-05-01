@@ -2,7 +2,6 @@ import type { Express } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import { requireAuth } from "./middleware";
 import { storage } from "../storage";
-import { authStorage } from "../replit_integrations/auth/storage";
 import { checkAssistantRateLimit } from "../aiRateLimiter";
 import { db } from "../db";
 import { shoppingList } from "@shared/schema";
@@ -100,11 +99,6 @@ export function registerAssistantRoutes(app: Express): void {
   app.post("/api/assistant/voice", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-
-      const dbUser = await authStorage.getUser(userId);
-      if (!dbUser?.isEmailVerified) {
-        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
-      }
 
       const rateCheck = checkAssistantRateLimit(userId);
       if (!rateCheck.allowed) {
@@ -232,11 +226,6 @@ export function registerAssistantRoutes(app: Express): void {
     try {
       const userId = req.user!.id;
 
-      const dbUser = await authStorage.getUser(userId);
-      if (!dbUser?.isEmailVerified) {
-        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
-      }
-
       const rateCheck = checkAssistantRateLimit(userId);
       if (!rateCheck.allowed) {
         res.setHeader("Retry-After", String(rateCheck.retryAfterSeconds));
@@ -333,11 +322,6 @@ Responde APENAS com um JSON válido (sem markdown) neste formato:
   app.post("/api/ai/extract-client", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-
-      const dbUser = await authStorage.getUser(userId);
-      if (!dbUser?.isEmailVerified) {
-        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
-      }
 
       const rateCheck = checkAssistantRateLimit(userId);
       if (!rateCheck.allowed) {

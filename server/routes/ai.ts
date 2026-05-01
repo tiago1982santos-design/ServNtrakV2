@@ -3,7 +3,6 @@ import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { requireAuth } from "./middleware";
 import { storage } from "../storage";
-import { authStorage } from "../replit_integrations/auth/storage";
 import { checkScanDocumentRateLimit, checkAssistantRateLimit } from "../aiRateLimiter";
 
 const anthropic = new Anthropic({
@@ -34,11 +33,6 @@ export function registerAiRoutes(app: Express): void {
   app.post("/api/scan-document", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-
-      const dbUser = await authStorage.getUser(userId);
-      if (!dbUser?.isEmailVerified) {
-        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
-      }
 
       const rateCheck = checkScanDocumentRateLimit(userId);
       if (!rateCheck.allowed) {
@@ -142,11 +136,6 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
     try {
       const userId = req.user!.id;
 
-      const dbUser = await authStorage.getUser(userId);
-      if (!dbUser?.isEmailVerified) {
-        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
-      }
-
       const rateCheck = checkAssistantRateLimit(userId);
       if (!rateCheck.allowed) {
         res.setHeader("Retry-After", String(rateCheck.retryAfterSeconds));
@@ -203,11 +192,6 @@ Valores monetários devem ser números (ex: 12.50, não "12,50€").`,
   app.post("/api/ai/process-voice", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-
-      const dbUser = await authStorage.getUser(userId);
-      if (!dbUser?.isEmailVerified) {
-        return res.status(403).json({ message: "É necessário verificar o seu email antes de utilizar esta funcionalidade" });
-      }
 
       const rateCheck = checkAssistantRateLimit(userId);
       if (!rateCheck.allowed) {
