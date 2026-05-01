@@ -90,3 +90,12 @@ The project uses **TypeScript 6.x** with `"ignoreDeprecations": "6.0"` to keep `
 ## Database Migrations
 
 Schema lives in `shared/schema.ts`. Use `npm run db:push` for development. Some ad-hoc columns are also added via raw `pool.query` calls in `server/index.ts` on startup.
+
+## Code Review Focus (Priority)
+
+Sempre que analisares o código, dá prioridade a estes pontos:
+1. **Segurança:** Validar se rotas em `server/routes/` usam `ensureAuthenticated` e se os dados do utilizador são filtrados por `req.user.id`.
+2. **Arquitetura de Dados:** Garantir que queries SQL complexas estão no `server/storage.ts` e não espalhadas pelas rotas.
+3. **Consistência Visual:** Verificar se cores hardcoded foram usadas (deve-se usar variáveis CSS para suportar os temas Verde/Azul/Laranja).
+4. **Língua:** Garantir que todas as mensagens de erro, labels e toasts estão em **PT-PT**.
+5. **Dual SDK Cleanup:** Identificar se o SDK da OpenAI ainda está a ser importado e sugerir a migração total para Anthropic.
