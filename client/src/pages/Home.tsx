@@ -908,7 +908,7 @@ export default function Home() {
 
       {showVoiceReport && (
         <div className="fixed inset-0 z-40 bg-black/40 flex items-end" onClick={() => setShowVoiceReport(false)}>
-          <div className="w-full bg-background rounded-t-3xl p-5 space-y-4 shadow-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="w-full bg-background rounded-t-3xl p-5 pb-24 space-y-4 shadow-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-base font-bold text-slate-900">Relatório de Voz</h2>
               <button onClick={() => setShowVoiceReport(false)} className="p-1 text-slate-400 hover:text-slate-600" data-testid="button-close-voice-report">
