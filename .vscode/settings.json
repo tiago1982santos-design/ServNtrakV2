@@ -1,4 +1,6 @@
 {
+    "css.validate": false,
+    "css.lint.unknownAtRules": "ignore",
     "files.exclude": {
         "**/.local": true,
         "**/.agents": true,

@@ -1,12 +1,9 @@
 import type { Express } from "express";
-import { eq, and } from "drizzle-orm";
+import { requireAuth } from "./middleware";
 import { storage } from "../storage";
-import { db } from "../db";
-import { serviceLogs } from "@shared/schema";
 
 export function registerExpenseNotesRoutes(app: Express): void {
-  app.get("/api/expense-notes", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.get("/api/expense-notes", requireAuth, async (req, res) => {
     try {
       const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
       const notes = await storage.getExpenseNotes(req.user!.id, clientId);
@@ -17,8 +14,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/expense-notes/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.get("/api/expense-notes/:id", requireAuth, async (req, res) => {
     try {
       const note = await storage.getExpenseNote(parseInt(req.params.id), req.user!.id);
       if (!note) return res.status(404).json({ error: "Nota não encontrada" });
@@ -29,8 +25,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/expense-notes", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.post("/api/expense-notes", requireAuth, async (req, res) => {
     try {
       const { items = [], ...noteData } = req.body;
       const userId = req.user!.id;
@@ -53,9 +48,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
       }
 
       if (noteData.serviceLogId) {
-        const [serviceLog] = await db.select().from(serviceLogs).where(
-          and(eq(serviceLogs.id, noteData.serviceLogId), eq(serviceLogs.userId, userId))
-        );
+        const serviceLog = await storage.getServiceLogWithEntries(noteData.serviceLogId, userId);
         if (!serviceLog) {
           return res.status(400).json({ error: "Registo de serviço inválido" });
         }
@@ -72,8 +65,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
     }
   });
 
-  app.patch("/api/expense-notes/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.patch("/api/expense-notes/:id", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
 
@@ -85,9 +77,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
       }
 
       if (req.body.serviceLogId) {
-        const [serviceLog] = await db.select().from(serviceLogs).where(
-          and(eq(serviceLogs.id, req.body.serviceLogId), eq(serviceLogs.userId, userId))
-        );
+        const serviceLog = await storage.getServiceLogWithEntries(req.body.serviceLogId, userId);
         if (!serviceLog) {
           return res.status(400).json({ error: "Registo de serviço inválido" });
         }
@@ -116,8 +106,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/expense-notes/:id/items", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.put("/api/expense-notes/:id/items", requireAuth, async (req, res) => {
     try {
       const { items = [] } = req.body;
 
@@ -146,9 +135,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/expense-notes/:id/edits", async (req, res) => {
-    if (!req.isAuthenticated())
-      return res.status(401).json({ error: "Não autenticado" });
+  app.post("/api/expense-notes/:id/edits", requireAuth, async (req, res) => {
     try {
       const { fieldChanged, reason } = req.body;
       if (!fieldChanged || !reason?.trim()) {
@@ -177,8 +164,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
     }
   });
 
-  app.delete("/api/expense-notes/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.delete("/api/expense-notes/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteExpenseNote(parseInt(req.params.id), req.user!.id);
       res.status(204).send();
@@ -188,8 +174,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/expense-notes/:id/pdf", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.get("/api/expense-notes/:id/pdf", requireAuth, async (req, res) => {
     try {
       const note = await storage.getExpenseNote(parseInt(req.params.id), req.user!.id);
       if (!note) return res.status(404).json({ error: "Nota não encontrada" });
@@ -200,8 +185,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/expense-notes/from-service-log/:logId", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.post("/api/expense-notes/from-service-log/:logId", requireAuth, async (req, res) => {
     try {
       const logId = parseInt(req.params.logId);
       const log = await storage.getServiceLogWithEntries(logId, req.user!.id);
