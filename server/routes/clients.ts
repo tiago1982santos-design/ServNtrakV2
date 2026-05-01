@@ -3,8 +3,6 @@ import { z } from "zod";
 import { requireAuth } from "./middleware";
 import { storage } from "../storage";
 import { api } from "@shared/routes";
-import { db } from "../db";
-import { clients } from "@shared/schema";
 
 export function registerClientsRoutes(app: Express): void {
   app.get(api.clients.list.path, requireAuth, async (req, res) => {
@@ -80,13 +78,13 @@ export function registerClientsRoutes(app: Express): void {
         return res.status(400).json({ message: "O nome é obrigatório" });
       }
 
-      const [created] = await db.insert(clients).values({
+      const created = await storage.createClient({
         userId,
         name: name.trim(),
         phone: phone?.trim() || null,
         countryCode: countryCode?.trim() || "+351",
         email: email?.trim() || null,
-      }).returning();
+      });
 
       res.status(201).json(created);
     } catch (err: any) {

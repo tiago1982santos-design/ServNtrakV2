@@ -1,11 +1,8 @@
 import type { Express } from "express";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
 import { requireAuth } from "./middleware";
 import { storage } from "../storage";
-import { db } from "../db";
 import { api } from "@shared/routes";
-import { appointments } from "@shared/schema";
 
 export function registerAppointmentsRoutes(app: Express): void {
   app.get(api.appointments.list.path, requireAuth, async (req, res) => {
@@ -84,10 +81,7 @@ export function registerAppointmentsRoutes(app: Express): void {
       const userId = req.user!.id;
 
       if (confirmed) {
-        await db
-          .update(appointments)
-          .set({ isCompleted: true })
-          .where(and(eq(appointments.id, id), eq(appointments.userId, userId)));
+        await storage.updateAppointment(id, userId, { isCompleted: true });
       }
 
       res.json({ ok: true });

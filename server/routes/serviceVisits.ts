@@ -1,11 +1,8 @@
 import type { Express } from "express";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
 import { requireAuth } from "./middleware";
 import { storage } from "../storage";
-import { db } from "../db";
 import { api } from "@shared/routes";
-import { serviceVisits, appointments } from "@shared/schema";
 
 export function registerServiceVisitsRoutes(app: Express): void {
   // --- Service Visits ---
@@ -115,23 +112,14 @@ export function registerServiceVisitsRoutes(app: Express): void {
 
       let visit;
       if (emCurso) {
-        const [updated] = await db.update(serviceVisits)
-          .set({
-            endTime: new Date(parsed.fim),
-            actualDurationMinutes: parsed.duracaoMinutos,
-            status: "concluida" as const,
-            ...(parsed.appointmentId ? { appointmentId: parsed.appointmentId } : {}),
-          })
-          .where(eq(serviceVisits.id, emCurso.id))
-          .returning();
+        const updated = await storage.completeServiceVisit(emCurso.id, {
+          endTime: new Date(parsed.fim),
+          actualDurationMinutes: parsed.duracaoMinutos,
+          ...(parsed.appointmentId ? { appointmentId: parsed.appointmentId } : {}),
+        });
 
         if (parsed.appointmentId) {
-          await db.update(appointments)
-            .set({ isCompleted: true })
-            .where(and(
-              eq(appointments.id, parsed.appointmentId),
-              eq(appointments.userId, userId)
-            ));
+          await storage.updateAppointment(parsed.appointmentId, userId, { isCompleted: true });
         }
 
         visit = { ...updated, services: emCurso.services ?? [] };
@@ -178,7 +166,7 @@ export function registerServiceVisitsRoutes(app: Express): void {
       );
 
       if (emCurso) {
-        await db.delete(serviceVisits).where(eq(serviceVisits.id, emCurso.id));
+        await storage.deleteServiceVisit(emCurso.id);
       }
 
       res.status(204).end();

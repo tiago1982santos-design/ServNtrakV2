@@ -119,6 +119,8 @@ export interface IStorage {
     services: Omit<InsertServiceVisitService, 'visitId'>[]
   ): Promise<ServiceVisitWithServices>;
   getClientServiceStats(userId: string, clientId: number): Promise<ClientServiceStats | undefined>;
+  completeServiceVisit(id: number, data: { endTime: Date; actualDurationMinutes: number; appointmentId?: number }): Promise<ServiceVisit>;
+  deleteServiceVisit(id: number): Promise<void>;
 
   // Financial Config
   getFinancialConfig(userId: string): Promise<FinancialConfig | undefined>;
@@ -1044,6 +1046,24 @@ export class DatabaseStorage implements IStorage {
       totalWorkerHours: Math.round(totalWorkerHours * 10) / 10,
       serviceBreakdown,
     };
+  }
+
+  async completeServiceVisit(id: number, data: { endTime: Date; actualDurationMinutes: number; appointmentId?: number }): Promise<ServiceVisit> {
+    const [updated] = await db
+      .update(serviceVisits)
+      .set({
+        endTime: data.endTime,
+        actualDurationMinutes: data.actualDurationMinutes,
+        status: "concluida" as const,
+        ...(data.appointmentId ? { appointmentId: data.appointmentId } : {}),
+      })
+      .where(eq(serviceVisits.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteServiceVisit(id: number): Promise<void> {
+    await db.delete(serviceVisits).where(eq(serviceVisits.id, id));
   }
 
   // Financial Config
