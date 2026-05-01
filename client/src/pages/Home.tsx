@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useAppointments } from "@/hooks/use-appointments";
+import { useClients } from "@/hooks/use-clients";
 import { useUnpaidExtraServices } from "@/hooks/use-service-logs";
 import { useDetailedWeather, getWeatherInfo } from "@/hooks/use-weather";
 import { useGeofencing, type VisitaConcluida, type ClienteComLocalizacao } from "@/hooks/useGeofencing";
@@ -279,6 +280,7 @@ export default function Home() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const { data: categories = [] } = useQuery<PurchaseCategory[]>({ queryKey: ['/api/purchase-categories'] });
   const { data: stores = [] } = useQuery<Store[]>({ queryKey: ['/api/stores'] });
+  const { data: allClients = [] } = useClients();
 
   const todayStart = useMemo(() => startOfDay(new Date()).toISOString(), []);
 
@@ -838,8 +840,18 @@ export default function Home() {
                 <input
                   className="flex-1 border border-slate-200 rounded-lg px-2 py-1 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                   value={draft.cliente}
+                  list="client-suggestions"
                   onChange={e => setDraft(prev => prev ? { ...prev, cliente: e.target.value } : prev)}
                 />
+                <datalist id="client-suggestions">
+                  {(() => {
+                    const normalise = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+                    const q = normalise(draft.cliente);
+                    return allClients
+                      .filter(c => normalise(c.name).includes(q) || (q.length >= 3 && normalise(c.address ?? "").includes(q)))
+                      .map(c => <option key={c.id} value={c.name} />);
+                  })()}
+                </datalist>
               </div>
               {draft.local && (
                 <div className="flex gap-2">

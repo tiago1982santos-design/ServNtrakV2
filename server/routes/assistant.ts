@@ -293,11 +293,18 @@ export function registerAssistantRoutes(app: Express): void {
         return res.status(400).json({ message: "O texto não pode exceder 4000 caracteres" });
       }
 
+      const clients = await storage.getClients(userId);
+      const clientsContext = clients.map(c => `- Nome: ${c.name}${c.address ? `, Local: ${c.address}` : ""}`).join("\n");
+
       const promptAgendamento = `És o assistente da Peralta Gardens. O teu trabalho é extrair dados de agendamento.
 Data atual: ${new Date().toISOString()}
+
+Lista de clientes existentes na base de dados (nome + local de residência/obra):
+${clientsContext || "(sem clientes registados)"}
+
 Extrai:
-1. Cliente (Nome) — preserva o nome próprio exatamente como foi dito, independentemente da língua (inglês, francês, etc.). Não traduzas nem corrijas nomes de pessoas.
-2. Local (Se mencionado)
+1. Cliente (Nome) — compara o nome ouvido com a lista de clientes acima. Se o nome ouvido incluir uma localidade/morada que coincide com o "Local" de um cliente da lista, usa apenas o primeiro nome/apelido desse cliente como "cliente" e a localidade como "local". Preserva o nome próprio exatamente como aparece na lista. Não traduzas nem corrijas nomes de pessoas.
+2. Local (Se mencionado, ou inferido da lista de clientes)
 3. Data (Formata como YYYY-MM-DD)
 4. Tarefas (Lista separada) — usa sempre Português Europeu para descrever as tarefas de manutenção.
 Responde APENAS com um JSON válido (sem markdown) neste formato:
