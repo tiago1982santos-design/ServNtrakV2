@@ -35,9 +35,9 @@ import {
 import { Button } from "@/components/ui/button";
 
 const SERVICE_COLORS: Record<string, string> = {
-  Garden:  "bg-green-100 text-green-700 border-green-200",
-  Pool:    "bg-blue-100 text-blue-700 border-blue-200",
-  Jacuzzi: "bg-cyan-100 text-cyan-700 border-cyan-200",
+  Garden:  "bg-primary/10 text-primary border-primary/20",
+  Pool:    "bg-primary/10 text-primary border-primary/20",
+  Jacuzzi: "bg-secondary/50 text-secondary-foreground border-border",
   General: "bg-muted text-muted-foreground border-border",
 };
 

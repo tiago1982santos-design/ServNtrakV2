@@ -1,23 +1,25 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { 
-  ClipboardList, Plus, Leaf, Waves, ThermometerSun, Wrench, 
-  AlertTriangle, ChevronUp, Trash2, Check, Lightbulb, Euro, 
-  Clock, ThumbsDown, ThumbsUp 
+import {
+  ClipboardList, Plus, Leaf, Waves, ThermometerSun, Wrench,
+  AlertTriangle, ChevronUp, Trash2, Check, Lightbulb, Euro,
+  Clock, ThumbsDown, ThumbsUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, 
-  AlertDialogTitle, AlertDialogTrigger 
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { CreatePendingTaskDialog } from "@/components/CreatePendingTaskDialog";
 import { CreateSuggestedWorkDialog } from "@/components/CreateSuggestedWorkDialog";
 import { formatDuration } from "@/lib/utils";
-import type { PendingTaskWithClient, SuggestedWorkWithClient } from "@shared/schema";
+import {
+  useClientPendingTasks, useCompleteClientPendingTask, useDeleteClientPendingTask,
+  useClientSuggestedWorks, useUpdateSuggestedWork, useDeleteSuggestedWork,
+} from "@/hooks/use-client-tasks";
 
 interface ClientTasksTabProps {
   clientId: number;
@@ -25,99 +27,16 @@ interface ClientTasksTabProps {
 }
 
 export function ClientTasksTab({ clientId, clientName }: ClientTasksTabProps) {
-  const queryClient = useQueryClient();
   const [showPendingTaskDialog, setShowPendingTaskDialog] = useState(false);
   const [showSuggestedWorkDialog, setShowSuggestedWorkDialog] = useState(false);
 
-  const { data: pendingTasks } = useQuery<PendingTaskWithClient[]>({
-    queryKey: ["/api/pending-tasks", { clientId: clientId.toString() }],
-    queryFn: async () => {
-      const response = await fetch(`/api/pending-tasks?clientId=${clientId}`, { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch pending tasks");
-      return response.json();
-    },
-  });
+  const { data: pendingTasks } = useClientPendingTasks(clientId);
+  const completePendingTask = useCompleteClientPendingTask();
+  const deletePendingTask = useDeleteClientPendingTask();
 
-  const deletePendingTask = useMutation({
-    mutationFn: async (taskId: number) => {
-      const response = await fetch(`/api/pending-tasks/${taskId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to delete task");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks/count"] });
-    },
-  });
-
-  const completePendingTask = useMutation({
-    mutationFn: async (taskId: number) => {
-      const response = await fetch(`/api/pending-tasks/${taskId}/complete`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to complete task");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks/count"] });
-    },
-  });
-
-  const { data: suggestedWorks } = useQuery<SuggestedWorkWithClient[]>({
-    queryKey: ["/api/suggested-works", { clientId: clientId.toString() }],
-    queryFn: async () => {
-      const response = await fetch(`/api/suggested-works?clientId=${clientId}`, { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch suggested works");
-      return response.json();
-    },
-  });
-
-  const updateSuggestedWork = useMutation({
-    mutationFn: async ({ workId, isAccepted, isRejected, isCompleted }: { workId: number; isAccepted?: boolean; isRejected?: boolean; isCompleted?: boolean }) => {
-      const body: Record<string, any> = {};
-      if (isAccepted !== undefined) {
-        body.isAccepted = isAccepted;
-        body.acceptedAt = isAccepted ? new Date().toISOString() : null;
-      }
-      if (isRejected !== undefined) {
-        body.isRejected = isRejected;
-        body.rejectedAt = isRejected ? new Date().toISOString() : null;
-      }
-      if (isCompleted !== undefined) {
-        body.isCompleted = isCompleted;
-        body.completedAt = isCompleted ? new Date().toISOString() : null;
-      }
-      const response = await fetch(`/api/suggested-works/${workId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to update work");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/suggested-works"] });
-    },
-  });
-
-  const deleteSuggestedWork = useMutation({
-    mutationFn: async (workId: number) => {
-      const response = await fetch(`/api/suggested-works/${workId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to delete work");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/suggested-works"] });
-    },
-  });
+  const { data: suggestedWorks } = useClientSuggestedWorks(clientId);
+  const updateSuggestedWork = useUpdateSuggestedWork();
+  const deleteSuggestedWork = useDeleteSuggestedWork();
 
   return (
     <div className="space-y-6">
@@ -152,10 +71,10 @@ export function ClientTasksTab({ clientId, clientName }: ClientTasksTabProps) {
                                   task.serviceType === 'Piscina' ? Waves :
                                   task.serviceType === 'Jacuzzi' ? ThermometerSun : Wrench;
               const priorityColors = {
-                low: 'bg-gray-100 text-gray-600',
-                normal: 'bg-blue-100 text-blue-600',
+                low: 'bg-muted text-muted-foreground',
+                normal: 'bg-primary/10 text-primary',
                 high: 'bg-destructive/10 text-destructive',
-                urgent: 'bg-red-100 text-red-600',
+                urgent: 'bg-destructive/20 text-destructive',
               };
               const priorityLabels = { low: 'Baixa', normal: 'Normal', high: 'Alta', urgent: 'Urgente' };
 

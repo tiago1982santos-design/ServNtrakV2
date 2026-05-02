@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ClipboardList, ChevronRight, AlertTriangle, ChevronUp, Leaf, Waves, 
+import {
+  ClipboardList, ChevronRight, AlertTriangle, ChevronUp, Leaf, Waves,
   ThermometerSun, Wrench, Check, Trash2, Loader2
 } from "lucide-react";
 import { Link } from "wouter";
@@ -12,58 +11,22 @@ import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { BackButton } from "@/components/BackButton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import type { PendingTaskWithClient } from "@shared/schema";
+import { usePendingTasks, useCompletePendingTask, useDeletePendingTask } from "@/hooks/use-pending-tasks";
 
 export default function PendingTasks() {
-  const queryClient = useQueryClient();
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-  const { data: pendingTasks, isLoading } = useQuery<PendingTaskWithClient[]>({
-    queryKey: ["/api/pending-tasks"],
-    queryFn: async () => {
-      const response = await fetch("/api/pending-tasks", { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch pending tasks");
-      return response.json();
-    },
-  });
-
-  const deletePendingTask = useMutation({
-    mutationFn: async (taskId: number) => {
-      const response = await fetch(`/api/pending-tasks/${taskId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to delete task");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks/count"] });
-    },
-  });
-
-  const completePendingTask = useMutation({
-    mutationFn: async (taskId: number) => {
-      const response = await fetch(`/api/pending-tasks/${taskId}/complete`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to complete task");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-tasks/count"] });
-    },
-  });
+  const { data: pendingTasks, isLoading } = usePendingTasks();
+  const completePendingTask = useCompletePendingTask();
+  const deletePendingTask = useDeletePendingTask();
 
   const priorityLabels = { low: "Baixa", normal: "Normal", high: "Alta", urgent: "Urgente" };
   const priorityColors = {
-    low: "bg-gray-100 text-gray-600",
-    normal: "bg-blue-100 text-blue-600",
+    low: "bg-muted text-muted-foreground",
+    normal: "bg-primary/10 text-primary",
     high: "bg-destructive/10 text-destructive",
-    urgent: "bg-red-100 text-red-600",
+    urgent: "bg-destructive/20 text-destructive",
   };
 
   const filteredTasks = pendingTasks?.filter(task => {

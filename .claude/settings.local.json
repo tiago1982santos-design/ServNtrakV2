@@ -64,7 +64,18 @@
       "Bash(grep -v \"//.*fetch\")",
       "Bash(grep -v \"//.*\")",
       "Bash(xargs wc *)",
-      "Bash(sort -t: -k2 -rn)"
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(curl *)",
+      "Bash(grep -rn \"bg-orange\\\\|bg-amber\\\\|text-orange\\\\|text-amber\\\\|#[0-9a-fA-F]\\\\{3,6\\\\}\" --include=\"*.tsx\" --include=\"*.ts\" \"D:/AI Projects/ServNtrakV2/client/src\")",
+      "Bash(grep -iP '\"[a-zA-Z ]{3,}\"|title:.*[a-z]')",
+      "Bash(grep -v \"import\\\\|export\\\\|//\")",
+      "Bash(grep -iP '\"[A-Za-z ]{3,}\"')",
+      "Bash(git checkout *)",
+      "Bash(git -C \"D:/AI Projects/ServNtrakV2\" stash)",
+      "Bash(npm --prefix \"D:/AI Projects/ServNtrakV2\" run check)"
     ]
+  },
+  "enabledPlugins": {
+    "andrej-karpathy-skills@karpathy-skills": true
   }
 }

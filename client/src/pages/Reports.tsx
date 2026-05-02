@@ -16,10 +16,10 @@ import { BackButton } from "@/components/BackButton";
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 const SERVICE_COLORS: Record<string, string> = {
-  'Jardim': 'hsl(145 63% 32%)',
-  'Piscina': 'hsl(200 80% 50%)',
-  'Jacuzzi': 'hsl(280 60% 50%)',
-  'Geral': 'hsl(40 70% 50%)',
+  'Jardim': 'hsl(var(--chart-2))',
+  'Piscina': 'hsl(var(--chart-3))',
+  'Jacuzzi': 'hsl(var(--chart-4))',
+  'Geral': 'hsl(var(--chart-5))',
 };
 
 export default function Reports() {

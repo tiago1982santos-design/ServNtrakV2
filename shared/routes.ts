@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, insertPurchaseCategorySchema, insertStoreSchema, insertPurchaseSchema, insertClientPaymentSchema, insertServiceVisitSchema, insertFinancialConfigSchema, insertMonthlyDistributionSchema, insertEmployeeSchema, insertPendingTaskSchema, insertSuggestedWorkSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries, purchaseCategories, stores, purchases, clientPayments, serviceVisits, serviceVisitServices, financialConfig, monthlyDistributions, employees, pendingTasks, suggestedWorks } from './schema';
+import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, insertPurchaseCategorySchema, insertStoreSchema, insertPurchaseSchema, insertClientPaymentSchema, insertServiceVisitSchema, insertFinancialConfigSchema, insertMonthlyDistributionSchema, insertEmployeeSchema, insertPendingTaskSchema, insertSuggestedWorkSchema, insertExpenseNoteSchema, insertExpenseNoteItemSchema, insertQuoteSchema, insertQuoteItemSchema, updateWorkingHoursSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries, purchaseCategories, stores, purchases, clientPayments, serviceVisits, serviceVisitServices, financialConfig, monthlyDistributions, employees, pendingTasks, suggestedWorks, expenseNotes, expenseNoteItems, expenseNoteEdits, quotes, quoteItems } from './schema';
 
 // Robust numeric validator: preprocess to reject NaN/Infinity before coercion
 const safePositiveNumber = (max: number, fieldName: string) =>
@@ -109,6 +109,14 @@ export const api = {
         200: z.array(z.custom<typeof appointments.$inferSelect & { client: typeof clients.$inferSelect }>()),
       },
     },
+    get: {
+      method: 'GET' as const,
+      path: '/api/appointments/:id',
+      responses: {
+        200: z.custom<typeof appointments.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
     create: {
       method: 'POST' as const,
       path: '/api/appointments',
@@ -180,6 +188,16 @@ export const api = {
       path: '/api/service-logs/:id/mark-paid',
       responses: {
         200: z.custom<typeof serviceLogs.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/service-logs/:id',
+      input: insertServiceLogSchema.partial(),
+      responses: {
+        200: z.custom<typeof serviceLogs.$inferSelect>(),
+        400: errorSchemas.validation,
         404: errorSchemas.notFound,
       },
     },
@@ -434,7 +452,7 @@ export const api = {
     list: {
       method: 'GET' as const,
       path: '/api/service-visits',
-      query: z.object({
+      input: z.object({
         clientId: z.string().optional(),
       }).optional(),
       responses: {
@@ -494,7 +512,7 @@ export const api = {
     list: {
       method: 'GET' as const,
       path: '/api/monthly-distributions',
-      query: z.object({
+      input: z.object({
         year: z.string().optional(),
       }).optional(),
       responses: {
@@ -530,7 +548,7 @@ export const api = {
     list: {
       method: 'GET' as const,
       path: '/api/employees',
-      query: z.object({
+      input: z.object({
         includeInactive: z.string().optional(),
       }).optional(),
       responses: {
@@ -585,7 +603,7 @@ export const api = {
     list: {
       method: 'GET' as const,
       path: '/api/pending-tasks',
-      query: z.object({
+      input: z.object({
         clientId: z.string().optional(),
         includeCompleted: z.string().optional(),
       }).optional(),
@@ -652,7 +670,7 @@ export const api = {
     list: {
       method: 'GET' as const,
       path: '/api/suggested-works',
-      query: z.object({
+      input: z.object({
         clientId: z.string().optional(),
         includeCompleted: z.string().optional(),
       }).optional(),
@@ -665,7 +683,7 @@ export const api = {
       path: '/api/suggested-works/:id',
       responses: {
         200: z.custom<typeof suggestedWorks.$inferSelect>(),
-        404: z.object({ message: z.string() }),
+        404: errorSchemas.notFound,
       },
     },
     create: {
@@ -674,7 +692,7 @@ export const api = {
       input: insertSuggestedWorkSchema,
       responses: {
         201: z.custom<typeof suggestedWorks.$inferSelect>(),
-        400: z.object({ message: z.string() }),
+        400: errorSchemas.validation,
       },
     },
     update: {
@@ -683,7 +701,7 @@ export const api = {
       input: insertSuggestedWorkSchema.partial(),
       responses: {
         200: z.custom<typeof suggestedWorks.$inferSelect>(),
-        404: z.object({ message: z.string() }),
+        404: errorSchemas.notFound,
       },
     },
     delete: {
@@ -691,7 +709,189 @@ export const api = {
       path: '/api/suggested-works/:id',
       responses: {
         204: z.void(),
-        404: z.object({ message: z.string() }),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+
+  expenseNotes: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/expense-notes',
+      input: z.object({
+        clientId: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof expenseNotes.$inferSelect & { client: typeof clients.$inferSelect; items: (typeof expenseNoteItems.$inferSelect)[] }>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/expense-notes/:id',
+      responses: {
+        200: z.custom<typeof expenseNotes.$inferSelect & { client: typeof clients.$inferSelect; items: (typeof expenseNoteItems.$inferSelect)[]; edits?: (typeof expenseNoteEdits.$inferSelect)[] }>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/expense-notes',
+      input: insertExpenseNoteSchema.extend({
+        items: z.array(insertExpenseNoteItemSchema.innerType().omit({ expenseNoteId: true })).optional(),
+      }),
+      responses: {
+        201: z.custom<typeof expenseNotes.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/expense-notes/:id',
+      input: insertExpenseNoteSchema.partial(),
+      responses: {
+        200: z.custom<typeof expenseNotes.$inferSelect>(),
+        400: errorSchemas.validation,
+        403: errorSchemas.notFound,
+        404: errorSchemas.notFound,
+      },
+    },
+    updateItems: {
+      method: 'PUT' as const,
+      path: '/api/expense-notes/:id/items',
+      input: z.object({
+        items: z.array(insertExpenseNoteItemSchema.innerType().omit({ expenseNoteId: true })),
+      }),
+      responses: {
+        200: z.array(z.custom<typeof expenseNoteItems.$inferSelect>()),
+        400: errorSchemas.validation,
+        403: errorSchemas.notFound,
+      },
+    },
+    createEdit: {
+      method: 'POST' as const,
+      path: '/api/expense-notes/:id/edits',
+      input: z.object({
+        fieldChanged: z.string().min(1),
+        reason: z.string().min(1),
+      }),
+      responses: {
+        201: z.object({ success: z.boolean() }),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/expense-notes/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+    fromServiceLog: {
+      method: 'POST' as const,
+      path: '/api/expense-notes/from-service-log/:logId',
+      input: z.object({
+        notes: z.string().optional(),
+      }).optional(),
+      responses: {
+        201: z.custom<typeof expenseNotes.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+
+  quotes: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/quotes',
+      input: z.object({
+        clientId: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof quotes.$inferSelect & { client: typeof clients.$inferSelect; items: (typeof quoteItems.$inferSelect)[] }>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/quotes/:id',
+      responses: {
+        200: z.custom<typeof quotes.$inferSelect & { client: typeof clients.$inferSelect; items: (typeof quoteItems.$inferSelect)[] }>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/quotes',
+      input: insertQuoteSchema.extend({
+        items: z.array(insertQuoteItemSchema.omit({ quoteId: true })).optional(),
+      }),
+      responses: {
+        201: z.custom<typeof quotes.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/quotes/:id',
+      input: insertQuoteSchema.partial(),
+      responses: {
+        200: z.custom<typeof quotes.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    updateItems: {
+      method: 'PUT' as const,
+      path: '/api/quotes/:id/items',
+      input: z.object({
+        items: z.array(insertQuoteItemSchema.omit({ quoteId: true })),
+      }),
+      responses: {
+        200: z.array(z.custom<typeof quoteItems.$inferSelect>()),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/quotes/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+
+  userPreferences: {
+    getWorkingHours: {
+      method: 'GET' as const,
+      path: '/api/user/preferences/working-hours',
+      responses: {
+        200: z.object({
+          workingHoursStart: z.number(),
+          workingHoursEnd: z.number(),
+          lunchEnabled: z.boolean(),
+          lunchStart: z.number(),
+          lunchEnd: z.number(),
+          hasPreferences: z.boolean(),
+        }),
+      },
+    },
+    updateWorkingHours: {
+      method: 'PUT' as const,
+      path: '/api/user/preferences/working-hours',
+      input: updateWorkingHoursSchema,
+      responses: {
+        200: z.object({
+          workingHoursStart: z.number(),
+          workingHoursEnd: z.number(),
+          lunchEnabled: z.boolean(),
+          lunchStart: z.number(),
+          lunchEnd: z.number(),
+          hasPreferences: z.boolean(),
+        }),
+        400: errorSchemas.validation,
       },
     },
   },
