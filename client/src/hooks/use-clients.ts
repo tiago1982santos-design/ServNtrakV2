@@ -54,13 +54,13 @@ export function useCreateClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.clients.list.path] });
-      toast({ title: "Success", description: "Client created successfully" });
+      toast({ title: "Sucesso", description: "Cliente criado com sucesso" });
     },
     onError: (error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive"
       });
     },
   });
@@ -90,10 +90,10 @@ export function useUpdateClient() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.clients.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.clients.get.path, variables.id] });
-      toast({ title: "Updated", description: "Client details updated" });
+      toast({ title: "Atualizado", description: "Dados do cliente atualizados" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     },
   });
 }
@@ -114,10 +114,10 @@ export function useDeleteClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.clients.list.path] });
-      toast({ title: "Deleted", description: "Client removed" });
+      toast({ title: "Eliminado", description: "Cliente removido" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     },
   });
 }

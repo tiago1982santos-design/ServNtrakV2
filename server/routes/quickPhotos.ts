@@ -11,7 +11,7 @@ export function registerQuickPhotosRoutes(app: Express): void {
     const photos = await storage.getQuickPhotos(userId, clientId);
 
     const enrichedPhotos = await Promise.all(photos.map(async (photo) => {
-      const client = await storage.getClient(photo.clientId);
+      const client = await storage.getClientForUser(photo.clientId, userId);
       return { ...photo, client: client! };
     }));
 

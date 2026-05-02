@@ -46,10 +46,10 @@ export function useCreateAppointment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
-      toast({ title: "Scheduled", description: "Appointment added to calendar" });
+      toast({ title: "Agendado", description: "Agendamento adicionado ao calendário" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     },
   });
 }
@@ -73,10 +73,10 @@ export function useUpdateAppointment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
-      toast({ title: "Updated", description: "Appointment details updated" });
+      toast({ title: "Atualizado", description: "Agendamento atualizado" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     },
   });
 }
@@ -93,10 +93,10 @@ export function useDeleteAppointment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.appointments.list.path] });
-      toast({ title: "Cancelled", description: "Appointment removed" });
+      toast({ title: "Cancelado", description: "Agendamento removido" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     },
   });
 }

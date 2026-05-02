@@ -1,9 +1,13 @@
 import type { Express } from "express";
 import { storage } from "../storage";
+import { requireAuth } from "./middleware";
+import { insertQuoteSchema, insertQuoteItemSchema } from "@shared/schema";
+
+const updateQuoteSchema = insertQuoteSchema.partial();
+const quoteItemSchema = insertQuoteItemSchema.omit({ quoteId: true });
 
 export function registerQuotesRoutes(app: Express): void {
-  app.get("/api/quotes", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.get("/api/quotes", requireAuth, async (req, res) => {
     try {
       const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
       const result = await storage.getQuotes(req.user!.id, clientId);
@@ -14,8 +18,7 @@ export function registerQuotesRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/quotes/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.get("/api/quotes/:id", requireAuth, async (req, res) => {
     try {
       const quote = await storage.getQuote(parseInt(req.params.id), req.user!.id);
       if (!quote) return res.status(404).json({ error: "Orçamento não encontrado" });
@@ -26,8 +29,7 @@ export function registerQuotesRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/quotes", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.post("/api/quotes", requireAuth, async (req, res) => {
     try {
       const { items = [], ...quoteData } = req.body;
       const userId = req.user!.id;
@@ -50,13 +52,14 @@ export function registerQuotesRoutes(app: Express): void {
     }
   });
 
-  app.patch("/api/quotes/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.patch("/api/quotes/:id", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
+      const parsed = updateQuoteSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
 
-      if (req.body.clientId) {
-        const client = await storage.getClient(req.body.clientId);
+      if (parsed.data.clientId) {
+        const client = await storage.getClient(parsed.data.clientId);
         if (!client || client.userId !== userId) {
           return res.status(400).json({ error: "Cliente inválido" });
         }
@@ -65,7 +68,7 @@ export function registerQuotesRoutes(app: Express): void {
       const updated = await storage.updateQuote(
         parseInt(req.params.id),
         userId,
-        req.body
+        parsed.data
       );
       if (!updated) return res.status(404).json({ error: "Orçamento não encontrado" });
       res.json(updated);
@@ -75,14 +78,15 @@ export function registerQuotesRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/quotes/:id/items", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.put("/api/quotes/:id/items", requireAuth, async (req, res) => {
     try {
       const { items = [] } = req.body;
+      const parsed = quoteItemSchema.array().safeParse(items);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Itens inválidos" });
       const updatedItems = await storage.updateQuoteItems(
         parseInt(req.params.id),
         req.user!.id,
-        items
+        parsed.data
       );
       res.json(updatedItems);
     } catch (error) {
@@ -91,8 +95,7 @@ export function registerQuotesRoutes(app: Express): void {
     }
   });
 
-  app.delete("/api/quotes/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Não autenticado" });
+  app.delete("/api/quotes/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteQuote(parseInt(req.params.id), req.user!.id);
       res.status(204).send();

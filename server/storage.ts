@@ -7,6 +7,7 @@ import {
   financialConfig, monthlyDistributions, employees, pendingTasks, suggestedWorks,
   expenseNotes, expenseNoteItems, expenseNoteEdits,
   quotes, quoteItems,
+  shoppingList,
   type InsertClient, type Client,
   type InsertAppointment, type Appointment,
   type InsertServiceLog, type ServiceLog,
@@ -33,6 +34,7 @@ import {
   type InsertExpenseNoteItem, type ExpenseNoteItem, type ExpenseNoteWithDetails,
   type InsertQuote, type Quote,
   type InsertQuoteItem, type QuoteItem, type QuoteWithDetails,
+  type ShoppingListItem, type InsertShoppingListItem,
   userPreferences,
   type UserPreferences, type UpdateWorkingHours,
 } from "@shared/schema";
@@ -178,6 +180,12 @@ export interface IStorage {
   // User Preferences
   getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
   upsertUserPreferences(userId: string, prefs: UpdateWorkingHours): Promise<UserPreferences>;
+
+  // Clients (extra)
+  getClientForUser(id: number, userId: string): Promise<Client | undefined>;
+
+  // Shopping List
+  createShoppingListItem(item: InsertShoppingListItem & { userId: string }): Promise<ShoppingListItem>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1742,6 +1750,11 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return row;
+  }
+
+  async createShoppingListItem(item: InsertShoppingListItem & { userId: string }): Promise<ShoppingListItem> {
+    const [newItem] = await db.insert(shoppingList).values(item).returning();
+    return newItem;
   }
 }
 

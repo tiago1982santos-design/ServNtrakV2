@@ -3,8 +3,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { requireAuth } from "./middleware";
 import { storage } from "../storage";
 import { checkAssistantRateLimit } from "../aiRateLimiter";
-import { db } from "../db";
-import { shoppingList } from "@shared/schema";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -144,7 +142,7 @@ export function registerAssistantRoutes(app: Express): void {
       const { type, summary, data } = classified;
 
       if (type === "COMPRA") {
-        await db.insert(shoppingList).values({
+        await storage.createShoppingListItem({
           userId,
           item: data.item || summary,
           quantity: data.quantity ?? null,
@@ -337,6 +335,12 @@ Responde APENAS com um JSON válido (sem markdown) neste formato:
   app.post("/api/ai/confirm-schedule", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
+
+      const rateCheck = checkAssistantRateLimit(userId);
+      if (!rateCheck.allowed) {
+        res.setHeader("Retry-After", String(rateCheck.retryAfterSeconds));
+        return res.status(429).json({ message: `Limite de mensagens atingido. Tente novamente em ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minuto(s).` });
+      }
 
       const { cliente, local, data, tarefas, serviceType, time } = req.body;
 

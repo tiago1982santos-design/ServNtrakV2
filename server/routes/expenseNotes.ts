@@ -1,6 +1,9 @@
 import type { Express } from "express";
 import { requireAuth } from "./middleware";
 import { storage } from "../storage";
+import { insertExpenseNoteSchema } from "@shared/schema";
+
+const updateExpenseNoteSchema = insertExpenseNoteSchema.partial();
 
 export function registerExpenseNotesRoutes(app: Express): void {
   app.get("/api/expense-notes", requireAuth, async (req, res) => {
@@ -68,16 +71,18 @@ export function registerExpenseNotesRoutes(app: Express): void {
   app.patch("/api/expense-notes/:id", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
+      const parsed = updateExpenseNoteSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
 
-      if (req.body.clientId) {
-        const client = await storage.getClient(req.body.clientId);
+      if (parsed.data.clientId) {
+        const client = await storage.getClient(parsed.data.clientId);
         if (!client || client.userId !== userId) {
           return res.status(400).json({ error: "Cliente inválido" });
         }
       }
 
-      if (req.body.serviceLogId) {
-        const serviceLog = await storage.getServiceLogWithEntries(req.body.serviceLogId, userId);
+      if (parsed.data.serviceLogId) {
+        const serviceLog = await storage.getServiceLogWithEntries(parsed.data.serviceLogId, userId);
         if (!serviceLog) {
           return res.status(400).json({ error: "Registo de serviço inválido" });
         }
@@ -86,7 +91,7 @@ export function registerExpenseNotesRoutes(app: Express): void {
       const updated = await storage.updateExpenseNote(
         parseInt(req.params.id),
         userId,
-        req.body
+        parsed.data
       );
       if (!updated) return res.status(404).json({ error: "Nota não encontrada" });
       res.json(updated);
