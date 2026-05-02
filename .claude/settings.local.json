@@ -59,7 +59,12 @@
       "Bash(python3 *)",
       "Bash(node *)",
       "Bash(npm list *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(Expand-Archive *)",
+      "Bash(grep -v \"//.*fetch\")",
+      "Bash(grep -v \"//.*\")",
+      "Bash(xargs wc *)",
+      "Bash(sort -t: -k2 -rn)"
     ]
   }
 }
