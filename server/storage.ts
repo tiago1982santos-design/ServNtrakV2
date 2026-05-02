@@ -185,7 +185,11 @@ export interface IStorage {
   getClientForUser(id: number, userId: string): Promise<Client | undefined>;
 
   // Shopping List
+  getShoppingList(userId: string): Promise<ShoppingListItem[]>;
   createShoppingListItem(item: InsertShoppingListItem & { userId: string }): Promise<ShoppingListItem>;
+  updateShoppingListItem(id: number, userId: string, updates: Partial<InsertShoppingListItem>): Promise<ShoppingListItem | undefined>;
+  deleteShoppingListItem(id: number, userId: string): Promise<void>;
+  toggleShoppingListItemStatus(id: number, userId: string): Promise<ShoppingListItem | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1752,9 +1756,38 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
 
+  async getShoppingList(userId: string): Promise<ShoppingListItem[]> {
+    return await db.select().from(shoppingList).where(eq(shoppingList.userId, userId)).orderBy(shoppingList.createdAt);
+  }
+
   async createShoppingListItem(item: InsertShoppingListItem & { userId: string }): Promise<ShoppingListItem> {
     const [newItem] = await db.insert(shoppingList).values(item).returning();
     return newItem;
+  }
+
+  async updateShoppingListItem(id: number, userId: string, updates: Partial<InsertShoppingListItem>): Promise<ShoppingListItem | undefined> {
+    const [updated] = await db
+      .update(shoppingList)
+      .set(updates)
+      .where(and(eq(shoppingList.id, id), eq(shoppingList.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteShoppingListItem(id: number, userId: string): Promise<void> {
+    await db.delete(shoppingList).where(and(eq(shoppingList.id, id), eq(shoppingList.userId, userId)));
+  }
+
+  async toggleShoppingListItemStatus(id: number, userId: string): Promise<ShoppingListItem | undefined> {
+    const [current] = await db.select().from(shoppingList).where(and(eq(shoppingList.id, id), eq(shoppingList.userId, userId)));
+    if (!current) return undefined;
+    const newStatus = current.status === 'pendente' ? 'comprado' : 'pendente';
+    const [updated] = await db
+      .update(shoppingList)
+      .set({ status: newStatus })
+      .where(and(eq(shoppingList.id, id), eq(shoppingList.userId, userId)))
+      .returning();
+    return updated;
   }
 }
 

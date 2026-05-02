@@ -21,6 +21,7 @@ import { registerExpenseNotesRoutes } from "./routes/expenseNotes";
 import { registerQuotesRoutes } from "./routes/quotes";
 import { registerUserPreferencesRoutes } from "./routes/userPreferences";
 import { registerAssistantRoutes } from "./routes/assistant";
+import { registerShoppingListRoutes } from "./routes/shoppingList";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -48,6 +49,7 @@ export async function registerRoutes(
   registerQuotesRoutes(app);
   registerUserPreferencesRoutes(app);
   registerAssistantRoutes(app);
+  registerShoppingListRoutes(app);
 
   return httpServer;
 }

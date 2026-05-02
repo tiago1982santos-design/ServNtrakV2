@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 const MORE_ROUTES = [
   "/finances", "/reports", "/exports", "/billing",
   "/payments", "/gallery", "/reminders", "/map", "/employees", "/pending-tasks",
-  "/expense-notes",
+  "/expense-notes", "/lista-compras",
 ];
 
 export function BottomNav() {

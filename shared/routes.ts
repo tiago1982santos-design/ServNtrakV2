@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, insertPurchaseCategorySchema, insertStoreSchema, insertPurchaseSchema, insertClientPaymentSchema, insertServiceVisitSchema, insertFinancialConfigSchema, insertMonthlyDistributionSchema, insertEmployeeSchema, insertPendingTaskSchema, insertSuggestedWorkSchema, insertExpenseNoteSchema, insertExpenseNoteItemSchema, insertQuoteSchema, insertQuoteItemSchema, updateWorkingHoursSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries, purchaseCategories, stores, purchases, clientPayments, serviceVisits, serviceVisitServices, financialConfig, monthlyDistributions, employees, pendingTasks, suggestedWorks, expenseNotes, expenseNoteItems, expenseNoteEdits, quotes, quoteItems } from './schema';
+import { insertClientSchema, insertAppointmentSchema, insertServiceLogSchema, insertReminderSchema, insertQuickPhotoSchema, insertPurchaseCategorySchema, insertStoreSchema, insertPurchaseSchema, insertClientPaymentSchema, insertServiceVisitSchema, insertFinancialConfigSchema, insertMonthlyDistributionSchema, insertEmployeeSchema, insertPendingTaskSchema, insertSuggestedWorkSchema, insertExpenseNoteSchema, insertExpenseNoteItemSchema, insertQuoteSchema, insertQuoteItemSchema, insertShoppingListSchema, updateWorkingHoursSchema, clients, appointments, serviceLogs, reminders, quickPhotos, serviceLogLaborEntries, serviceLogMaterialEntries, purchaseCategories, stores, purchases, clientPayments, serviceVisits, serviceVisitServices, financialConfig, monthlyDistributions, employees, pendingTasks, suggestedWorks, expenseNotes, expenseNoteItems, expenseNoteEdits, quotes, quoteItems, shoppingList } from './schema';
 
 // Robust numeric validator: preprocess to reject NaN/Infinity before coercion
 const safePositiveNumber = (max: number, fieldName: string) =>
@@ -858,6 +858,51 @@ export const api = {
       path: '/api/quotes/:id',
       responses: {
         204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+
+  shoppingList: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/shopping-list',
+      responses: {
+        200: z.array(z.custom<typeof shoppingList.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/shopping-list',
+      input: insertShoppingListSchema,
+      responses: {
+        201: z.custom<typeof shoppingList.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/shopping-list/:id',
+      input: insertShoppingListSchema.partial(),
+      responses: {
+        200: z.custom<typeof shoppingList.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/shopping-list/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+    toggleStatus: {
+      method: 'PATCH' as const,
+      path: '/api/shopping-list/:id/status',
+      responses: {
+        200: z.custom<typeof shoppingList.$inferSelect>(),
         404: errorSchemas.notFound,
       },
     },

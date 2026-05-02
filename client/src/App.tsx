@@ -36,6 +36,7 @@ import Quotes from "@/pages/Quotes";
 import QuoteNew from "@/pages/QuoteNew";
 import QuoteDetail from "@/pages/QuoteDetail";
 import ProductPrices from "@/pages/ProductPrices";
+import ShoppingList from "@/pages/ShoppingList";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -87,6 +88,7 @@ function Router() {
         <Route path="/quotes/new" component={QuoteNew} />
         <Route path="/quotes/:id" component={QuoteDetail} />
         <Route path="/product-prices" component={ProductPrices} />
+        <Route path="/lista-compras" component={ShoppingList} />
         <Route component={NotFound} />
       </Switch>
       <AssistantChat />
