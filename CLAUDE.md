@@ -2,100 +2,241 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Commands
+---
+
+## 1. Comandos Críticos
+
+### Desenvolvimento
 
 ```bash
-npm install          # install dependencies
-npm run dev          # start dev server (port 5000, serves API + client via Vite proxy)
-npm run build        # build client (Vite → dist/public) + server (esbuild → dist/index.cjs)
-npm start            # run production build
-npm run check        # TypeScript type-check (tsc --noEmit)
-npm run db:push      # push Drizzle schema changes to the database
+npm install          # instalar dependências
+npm run dev          # servidor de desenvolvimento (porta 5000 — API + cliente via proxy Vite)
+npm run build        # build cliente (Vite → dist/public) + servidor (esbuild → dist/index.cjs)
+npm start            # executar build de produção
 ```
 
-No test runner is configured. Unit-level tests are plain `.test.ts` files run manually with `tsx`:
+### Verificação e Qualidade
+
+```bash
+npm run check        # type-check TypeScript (tsc --noEmit) — SEMPRE correr antes de commit
+npm run db:push      # aplicar alterações do schema Drizzle à base de dados
+```
+
+### Testes Manuais
+
+Não existe test runner configurado. Testes unitários são ficheiros `.test.ts` corridos com `tsx`:
+
 ```bash
 npx tsx client/src/lib/suggestSlots.test.ts
 npx tsx server/pushService.endpointAllowlist.test.ts
 ```
 
-## Architecture
+---
 
-### Monorepo layout
+## 2. Arquitetura e Fluxos
+
+### Monorepo
 
 ```
 client/src/   React 18 SPA (Vite)
-server/       Express API + background services
-shared/       Schema (Drizzle), route types, scheduling logic — imported by both sides
+server/       Express API + serviços de background
+shared/       Schema (Drizzle), tipos de rotas, lógica de agendamento — partilhado entre cliente e servidor
 ```
 
-**Path aliases** (configured in `tsconfig.json` and `vite.config.ts`):
+**Path aliases** (configurados em `tsconfig.json` e `vite.config.ts`):
 - `@/*` → `client/src/*`
 - `@shared/*` → `shared/*`
 - `@assets/*` → `attached_assets/*`
 
-### Server
+### Fluxo de Dados (Request → Response)
 
-`server/index.ts` bootstraps Express, runs inline `ALTER TABLE` / `CREATE TABLE IF NOT EXISTS` migrations on startup (not Drizzle migrations), then registers all routes via `server/routes.ts`.
+```
+Browser
+  └─ Hook (client/src/hooks/use-*.ts)          ← TanStack Query / fetch
+       └─ shared/routes.ts                      ← definição tipada da rota (path, method, schemas)
+            └─ server/routes/<domain>.ts         ← Express handler (requireAuth, Zod parse, storage call)
+                 └─ server/storage.ts            ← ÚNICA fonte de queries SQL (IStorage + DatabaseStorage)
+                      └─ PostgreSQL (Drizzle ORM)
+```
 
-Each domain has its own route file under `server/routes/` with a `register*Routes(app)` export. Authentication and object storage live in `server/replit_integrations/`.
+**Regra absoluta:** Nunca colocar queries SQL ou lógica de negócio directamente nos route handlers. Toda a lógica de acesso a dados vai para `server/storage.ts`.
 
-`server/storage.ts` is the data-access layer — all DB queries go here (no ORM queries in route files).
+### Fluxo de Estado no Cliente
 
-Background services started at boot:
-- `server/visitChecker.ts` — geofencing check, auto-logs service visits when user is within 75 m of a client.
-- `server/pushService.ts` — Web Push delivery with VAPID, health monitoring, failure rate alerting.
+```
+Page (client/src/pages/)
+  └─ Hook (use-*.ts)
+       ├─ useQuery  → lê dados, cache por queryKey
+       └─ useMutation → mutação + invalidateQueries para refrescar cache
+```
 
-### Client
+- O cliente TanStack Query é singleton em `client/src/lib/queryClient.ts`.
+- Após qualquer mutação bem-sucedida, invalidar sempre as queryKeys afectadas.
 
-`client/src/App.tsx` owns routing (Wouter) and auth-gate. All pages are in `client/src/pages/`. Shared components in `client/src/components/`; UI primitives (shadcn/ui) in `client/src/components/ui/`.
+### Autenticação
 
-Each domain has a hook in `client/src/hooks/` wrapping React Query calls (e.g., `use-clients.ts`, `use-appointments.ts`). Prefer those hooks over calling `fetch` directly in pages.
+- Todas as rotas protegidas usam `requireAuth` de `server/routes/middleware.ts`.
+- `req.user!.id` é o identificador do utilizador autenticado — **todos** os dados devem ser filtrados por este `userId`.
+- Sessão gerida por Passport + express-session.
 
-`client/src/lib/queryClient.ts` — single TanStack Query client. `client/src/lib/themes.ts` — theme switching (`applyTheme()`).
+### Serviços de Background (iniciados no boot)
 
-### Shared
+| Serviço | Ficheiro | Função |
+|---|---|---|
+| Visit Checker | `server/visitChecker.ts` | Geofencing 75 m — auto-registo de visitas |
+| Push Service | `server/pushService.ts` | Web Push VAPID, monitorização de falhas |
 
-`shared/schema.ts` — single source of truth for all Drizzle table definitions and Zod schemas (via `drizzle-zod`).
+### Rotas de IA / Assistente
 
-`shared/routes.ts` — typed API route definitions shared between client hooks and server route files.
+- SDK exclusivo: `@anthropic-ai/sdk` — o SDK da OpenAI foi removido.
+- Rate limiting obrigatório: `checkAssistantRateLimit(userId)` de `server/aiRateLimiter.ts` **em todos** os handlers de IA.
+- Modelo padrão: `claude-sonnet-4-20250514`.
 
-`shared/scheduling.ts` — business-rules logic for seasonal visit frequencies and automatic appointment generation.
+---
+
+## 3. Padrões de Código
+
+### Nomenclatura
+
+| Contexto | Padrão | Exemplo |
+|---|---|---|
+| Ficheiros de rotas servidor | `camelCase.ts` | `serviceLogs.ts` |
+| Hooks cliente | `use-kebab-case.ts` | `use-service-logs.ts` |
+| Páginas cliente | `PascalCase.tsx` | `ServiceLogs.tsx` |
+| Funções de registo de rotas | `register*Routes(app)` | `registerServiceLogsRoutes(app)` |
+| `data-testid` | `{action}-{target}` | `button-add-client`, `nav-clientes` |
+
+### Validação com Zod
+
+```typescript
+// Criação: parse com throw (deixa o erro propagar para o catch do handler)
+const input = api.domain.create.input.parse(req.body);
+
+// Actualização: .partial() + .safeParse() para erros controlados
+const updateSchema = insertDomainSchema.partial();
+const parsed = updateSchema.safeParse(req.body);
+if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message });
+```
+
+### Segurança nos Route Handlers
+
+```typescript
+// Padrão obrigatório para qualquer rota que devolva/altere dados de um utilizador
+const userId = req.user!.id;
+const item = await storage.getItemForUser(id, userId); // sempre filtrar por userId
+if (!item) return res.status(404).json({ message: "Não encontrado" });
+```
+
+### Design System — Temas
+
+- **Nunca** usar cores hardcoded: ~~`bg-orange-50`~~, ~~`text-amber-500`~~, ~~`#FF6B00`~~.
+- Usar sempre tokens CSS: `bg-primary`, `text-muted-foreground`, `border-border`, etc.
+- Três temas (Verde / Azul / Laranja) definidos como variáveis CSS em `client/src/index.css`.
+- Tema activo guardado em `localStorage` com a chave `servntrak-theme`.
+
+### Língua
+
+- **Todo** o texto visível ao utilizador deve estar em **Português Europeu (PT-PT)**: toasts, labels, mensagens de erro, `aria-label`, validações de formulário, mensagens da API.
+- Exemplos correctos: `"Cliente criado com sucesso"`, `"Erro ao guardar"`, `"Agendamento removido"`.
+
+---
+
+## 4. Workflows Específicos
+
+### Adicionar uma nova tabela à base de dados
+
+1. Definir a tabela em `shared/schema.ts` com Drizzle ORM + exportar o tipo e o schema Zod (`createInsertSchema`).
+2. Correr `npm run db:push` para aplicar o schema.
+3. Adicionar os métodos de acesso a dados à interface `IStorage` e à classe `DatabaseStorage` em `server/storage.ts`.
+4. (Opcional) Se a coluna for ad-hoc/urgente, adicionar `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` em `server/index.ts`.
+
+### Criar uma nova rota de API
+
+1. Adicionar a definição tipada em `shared/routes.ts` (path, method, input schema, response schemas).
+2. Criar `server/routes/<domain>.ts` com a função `register<Domain>Routes(app: Express)`.
+3. Registar a função em `server/routes.ts`.
+4. **Verificar obrigatoriamente:**
+   - `requireAuth` em todos os handlers.
+   - Filtrar por `req.user!.id`.
+   - Toda a lógica SQL via `storage.*`.
+   - Rate limiting (`checkAssistantRateLimit`) se for rota de IA.
+5. Correr `npm run check` para confirmar sem erros de tipos.
+
+### Criar um novo hook de cliente
+
+1. Criar `client/src/hooks/use-<domain>.ts`.
+2. Importar a rota tipada de `@shared/routes` e `buildUrl` para rotas com parâmetros.
+3. Estrutura base:
+
+```typescript
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, buildUrl } from "@shared/routes";
+import { useToast } from "@/hooks/use-toast";
+
+export function use<Domain>() {
+  return useQuery({
+    queryKey: [api.<domain>.list.path],
+    queryFn: async () => {
+      const res = await fetch(api.<domain>.list.path, { credentials: "include" });
+      if (!res.ok) throw new Error("Erro ao carregar dados");
+      return api.<domain>.list.responses[200].parse(await res.json());
+    },
+  });
+}
+```
+
+4. Toasts de sucesso/erro sempre em PT-PT.
+5. Após mutação bem-sucedida, chamar `queryClient.invalidateQueries`.
+
+### Criar uma nova página
+
+1. Criar `client/src/pages/<Domain>.tsx`.
+2. Adicionar a rota em `client/src/App.tsx` (Wouter `<Route>`).
+3. Usar os hooks de `client/src/hooks/` — nunca fazer `fetch` directamente numa página.
+4. Componentes UI de `client/src/components/ui/` (shadcn/ui).
+5. Sem cores hardcoded; todos os textos em PT-PT.
+
+---
 
 ## Design System
 
-See `DESIGN_SYSTEM.md` for the full spec. Key rules:
+Ver `DESIGN_SYSTEM.md` para a especificação completa.
 
-- **Never hard-code colours** (`bg-orange-50`, `text-amber-500`, `#hex`). Always use CSS variable tokens (`bg-primary`, `text-muted-foreground`, etc.) so all three themes (Verde / Azul / Laranja) work.
-- Themes are CSS variables declared in `client/src/index.css`, applied at startup from `localStorage` key `servntrak-theme`.
-- All UI text, `aria-label`s, toasts, and form validations must be in **Português Europeu (PT-PT)**.
-- `data-testid` pattern: `{action}-{target}`, e.g. `button-add-client`, `nav-clientes`.
+---
 
-## Environment Variables
+## Variáveis de Ambiente
 
-Copy `.env.example` to `.env`. Required variables:
+Copiar `.env.example` para `.env`. Variáveis obrigatórias:
 
-| Variable | Purpose |
+| Variável | Finalidade |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `SESSION_SECRET` | Express session secret |
-| `ANTHROPIC_API_KEY` | AI / OCR features |
+| `DATABASE_URL` | String de ligação PostgreSQL |
+| `SESSION_SECRET` | Segredo da sessão Express |
+| `ANTHROPIC_API_KEY` | Funcionalidades de IA / OCR |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_EMAIL` | Web Push |
-| `RESEND_API_KEY` | Transactional email |
+| `RESEND_API_KEY` | Email transaccional |
+
+---
 
 ## TypeScript
 
-The project uses **TypeScript 6.x** with `"ignoreDeprecations": "6.0"` to keep `baseUrl`-based path aliases working. Do not remove this flag until upgrading to TS 7 and migrating path aliases.
+O projecto usa **TypeScript 6.x** com `"ignoreDeprecations": "6.0"` para manter os path aliases baseados em `baseUrl`. Não remover esta flag até migrar para TS 7.
 
-## Database Migrations
+---
 
-Schema lives in `shared/schema.ts`. Use `npm run db:push` for development. Some ad-hoc columns are also added via raw `pool.query` calls in `server/index.ts` on startup.
+## Migrações de Base de Dados
 
-## Code Review Focus (Priority)
+O schema vive em `shared/schema.ts`. Usar `npm run db:push` em desenvolvimento. Algumas colunas ad-hoc são também adicionadas via `pool.query` em `server/index.ts` no arranque.
 
-Sempre que analisares o código, dá prioridade a estes pontos:
-1. **Segurança:** Validar se rotas em `server/routes/` usam `ensureAuthenticated` e se os dados do utilizador são filtrados por `req.user.id`.
-2. **Arquitetura de Dados:** Garantir que queries SQL complexas estão no `server/storage.ts` e não espalhadas pelas rotas.
-3. **Consistência Visual:** Verificar se cores hardcoded foram usadas (deve-se usar variáveis CSS para suportar os temas Verde/Azul/Laranja).
-4. **Língua:** Garantir que todas as mensagens de erro, labels e toasts estão em **PT-PT**.
-5. **Dual SDK Cleanup:** Identificar se o SDK da OpenAI ainda está a ser importado e sugerir a migração total para Anthropic.
+---
+
+## Code Review — Pontos Prioritários
+
+Sempre que analisares o código, verifica obrigatoriamente:
+
+1. **Segurança:** Todas as rotas em `server/routes/` usam `requireAuth` e filtram dados por `req.user!.id`.
+2. **Arquitectura de Dados:** Queries SQL complexas estão em `server/storage.ts`, não nos route handlers.
+3. **Consistência Visual:** Sem cores hardcoded — usar variáveis CSS para suportar os três temas.
+4. **Língua:** Todas as mensagens, labels e toasts em **PT-PT**.
+5. **SDK de IA:** Apenas `@anthropic-ai/sdk` — sem importações do SDK da OpenAI.
+6. **Rate Limiting:** Todos os endpoints de IA usam `checkAssistantRateLimit(userId)`.
