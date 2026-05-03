@@ -72,7 +72,8 @@
       "Bash(grep -iP '\"[A-Za-z ]{3,}\"')",
       "Bash(git checkout *)",
       "Bash(git -C \"D:/AI Projects/ServNtrakV2\" stash)",
-      "Bash(npm --prefix \"D:/AI Projects/ServNtrakV2\" run check)"
+      "Bash(npm --prefix \"D:/AI Projects/ServNtrakV2\" run check)",
+      "Bash(grep -n \"^import\\\\|{ and\\\\|, and,\" \"D:\\\\AI Projects\\\\ServNtrakV2\\\\server\\\\storage.ts\")"
     ]
   },
   "enabledPlugins": {
