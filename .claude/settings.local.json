@@ -73,7 +73,13 @@
       "Bash(git checkout *)",
       "Bash(git -C \"D:/AI Projects/ServNtrakV2\" stash)",
       "Bash(npm --prefix \"D:/AI Projects/ServNtrakV2\" run check)",
-      "Bash(grep -n \"^import\\\\|{ and\\\\|, and,\" \"D:\\\\AI Projects\\\\ServNtrakV2\\\\server\\\\storage.ts\")"
+      "Bash(grep -n \"^import\\\\|{ and\\\\|, and,\" \"D:\\\\AI Projects\\\\ServNtrakV2\\\\server\\\\storage.ts\")",
+      "Bash(git submodule *)",
+      "Bash(Remove-Item *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\AI Projects\\\\ServNtrakV2\\\\open-design\" -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(start *)",
+      "Bash(npx serve *)"
     ]
   },
   "enabledPlugins": {

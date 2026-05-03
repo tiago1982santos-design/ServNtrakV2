@@ -281,6 +281,7 @@ export default function Home() {
   const { data: categories = [] } = useQuery<PurchaseCategory[]>({ queryKey: ['/api/purchase-categories'] });
   const { data: stores = [] } = useQuery<Store[]>({ queryKey: ['/api/stores'] });
   const { data: allClients = [] } = useClients();
+  const { data: weatherData } = useDetailedWeather();
 
   const todayStart = useMemo(() => startOfDay(new Date()).toISOString(), []);
 
@@ -415,12 +416,52 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background pb-24 page-transition">
 
-      {/* ── HEADER ─────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border/30 px-5 py-3 flex justify-between items-center shadow-sm">
-        <span className="text-[19px] font-bold text-slate-900 tracking-tight" data-testid="text-greeting">
-          {greeting}, {userName}
-        </span>
-        <WeatherStrip />
+      {/* ── HERO HEADER ─────────────────────────────── */}
+      <header
+        className="relative overflow-hidden px-5 pt-12 pb-5"
+        style={{ background: "linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, #000) 100%)" }}
+      >
+        {/* gradient mesh overlay */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: `radial-gradient(at 40% 20%, rgba(255,255,255,0.18) 0px, transparent 50%),
+                       radial-gradient(at 80% 0%, rgba(0,0,0,0.18) 0px, transparent 50%),
+                       radial-gradient(at 0% 100%, rgba(0,0,0,0.12) 0px, transparent 50%)`
+        }} />
+        <div className="relative flex justify-between items-center mb-4">
+          <div className="bg-white/20 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/30">
+            <img src="/logo.png" alt="ServNtrak" className="h-5" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <span className="text-white font-bold text-sm hidden">ServNtrak</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {weatherData && (
+              <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1 border border-white/20">
+                <Sun className="w-3.5 h-3.5 text-white" />
+                <span className="text-xs font-bold text-white">{Math.round(weatherData.temperature)}°C</span>
+              </div>
+            )}
+            <div className="w-9 h-9 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white text-sm font-bold">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+          </div>
+        </div>
+        <div className="relative">
+          <p className="text-white/70 text-xs font-semibold tracking-wide uppercase mb-1">
+            {format(new Date(), "EEEE, d MMM", { locale: pt })}
+          </p>
+          <h1 className="text-white text-2xl font-extrabold tracking-tight leading-tight" data-testid="text-greeting">
+            {greeting}, {userName}
+          </h1>
+          <p className="text-white/80 text-sm mt-1.5 font-medium">
+            {isLoading ? "A carregar…" : (
+              <>
+                <span className="font-bold text-white">{todayAppointments.length}</span> paragem{todayAppointments.length !== 1 ? "s" : ""} hoje
+                {nextAppointment && (
+                  <> · próxima às <span className="font-bold text-white">{format(new Date(nextAppointment.date), "HH:mm")}</span></>
+                )}
+              </>
+            )}
+          </p>
+        </div>
       </header>
 
       <main className="flex-1 px-4 py-5">
@@ -560,22 +601,6 @@ export default function Home() {
 
         {/* ── WEATHER CARD ──────────────────────── */}
         <WeatherCard />
-
-        {/* ── STATS STRIP ───────────────────────── */}
-        <div className="bg-primary text-white rounded-xl p-3 mb-6 flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-2.5">
-            <Clock className="w-4 h-4 text-green-200" strokeWidth={2.5} />
-            {isLoading ? (
-              <span className="text-[13px] font-medium tracking-wide opacity-70">A carregar…</span>
-            ) : (
-              <span className="text-[13px] font-medium tracking-wide" data-testid="text-today-stats">
-                {todayAppointments.length} paragem{todayAppointments.length !== 1 ? "s" : ""} hoje
-                {" · "}{completedToday.length} concluída{completedToday.length !== 1 ? "s" : ""}
-                {unpaidTotal > 0 && ` · ${unpaidTotal.toFixed(0)}€ pendentes`}
-              </span>
-            )}
-          </div>
-        </div>
 
         {/* ── TIMELINE ──────────────────────────── */}
         {isLoading ? (
@@ -731,28 +756,27 @@ export default function Home() {
 
         {/* ── QUICK ACTIONS ─────────────────────── */}
         <div className="mb-6">
-          <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Ações Rápidas</h3>
-          <div className="flex gap-4 overflow-x-auto pb-2 snap-x hide-scrollbar px-1">
+          <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3 px-1">Ações Rápidas</h3>
+          <div className="grid grid-cols-4 gap-3">
             {[
-              { href: "/calendar", Icon: Plus,     label: "Novo Serviço", bg: "bg-primary/10", text: "text-primary",  border: "border-primary/20" },
-              { href: "/clients",  Icon: UserPlus, label: "Novo Cliente", bg: "bg-blue-50",      text: "text-blue-600",   border: "border-blue-200" },
-              { href: "/gallery",  Icon: Camera,   label: "Foto Rápida",  bg: "bg-blue-50",      text: "text-blue-600",   border: "border-blue-200" },
-              { href: "/map",      Icon: Map, label: "Mapa", bg: "bg-primary/5", text: "text-primary", border: "border-primary/15" },
-              { href: "/reports",  Icon: BarChart2, label: "Relatórios", bg: "bg-slate-100", text: "text-slate-600", border: "border-slate-200" },
+              { href: "/calendar",  Icon: Plus,     label: "Novo Serviço", color: "bg-primary",    shadow: "shadow-primary/30" },
+              { href: "/clients",   Icon: UserPlus, label: "Novo Cliente", color: "bg-blue-500",   shadow: "shadow-blue-500/30" },
+              { href: "/gallery",   Icon: Camera,   label: "Foto Rápida",  color: "bg-orange-500", shadow: "shadow-orange-500/30" },
+              { href: "/map",       Icon: Map,      label: "Mapa",         color: "bg-teal-600",   shadow: "shadow-teal-600/30" },
             ].map((action, i) => (
-              <Link key={i} href={action.href} className="snap-start shrink-0" data-testid={`link-quick-${action.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-")}`}>
-                <div className="flex flex-col items-center gap-2.5 w-[76px] group">
-                  <div className={cn("w-14 h-14 rounded-2xl border flex items-center justify-center transition-all group-active:scale-95 shadow-sm", action.bg, action.border)}>
-                    <action.Icon className={cn("w-6 h-6", action.text)} strokeWidth={2} aria-hidden="true" />
+              <Link key={i} href={action.href} className="block" data-testid={`link-quick-${action.label.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/s+/g, "-")}`}>
+                <div className="flex flex-col items-center gap-2 group">
+                  <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-active:scale-95 shadow-md", action.color, action.shadow)}>
+                    <action.Icon className="w-6 h-6 text-white" strokeWidth={2} />
                   </div>
-                  <span className="text-[11px] font-bold text-slate-600 text-center leading-tight">{action.label}</span>
+                  <span className="text-[11px] font-bold text-muted-foreground text-center leading-tight">{action.label}</span>
                 </div>
               </Link>
             ))}
           </div>
         </div>
 
-        {/* ── MORE ACTIONS ─────────────────────── */}
+                {/* ── MORE ACTIONS ─────────────────────── */}
         <div className="space-y-3 mb-4">
           <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Mais</h3>
           {([

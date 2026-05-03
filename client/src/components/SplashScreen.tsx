@@ -64,7 +64,7 @@ export function SplashScreen({ onFinish, userName }: SplashScreenProps) {
               transition={{ delay: 0.3 }}
               className="text-center"
             >
-              <p className="text-sm text-muted-foreground mt-1">Gestão de Serviços e Tarefas</p>
+              <p className="text-sm text-muted-foreground mt-1">Gestão de Serviços no Terreno</p>
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
