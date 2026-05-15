@@ -1,6 +1,6 @@
 /* global React, ReactDOM, DesignCanvas, DCSection, DCArtboard, DCPostit */
 /* global V1Tech, V1Dispatch, V2Tech, V2Dispatch, V3Tech, V3Dispatch, V4Tech, V4Dispatch */
-/* global TechReal, DispReal, IOSDevice, AndroidDevice */
+/* global TechReal, DispReal, TechAgendaReal, DispAgendaReal, IOSDevice, AndroidDevice */
 
 const TECH_W = 380;
 const TECH_H = 760;
@@ -127,6 +127,19 @@ function App() {
               </div>
             </AndroidDevice>
           </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="v0-agenda"
+        title="00 · Agenda — Técnico (móvel) + Despacho (web)"
+        subtitle="Ecrã de agenda em ambas vistas, mantendo a paleta oficial e a tipografia do V0. No móvel: timeline diária com hour rail, faixas verde (piscinas) e teal (jardins), card 'next' destacado com endereço e CTA Navegar, banner de aguaceiro herdado do tempo. Na web: swimlane técnicos × horas (07–18) com linha 'agora' a 09:42, KPIs do dia e tray 'Por atribuir' para drag-and-drop."
+      >
+        <DCArtboard id="v0-agenda-tech" label="Técnico · Agenda (mobile)" width={380} height={760}>
+          <TechAgendaReal />
+        </DCArtboard>
+        <DCArtboard id="v0-agenda-disp" label="Despacho · Agenda (swimlane)" width={1200} height={760}>
+          <DispAgendaReal />
         </DCArtboard>
       </DCSection>
 
